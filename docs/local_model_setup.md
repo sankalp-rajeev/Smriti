@@ -27,7 +27,8 @@ filesDir/models/gemma-4-E2B-it-int4.litertlm
 - The app checks whether the expected app-private model file exists.
 - If missing, Offline Proof reports the Real Gemma model as not found and inference disabled.
 - If present, the app reports the model as found but not loaded.
-- The LiteRT layer prepares `EngineConfig` only when the model is found.
+- The LiteRT layer prepares a plain EngineConfig plan only when the model is found.
+- Passive direct LiteRT API type references compile after the Room KSP migration.
 - Engine initialization is intentionally disabled.
 - No `Engine` is created.
 - No conversation is created.

@@ -37,7 +37,8 @@ class LiteRtEngineConfigFactoryTest {
         assertEquals(modelFile.absolutePath, prepared.modelPath)
         assertEquals("CPU", prepared.backendLabel)
         assertFalse(prepared.configConstructionAllowed)
-        assertTrue(prepared.reason.contains("KAPT cannot read Java 21 LiteRT classes"))
+        assertTrue(prepared.reason.contains("EngineConfig type check passed"))
+        assertTrue(prepared.reason.contains("Engine disabled"))
         assertFalse(prepared.engineCreated)
         assertFalse(prepared.engineInitializationAttempted)
         assertFalse(prepared.conversationCreated)
@@ -57,6 +58,7 @@ class LiteRtEngineConfigFactoryTest {
         assertTrue(result is LiteRtEngineConfigPreparation.Prepared)
         val prepared = result as LiteRtEngineConfigPreparation.Prepared
         assertFalse(prepared.configConstructionAllowed)
-        assertTrue(prepared.reason.contains("EngineConfig construction deferred"))
+        assertTrue(prepared.reason.contains("EngineConfig type check passed"))
+        assertTrue(prepared.reason.contains("Engine disabled"))
     }
 }

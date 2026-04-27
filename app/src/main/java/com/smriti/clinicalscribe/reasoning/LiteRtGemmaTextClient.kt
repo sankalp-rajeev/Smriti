@@ -2,7 +2,8 @@ package com.smriti.clinicalscribe.reasoning
 
 class LiteRtGemmaTextClient(
     private val modelStatus: ModelStatus? = null,
-    private val engineConfigFactory: LiteRtEngineConfigFactory = LiteRtEngineConfigFactory()
+    private val engineConfigFactory: LiteRtEngineConfigFactory = LiteRtEngineConfigFactory(),
+    private val apiSurfaceProbe: LiteRtApiSurfaceProbe = LiteRtApiSurfaceProbe()
 ) : RealGemmaTextClient {
     val modelLoadAttempted: Boolean = false
     val engineInitializationAttempted: Boolean = false
@@ -19,7 +20,7 @@ class LiteRtGemmaTextClient(
         }.orEmpty()
         return TextGenerationResult.Unavailable(
             status = buildString {
-                append("LiteRT-LM client scaffold present; direct API use deferred because KAPT cannot read Java 21 LiteRT classes. ")
+                append("LiteRT-LM client scaffold present; direct API types compile after KSP migration, but Engine remains disabled. ")
                 append("No diagnosis generated. CHW confirmation required. ")
                 append("Protocol citation required before recommendation.")
                 append(configStatus)
@@ -31,6 +32,6 @@ class LiteRtGemmaTextClient(
     }
 
     fun apiSurfaceProbeStatus(): String {
-        return "Direct LiteRT-LM API use deferred because KAPT cannot read Java 21 LiteRT classes."
+        return "Direct LiteRT-LM API types compile: ${apiSurfaceProbe.verifiedTypeNames.joinToString()}."
     }
 }

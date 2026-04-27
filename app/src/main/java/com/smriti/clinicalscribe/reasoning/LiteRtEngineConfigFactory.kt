@@ -11,7 +11,7 @@ sealed class LiteRtEngineConfigPreparation {
         val modelPath: String,
         val backendLabel: String = "CPU",
         val configConstructionAllowed: Boolean = false,
-        val reason: String = KAPT_BLOCKER_REASON,
+        val reason: String = TYPE_CHECK_PASSED_REASON,
         val engineCreated: Boolean = false,
         val engineInitializationAttempted: Boolean = false,
         val conversationCreated: Boolean = false,
@@ -19,8 +19,8 @@ sealed class LiteRtEngineConfigPreparation {
     ) : LiteRtEngineConfigPreparation()
 
     companion object {
-        const val KAPT_BLOCKER_REASON =
-            "LiteRT-LM EngineConfig construction deferred because KAPT cannot read Java 21 LiteRT classes."
+        const val TYPE_CHECK_PASSED_REASON =
+            "LiteRT-LM EngineConfig type check passed after KSP migration; Engine disabled."
     }
 }
 
