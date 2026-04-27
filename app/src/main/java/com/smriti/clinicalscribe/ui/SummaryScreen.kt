@@ -25,6 +25,8 @@ fun SummaryScreen(
     summary: SupervisorSummary,
     isResettingDemoData: Boolean,
     reasoningModeLabel: String,
+    agentModeLabel: String,
+    realGemmaModelStatusLabel: String,
     ttsStatusMessage: String?,
     exportSummaryPath: String?,
     onReadSummary: () -> Unit,
@@ -121,22 +123,11 @@ fun SummaryScreen(
             }
 
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text("Offline Proof", fontWeight = FontWeight.SemiBold)
-                        Text("Network required: No")
-                        Text("Protocol source: Local asset JSON")
-                        Text("Reasoning mode: $reasoningModeLabel")
-                        Text("Audio storage: Local app-private file")
-                        Text("Last build/demo state: Mock MVP")
-                    }
-                }
+                OfflineProofCard(
+                    reasoningModeLabel = reasoningModeLabel,
+                    agentModeLabel = agentModeLabel,
+                    realGemmaModelStatusLabel = realGemmaModelStatusLabel
+                )
             }
 
             item {

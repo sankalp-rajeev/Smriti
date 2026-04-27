@@ -36,6 +36,7 @@ import com.smriti.clinicalscribe.reasoning.AgentConfig
 import com.smriti.clinicalscribe.reasoning.AgentMode
 import com.smriti.clinicalscribe.reasoning.GemmaAgent
 import com.smriti.clinicalscribe.reasoning.GemmaAgentFactory
+import com.smriti.clinicalscribe.reasoning.ModelAvailability
 import com.smriti.clinicalscribe.reasoning.SupervisorSummary
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import com.smriti.clinicalscribe.tts.AndroidVoiceOutput
@@ -79,6 +80,8 @@ private fun SmritiApp(
     val retriever = remember { ProtocolRetriever.fromAsset(context) }
     val jsonExporter = remember { JsonExporter.appPrivate(context) }
     val voiceOutput = remember { AndroidVoiceOutput(context) }
+    val modelAvailability = remember { ModelAvailability.fromFilesDir(context.filesDir) }
+    val modelStatus = remember { modelAvailability.check() }
     var audioPermissionGranted by remember {
         mutableStateOf(
             context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
@@ -162,6 +165,9 @@ private fun SmritiApp(
                         patients = patients,
                         visits = visits,
                         isLoading = isLoading,
+                        reasoningModeLabel = agentMode.displayName,
+                        agentModeLabel = agentMode.name,
+                        realGemmaModelStatusLabel = modelStatus.proofLabel,
                         onPatientSelected = { patient ->
                             errorMessage = null
                             currentScreen = SmritiScreen.Visit(patient)
@@ -280,6 +286,8 @@ private fun SmritiApp(
                         summary = screen.summary,
                         isResettingDemoData = isResettingDemoData,
                         reasoningModeLabel = agentMode.displayName,
+                        agentModeLabel = agentMode.name,
+                        realGemmaModelStatusLabel = modelStatus.proofLabel,
                         ttsStatusMessage = ttsStatusMessage,
                         exportSummaryPath = exportSummaryPath,
                         onReadSummary = {

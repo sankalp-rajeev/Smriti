@@ -1,10 +1,10 @@
 # Smriti Project Context
 
 ## Current Goal
-LiteRT/Gemma Integration Spike: scaffold `RealGemmaAgent` behind the existing `GemmaAgent` interface while keeping the mock offline demo safe.
+LiteRT-LM Model Availability Stub: check for an app-private Gemma `.litertlm` file without loading the model or changing the mock demo flow.
 
 ## Current Status
-The repository now has a working Android Kotlin + Jetpack Compose offline field-tool prototype. It supports local 30-second voice-note recording, simulated transcript reasoning, offline JSON protocol grounding, CHW review/confirm, Android TTS readout, local JSON export, demo reset, and an Offline Proof section. `MockGemmaAgent` remains the default. `RealGemmaAgent` exists as a safe experimental stub only; no LiteRT dependencies, model files, real Gemma, Whisper, camera, or cloud features are present.
+The repository has a working Android Kotlin + Jetpack Compose offline field-tool prototype, with `MockGemmaAgent` still configured as the default and `RealGemmaAgent` still a safe experimental stub. The official LiteRT-LM Android dependency is pinned to `0.10.2`. Offline Proof remains visible from the patient roster and now reports the app-private expected Gemma model status: `filesDir/models/gemma-4-E2B-it-int4.litertlm` as either not found or found but not loaded. No model files, model loading, LiteRT-LM engine initialization, inference, audio/Gemma path, Hugging Face code, or app-flow changes were added.
 
 ## Completed Tasks
 - [x] Read `AGENTS.md`.
@@ -57,10 +57,23 @@ The repository now has a working Android Kotlin + Jetpack Compose offline field-
 - [x] Updated Offline Proof to display the active reasoning mode dynamically.
 - [x] Added unit tests for default mock mode and RealGemma unavailable behavior.
 - [x] Verified `testDebugUnitTest` and `assembleDebug` for the Gemma integration scaffold.
+- [x] Researched official LiteRT-LM Android documentation, Gemma 4 E2B model card, and Google AI Edge Gallery guidance.
+- [x] Documented LiteRT-LM dependencies, model format/loading options, audio support, structured output/tooling, open risks, and recommended implementation sequence.
+- [x] Added official LiteRT-LM Android dependency for dependency-validation only.
+- [x] Added roster-visible Offline Proof card showing local/offline status, current agent mode, and LiteRT-LM dependency status.
+- [x] Confirmed `latest.release` resolved to `litertlm-android-0.10.2` via Gradle dependency insight.
+- [x] Tested older official `litertlm-android` pins `0.9.0`, `0.8.0`, and `0.0.0-alpha06`; all still required newer Kotlin metadata than Kotlin 1.9.24 supports.
+- [x] Upgraded the Android/Kotlin toolchain consistently for LiteRT-LM compatibility.
+- [x] Pinned LiteRT-LM dependency to `com.google.ai.edge.litertlm:litertlm-android:0.10.2`.
+- [x] Verified `testDebugUnitTest` and `assembleDebug` pass after the compatibility fix.
+- [x] Added a safe model availability/path detection stub for `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
+- [x] Updated Offline Proof to show LiteRT-LM dependency status, Real Gemma model status, and active reasoning mode.
+- [x] Added pure unit tests for missing and found-but-not-loaded model status.
+- [x] Verified `testDebugUnitTest` and `assembleDebug` after the model availability stub.
 
 ## Active Tasks
-- [ ] Install the latest debug build and confirm Offline Proof still shows `MockGemmaAgent` by default.
-- [ ] Begin LiteRT-LM dependency/model-loading research without committing model files.
+- [ ] Reinstall the latest debug build and smoke-test the unchanged mock MVP flow, especially the updated Offline Proof card.
+- [ ] Keep `MockGemmaAgent` as default and avoid model loading/inference until a separate RealGemma text-only spike.
 
 ## Blockers / Issues
 - Gradle wrapper now exists; direct sandboxed wrapper runs can still fail until Gradle can access the normal user-level `.gradle` cache.
@@ -75,7 +88,16 @@ The repository now has a working Android Kotlin + Jetpack Compose offline field-
 - Android TTS availability depends on the emulator/device installed TTS engine and language data. The UI reports unavailable/initializing states instead of failing.
 - Real ASR is not implemented. Voice-note transcripts remain simulated and saved audio is marked `REAL_ASR_PENDING`.
 - `RealGemmaAgent` is intentionally unavailable. It returns uncertain safe results and asks for MockGemmaAgent fallback until LiteRT-LM support is added.
-- No LiteRT dependencies or model files are committed yet.
+- No model files are committed yet.
+- Model availability detection only checks for `filesDir/models/gemma-4-E2B-it-int4.litertlm`; it does not create, download, load, validate, or run the model.
+- LiteRT-LM Android docs identify the dependency as `com.google.ai.edge.litertlm:litertlm-android:latest.release`; Gradle confirmed that currently resolves to `0.10.2`, which is now pinned explicitly.
+- Kotlin metadata compatibility is resolved by upgrading the toolchain. Previous failed checks: `0.9.0` failed with LiteRT-LM metadata `2.3.0` and Kotlin stdlib/reflect metadata `2.2.0`; `0.8.0` failed with LiteRT-LM metadata `2.2.0`; `0.0.0-alpha06` failed with LiteRT-LM metadata `2.2.0`. These were official artifacts, but none were compatible with Kotlin 1.9.24.
+- `.\gradlew.bat testDebugUnitTest` passed after the toolchain upgrade. Warnings remain for deprecated `MediaRecorder()` and Room's deprecated no-argument `fallbackToDestructiveMigration()`.
+- `.\gradlew.bat assembleDebug` passed after the toolchain upgrade. Native packaging note: Gradle could not strip `liblitertlm_jni.so`, so it packaged that library as-is; this is a packaging warning, not a build failure.
+- The LiteRT-LM Android guide did not clearly state a single `minSdk`; Google AI Edge Gallery lists Android 12+ as its app requirement, so Smriti may need a later compatibility decision.
+- Gemma 4 E2B LiteRT-LM model size is about 2.58 GB and must not be committed to the repo or bundled casually in the APK.
+- Direct audio input is documented for supported multimodal models, but Smriti should implement text-only RealGemma first and keep recorded audio as metadata until audio behavior is validated.
+- LiteRT-LM tool/function calling is documented, but Smriti still needs strict local structured-output validation and fallback before trusting generated clinical support text.
 - `git status` is blocked by Git dubious ownership because the repository is owned by `Sankalps-Razer/rajee` while the sandbox user is `Sankalps-Razer/CodexSandboxOffline`.
 
 ## Architecture Decisions
@@ -84,6 +106,13 @@ The repository now has a working Android Kotlin + Jetpack Compose offline field-
 - Put Gemma behavior behind a `GemmaAgent` interface so LiteRT-LM can replace `MockGemmaAgent` later.
 - Keep `MockGemmaAgent` as the default demo-safe mode via `AgentConfig.DEFAULT_MODE = AgentMode.MOCK`.
 - Keep `RealGemmaAgent` as a safe stub until LiteRT-LM model loading and structured parsing are proven.
+- Use LiteRT-LM via a local filesystem `.litertlm` model path when the real integration begins; prefer app-private sideload/import for the multi-GB model and keep model files out of git.
+- Treat the first LiteRT-LM dependency addition as a compatibility validation step only; do not enable inference or model loading until a separate model availability/load spike.
+- Keep model availability separate from model loading: app-private file presence may be shown in Offline Proof, but `FOUND_NOT_LOADED` must still mean inference is disabled.
+- Use Kotlin 2.3.10 with the matching `org.jetbrains.kotlin.plugin.compose` Compose compiler Gradle plugin instead of the older `composeOptions.kotlinCompilerExtensionVersion` path.
+- Use AGP 8.13.2 and Gradle 8.13 because Android's Kotlin support table requires AGP 8.13.2 for Kotlin 2.3.
+- Use Room 2.8.4 so Room's annotation processor can handle newer Kotlin metadata from the upgraded toolchain and LiteRT-LM dependencies.
+- Implement text-only `RealGemmaAgent` before attempting direct audio input so prompt construction, protocol citation validation, JSON parsing, timeout handling, and `MockGemmaAgent` fallback are proven first.
 - Use Room entities/DAOs as the local persistence boundary and seed demo data on first app launch.
 - Use a simple in-app screen state machine instead of adding Navigation Compose for the first scaffold.
 - Use a flat keyword `ProtocolRetriever` for protocol chunks until the P1 local RAG corpus is added.
@@ -92,9 +121,11 @@ The repository now has a working Android Kotlin + Jetpack Compose offline field-
 - `AGENTS.md` - project instructions for Codex and engineering constraints.
 - `smriti_prd.md` - product requirements and demo plan.
 - `CONTEXT.md` - living project memory updated after meaningful changes.
+- `docs/litert_gemma_integration_notes.md` - official LiteRT-LM / Gemma 4 Android research notes and recommended integration sequence.
 - `settings.gradle.kts` - Gradle project/module registration.
-- `build.gradle.kts` - root Android/Kotlin plugin versions.
-- `app/build.gradle.kts` - Android app module configuration and dependencies.
+- `build.gradle.kts` - root Android/Kotlin/Compose plugin versions.
+- `gradle/wrapper/gradle-wrapper.properties` - Gradle wrapper distribution version.
+- `app/build.gradle.kts` - Android app module configuration and dependencies, including pinned LiteRT-LM.
 - `app/src/main/AndroidManifest.xml` - Android app manifest.
 - `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt` - app entry point, local seeding, runtime permission, screen flow, save/summary wiring, TTS/export wiring, and demo reset wiring.
 - `app/src/main/java/com/smriti/clinicalscribe/audio/` - local app-private voice-note recording and voice-note metadata.
@@ -105,8 +136,10 @@ The repository now has a working Android Kotlin + Jetpack Compose offline field-
 - `app/src/main/java/com/smriti/clinicalscribe/reasoning/AgentConfig.kt` - default agent mode configuration.
 - `app/src/main/java/com/smriti/clinicalscribe/reasoning/GemmaAgentFactory.kt` - creates the selected `GemmaAgent`.
 - `app/src/main/java/com/smriti/clinicalscribe/reasoning/RealGemmaAgent.kt` - safe unavailable stub for future LiteRT-LM integration.
+- `app/src/main/java/com/smriti/clinicalscribe/reasoning/ModelAvailability.kt` - app-private Gemma model path/status check; no loading or inference.
 - `app/src/main/java/com/smriti/clinicalscribe/rag/` - protocol chunk model and keyword retriever.
 - `app/src/main/java/com/smriti/clinicalscribe/ui/` - Compose MVP screens, including VisitScreen mock voice-note shell.
+- `app/src/main/java/com/smriti/clinicalscribe/ui/OfflineProofCard.kt` - shared Offline Proof card used on the patient roster and supervisor summary.
 - `app/src/main/java/com/smriti/clinicalscribe/tts/` - Android TTS-backed offline voice output abstraction.
 - `app/src/main/assets/protocols/maternal_health_demo_protocols.json` - offline deterministic maternal-health demo protocol corpus with danger-sign chunks and referral guidance.
 - `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt` - deterministic unit tests for local mock visit-note/referral behavior.
@@ -115,13 +148,14 @@ The repository now has a working Android Kotlin + Jetpack Compose offline field-
 - `app/src/test/java/com/smriti/clinicalscribe/export/JsonExporterTest.kt` - unit test for visit JSON protocol citation and referral flag export.
 - `app/src/test/java/com/smriti/clinicalscribe/reasoning/AgentModeTest.kt` - unit test ensuring mock mode is default.
 - `app/src/test/java/com/smriti/clinicalscribe/reasoning/RealGemmaAgentTest.kt` - unit tests for the safe unavailable RealGemma path.
+- `app/src/test/java/com/smriti/clinicalscribe/reasoning/ModelAvailabilityTest.kt` - unit tests for missing and found-but-not-loaded model file status.
 
 ## Next Steps
-1. Install the latest debug build on the Pixel 9 Pro API 35 emulator and confirm Offline Proof shows `MockGemmaAgent`.
-2. Research LiteRT-LM Android setup and model packaging constraints without adding model files.
-3. Implement model availability checks inside `RealGemmaAgent.initializeModel()`.
-4. Add timeout/error fallback from `RealGemmaAgent` to `MockGemmaAgent` before any real model call is used in the demo.
-5. Keep `MockGemmaAgent` as the default until the real Gemma path is benchmarked offline.
+1. Reinstall the latest debug build and smoke-test the unchanged mock MVP flow, especially Offline Proof and patient roster navigation.
+2. Confirm Offline Proof shows `Real Gemma model: Not found (inference disabled)` on a clean app-private storage install.
+3. Keep `MockGemmaAgent` as default and `RealGemmaAgent` unavailable until model-path checks and fallback handling are tested.
+4. Implement text-only `RealGemmaAgent` with strict JSON parsing, protocol citation validation, timeout handling, and fallback to `MockGemmaAgent` after a model file is intentionally staged outside git.
+5. Explore direct audio input only after text-only real Gemma behavior is stable.
 
 ## Change Log
 - 2026-04-27: Created `CONTEXT.md` with initial project state before Android scaffold.
@@ -135,3 +169,7 @@ The repository now has a working Android Kotlin + Jetpack Compose offline field-
 - 2026-04-27: Added a voice-note style UI shell without real ASR or audio recording. Files touched: `app/src/main/java/com/smriti/clinicalscribe/ui/VisitScreen.kt`, `CONTEXT.md`. Changes: added "Record Visit Note" section, mock Start/Stop voice note button, "Listening locally..." recording state, 30-second chunk label, "Simulated transcript for demo" text field label, "Use sample danger-sign transcript" fill button, and note that real Gemma 4 audio integration comes next. Test/build result: first sandboxed `.\gradlew.bat testDebugUnitTest` failed on the known Gradle cache lock-file path; rerun with normal cache access passed. `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug build and verify the mock voice workflow on the Pixel 9 Pro API 35 emulator.
 - 2026-04-27: Completed Field Tool Milestone while keeping mock reasoning. Files touched: `app/src/main/AndroidManifest.xml`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/audio/AudioRecorder.kt`, `app/src/main/java/com/smriti/clinicalscribe/audio/VoiceNoteMetadata.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/AppDatabase.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/TranscriptSource.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/VisitLog.kt`, `app/src/main/java/com/smriti/clinicalscribe/export/JsonExporter.kt`, `app/src/main/java/com/smriti/clinicalscribe/tts/AndroidVoiceOutput.kt`, `app/src/main/java/com/smriti/clinicalscribe/tts/VoiceOutput.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/VisitScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/ReviewScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/test/java/com/smriti/clinicalscribe/data/VisitLogTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/export/JsonExporterTest.kt`, `CONTEXT.md`. Features implemented: runtime microphone permission, local app-private 30-second voice-note recording, voice-note metadata persisted on confirmed visits, Android TTS readout for referral and summary, app-private visit/summary JSON export, and Offline Proof demo section. Test/build result: initial sandboxed Gradle run hit the known user-cache lock-file issue; `.\gradlew.bat testDebugUnitTest` passed with normal cache access; `.\gradlew.bat assembleDebug` passed. Known issues: `MediaRecorder()` no-arg constructor deprecation warning; TTS depends on device language data; real ASR remains pending and transcript source is marked `REAL_ASR_PENDING` when audio is attached. Next recommended step: emulator verification of recording/TTS/export, then start the LiteRT/Gemma integration spike behind `GemmaAgent`.
 - 2026-04-27: Added controlled LiteRT/Gemma integration scaffold behind `GemmaAgent`. Files touched: `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/AgentMode.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/AgentConfig.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/GemmaAgentFactory.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/RealGemmaAgent.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/AgentModeTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/RealGemmaAgentTest.kt`, `CONTEXT.md`. Features implemented: agent mode enum, mock default config, factory-based agent selection, RealGemmaAgent unavailable stub, dynamic Offline Proof reasoning mode, and TODOs for LiteRT-LM model loading, prompt construction, audio/transcript input, structured function-call parsing, and timeout/error fallback. Test/build result: first sandboxed `.\gradlew.bat testDebugUnitTest` failed on the known Gradle cache lock-file path; rerun with normal cache access passed. `.\gradlew.bat assembleDebug` passed. Known issues: RealGemmaAgent intentionally does not load a model and returns uncertain fallback-required results. Next recommended step: verify Offline Proof still shows `MockGemmaAgent`, then research LiteRT-LM Android dependencies/model packaging without adding model files.
+- 2026-04-27: Researched and documented the official LiteRT-LM / Gemma 4 Android integration path before code changes. Files touched: `docs/litert_gemma_integration_notes.md`, `CONTEXT.md`. Docs researched: Google LiteRT-LM overview, LiteRT-LM Android Kotlin guide, Gemma 4 E2B LiteRT-LM Hugging Face model card, and Google AI Edge Gallery. Integration questions answered: dependency/repositories, model format `.litertlm`, local filesystem model path options, Hugging Face distribution, direct audio API availability, structured tool/function calling shape, and recommended text-first RealGemma path. Build/test not run because this was documentation-only and did not change app code or Gradle config. Open risks: artifact version pinning, possible Android 12+/minSdk implications, 2.58 GB model storage/memory, direct audio validation, and strict structured-output parsing. Next recommended step: add the LiteRT-LM dependency only and verify Gradle sync/build while keeping `MockGemmaAgent` as default.
+- 2026-04-27: Added official LiteRT-LM Android dependency for validation only and made Offline Proof visible on the patient roster. Files touched: `app/build.gradle.kts`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/PatientListScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/OfflineProofCard.kt`, `CONTEXT.md`. Changes: added `implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")`; confirmed repositories already include `google()` and `mavenCentral()`; added shared Offline Proof card with Network required: No, local protocol source, `MockGemmaAgent`, `MOCK`, fallback inactive, local `.m4a` storage, transcript-source status, no cloud APIs, and LiteRT-LM dependency added/inference disabled. Manifest unchanged because the official docs reviewed did not require GPU/NPU native-library declarations for this dependency-only validation. Build/test result: first sandboxed `.\gradlew.bat testDebugUnitTest` hit the known Gradle user-cache lock-file issue; escalated rerun resolved `litertlm-android-0.10.2` but failed at `:app:kaptDebugKotlin` because Kotlin metadata from `kotlin-reflect-2.2.21`, `kotlin-stdlib-2.2.21`, and `litertlm-android-0.10.2` is newer than this project's Kotlin 1.9.24 compiler expectation. `.\gradlew.bat assembleDebug` also failed at `:app:kaptDebugKotlin`. Native packaging issue: none observed before Kotlin compile failure. Next recommended step: do not guess versions; deliberately choose a Kotlin/Compose/AGP upgrade path or an official Kotlin-1.9-compatible LiteRT-LM artifact, then pin the resolved dependency and rebuild.
+- 2026-04-27: Resolved LiteRT-LM dependency/toolchain compatibility without changing app behavior. Files touched: `build.gradle.kts`, `app/build.gradle.kts`, `gradle/wrapper/gradle-wrapper.properties`, `CONTEXT.md`. Investigation: current stack was AGP 8.5.2, Kotlin 1.9.24, Compose compiler 1.5.14, Compose BOM 2024.06.00, Room 2.6.1, and kapt. Gradle dependency insight confirmed `latest.release -> litertlm-android-0.10.2`. Compatibility path chosen: A, coordinated toolchain upgrade, because official older LiteRT-LM pins `0.9.0`, `0.8.0`, and `0.0.0-alpha06` all resolved but still failed with Kotlin metadata newer than Kotlin 1.9.24 supports. Changes: pinned LiteRT-LM to `0.10.2`; upgraded AGP to `8.13.2`, Kotlin Android/kapt to `2.3.10`, added matching `org.jetbrains.kotlin.plugin.compose` `2.3.10`, migrated from `kotlinOptions.jvmTarget` to `compilerOptions`, upgraded Room to `2.8.4`, and updated the Gradle wrapper to `8.13`. Build/test result: `.\gradlew.bat testDebugUnitTest` passed; `.\gradlew.bat assembleDebug` passed. Warnings: deprecated `MediaRecorder()` constructor, deprecated Room `fallbackToDestructiveMigration()` overload, and `liblitertlm_jni.so` packaged unstripped. No model files, model loading, inference, audio/Gemma path, downloads, Hugging Face code, default agent change, or app-flow changes were added. Next recommended step: reinstall and smoke-test the unchanged mock MVP flow, then add only model availability checks behind `RealGemmaAgent`.
+- 2026-04-27: Added a safe app-private model availability/path detection stub only. Files touched: `app/src/main/java/com/smriti/clinicalscribe/reasoning/ModelAvailability.kt`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/OfflineProofCard.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/PatientListScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/ModelAvailabilityTest.kt`, `CONTEXT.md`. Changes: added `ModelAvailability` and `ModelStatus` for `filesDir/models/gemma-4-E2B-it-int4.litertlm`; statuses are `NOT_FOUND` and `FOUND_NOT_LOADED`; file size is reported only when present; Offline Proof now shows LiteRT-LM dependency added, Real Gemma model status, and active reasoning mode `MOCK`. Build/test result: first sandboxed `.\gradlew.bat testDebugUnitTest` hit the known Gradle wrapper cache lock issue; rerun with normal user-level cache passed. `.\gradlew.bat assembleDebug` passed. No model files, model loading, LiteRT-LM engine initialization, inference, audio/Gemma integration, downloads, Hugging Face code, default agent change, or app-flow changes were added. Next recommended step: reinstall and verify Offline Proof on the emulator, then stage any future `.litertlm` model outside git only when ready for a separate loader spike.

@@ -30,6 +30,9 @@ fun PatientListScreen(
     patients: List<Patient>,
     visits: List<VisitLog>,
     isLoading: Boolean,
+    reasoningModeLabel: String,
+    agentModeLabel: String,
+    realGemmaModelStatusLabel: String,
     onPatientSelected: (Patient) -> Unit,
     onShowSummary: () -> Unit
 ) {
@@ -68,6 +71,13 @@ fun PatientListScreen(
                             patient = patient,
                             visitCount = visitCount,
                             onPatientSelected = onPatientSelected
+                        )
+                    }
+                    item {
+                        OfflineProofCard(
+                            reasoningModeLabel = reasoningModeLabel,
+                            agentModeLabel = agentModeLabel,
+                            realGemmaModelStatusLabel = realGemmaModelStatusLabel
                         )
                     }
                 }
