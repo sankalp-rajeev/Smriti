@@ -43,11 +43,9 @@ class MockGemmaAgent : GemmaAgent {
         }
 
         val note = buildString {
-            append("Patient: ${patient.displayLabel()}")
-            patient.pregnancyWeeks?.let { append(", ${it} weeks pregnant") }
-            append("\nObservation: ${observationText.trim()}")
-            append("\nRelevant history: $latestHistory")
-            append("\nAssessment support: Documentation support only. ")
+            append("Observation:\n${observationText.trim()}")
+            append("\n\nRelevant history:\n$latestHistory")
+            append("\n\nProtocol-grounded support:\nDocumentation support only; not a diagnosis. CHW confirmation required. ")
             if (hasDangerSign) {
                 append("Danger signs are present in the observation and require CHW review for referral. Protocol citation: $protocolCitation.")
             } else {

@@ -3,7 +3,6 @@ package com.smriti.clinicalscribe.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -36,7 +35,10 @@ fun ReviewScreen(
     onConfirmSave: (String, String) -> Unit,
     onBack: () -> Unit
 ) {
-    var noteText by remember(result) { mutableStateOf(result.structuredNote) }
+    val initialSections = remember(result) { ReviewNoteSections.from(result.structuredNote) }
+    var observationText by remember(result) { mutableStateOf(initialSections.observation) }
+    var historyText by remember(result) { mutableStateOf(initialSections.relevantHistory) }
+    var supportText by remember(result) { mutableStateOf(initialSections.protocolSupport) }
     var followUpText by remember(result) { mutableStateOf(result.suggestedFollowUp) }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -46,16 +48,20 @@ fun ReviewScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Column {
                         Text("Review and Confirm Visit Note", style = MaterialTheme.typography.headlineSmall)
                         Text("Offline demo mode", style = MaterialTheme.typography.labelLarge)
                         Text(patient.displayLabel(), style = MaterialTheme.typography.bodyMedium)
                     }
-                    OutlinedButton(onClick = onBack, enabled = !isSaving) {
+                    OutlinedButton(
+                        onClick = onBack,
+                        enabled = !isSaving,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text("Edit Observation")
                     }
                 }
@@ -99,13 +105,37 @@ fun ReviewScreen(
 
             item {
                 OutlinedTextField(
-                    value = noteText,
-                    onValueChange = { noteText = it },
+                    value = observationText,
+                    onValueChange = { observationText = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 220.dp),
-                    label = { Text("Structured visit note") },
-                    minLines = 8
+                        .heightIn(min = 110.dp),
+                    label = { Text("Observation") },
+                    minLines = 3
+                )
+            }
+
+            item {
+                OutlinedTextField(
+                    value = historyText,
+                    onValueChange = { historyText = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp),
+                    label = { Text("Relevant history") },
+                    minLines = 3
+                )
+            }
+
+            item {
+                OutlinedTextField(
+                    value = supportText,
+                    onValueChange = { supportText = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 130.dp),
+                    label = { Text("Protocol-grounded support") },
+                    minLines = 4
                 )
             }
 
@@ -137,13 +167,63 @@ fun ReviewScreen(
 
             item {
                 Button(
-                    onClick = { onConfirmSave(noteText, followUpText) },
+                    onClick = {
+                        onConfirmSave(
+                            buildStructuredNote(
+                                observation = observationText,
+                                relevantHistory = historyText,
+                                protocolSupport = supportText
+                            ),
+                            followUpText
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = noteText.isNotBlank() && !isSaving
+                    enabled = observationText.isNotBlank() && supportText.isNotBlank() && !isSaving
                 ) {
                     Text(if (isSaving) "Saving Confirmed Visit..." else "Confirm CHW Review and Save")
                 }
             }
         }
     }
+}
+
+private data class ReviewNoteSections(
+    val observation: String,
+    val relevantHistory: String,
+    val protocolSupport: String
+) {
+    companion object {
+        fun from(note: String): ReviewNoteSections {
+            return ReviewNoteSections(
+                observation = extractSection(note, "Observation:", "Relevant history:"),
+                relevantHistory = extractSection(note, "Relevant history:", "Protocol-grounded support:"),
+                protocolSupport = extractSection(note, "Protocol-grounded support:", null)
+            )
+        }
+
+        private fun extractSection(note: String, start: String, end: String?): String {
+            val startIndex = note.indexOf(start)
+            if (startIndex < 0) return note.trim()
+
+            val contentStart = startIndex + start.length
+            val contentEnd = end
+                ?.let { note.indexOf(it, startIndex = contentStart) }
+                ?.takeIf { it >= 0 }
+                ?: note.length
+
+            return note.substring(contentStart, contentEnd).trim()
+        }
+    }
+}
+
+private fun buildStructuredNote(
+    observation: String,
+    relevantHistory: String,
+    protocolSupport: String
+): String {
+    return listOf(
+        "Observation:\n${observation.trim()}",
+        "Relevant history:\n${relevantHistory.trim()}",
+        "Protocol-grounded support:\n${protocolSupport.trim()}"
+    ).joinToString(separator = "\n\n")
 }

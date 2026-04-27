@@ -66,12 +66,22 @@ private fun SmritiApp(
     var isLoading by remember { mutableStateOf(true) }
     var isGenerating by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
+    var isResettingDemoData by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     suspend fun refreshLocalState() {
         patients = database.patientDao().getAll()
         visits = database.visitLogDao().getAll()
         referrals = database.referralFlagDao().getAll()
+    }
+
+    suspend fun resetDemoData() {
+        database.referralFlagDao().deleteAll()
+        database.visitLogDao().deleteAll()
+        database.patientDao().upsertAll(DemoSeedData.patients)
+        database.protocolChunkDao().upsertAll(DemoSeedData.protocolChunks)
+        DemoSeedData.initialVisitLogs().forEach { database.visitLogDao().insert(it) }
+        refreshLocalState()
     }
 
     LaunchedEffect(Unit) {
@@ -183,6 +193,22 @@ private fun SmritiApp(
 
                     is SmritiScreen.Summary -> SummaryScreen(
                         summary = screen.summary,
+                        isResettingDemoData = isResettingDemoData,
+                        onResetDemoData = {
+                            scope.launch {
+                                isResettingDemoData = true
+                                errorMessage = null
+                                runCatching {
+                                    resetDemoData()
+                                    agent.generateSupervisorSummary(patients, visits, referrals)
+                                }.onSuccess { summary ->
+                                    currentScreen = SmritiScreen.Summary(summary)
+                                }.onFailure { error ->
+                                    errorMessage = "Could not reset demo data: ${error.message}"
+                                }
+                                isResettingDemoData = false
+                            }
+                        },
                         onBack = { currentScreen = SmritiScreen.PatientRoster }
                     )
                 }

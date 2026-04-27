@@ -60,6 +60,9 @@ interface VisitLogDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(visitLog: VisitLog): Long
+
+    @Query("DELETE FROM visit_logs")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -69,6 +72,9 @@ interface ReferralFlagDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(referralFlag: ReferralFlag): Long
+
+    @Query("DELETE FROM referral_flags")
+    suspend fun deleteAll()
 }
 
 @Dao

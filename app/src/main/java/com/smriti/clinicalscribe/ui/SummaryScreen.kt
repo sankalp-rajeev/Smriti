@@ -3,7 +3,6 @@ package com.smriti.clinicalscribe.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,6 +23,8 @@ import com.smriti.clinicalscribe.reasoning.SupervisorSummary
 @Composable
 fun SummaryScreen(
     summary: SupervisorSummary,
+    isResettingDemoData: Boolean,
+    onResetDemoData: () -> Unit,
     onBack: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -33,16 +34,20 @@ fun SummaryScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Column {
                         Text("End-of-Day Supervisor Summary", style = MaterialTheme.typography.headlineSmall)
                         Text("Offline demo mode", style = MaterialTheme.typography.labelLarge)
                         Text("Local brief from confirmed visits", style = MaterialTheme.typography.bodyMedium)
                     }
-                    OutlinedButton(onClick = onBack) {
+                    OutlinedButton(
+                        onClick = onBack,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isResettingDemoData
+                    ) {
                         Text("Back to Patient Roster")
                     }
                 }
@@ -62,6 +67,21 @@ fun SummaryScreen(
                         Text("Referral flags: ${summary.referralsFlagged}", fontWeight = FontWeight.SemiBold)
                     }
                 }
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = onResetDemoData,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isResettingDemoData
+                ) {
+                    Text(if (isResettingDemoData) "Resetting Demo Data..." else "Reset Demo Data")
+                }
+                Text(
+                    text = "Demo mode only: clears saved mock visits and referral flags, then restores the original Meena history.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
             }
 
             item {

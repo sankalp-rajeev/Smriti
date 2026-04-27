@@ -12,7 +12,6 @@ class ProtocolRetriever(
             .filter { (_, score) -> score > 0 }
             .sortedByDescending { (_, score) -> score }
             .map { (chunk, _) -> chunk }
-            .ifEmpty { chunks.take(1) }
     }
 
     private fun score(chunk: ProtocolChunk, normalizedQuery: String): Int {
