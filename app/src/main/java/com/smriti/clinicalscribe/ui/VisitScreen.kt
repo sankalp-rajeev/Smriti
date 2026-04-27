@@ -1,5 +1,7 @@
 package com.smriti.clinicalscribe.ui
 
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,28 +26,94 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.smriti.clinicalscribe.audio.AudioRecorder
+import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.VisitLog
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 @Composable
 fun VisitScreen(
     patient: Patient,
     history: List<VisitLog>,
     isGenerating: Boolean,
+    audioPermissionGranted: Boolean,
     errorMessage: String?,
-    onGenerate: (String) -> Unit,
+    onRequestAudioPermission: () -> Unit,
+    onGenerate: (String, VoiceNoteMetadata?) -> Unit,
     onBack: () -> Unit
 ) {
-    var isRecordingMockVoiceNote by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val audioRecorder = remember(context) { AudioRecorder(context) }
+    var voiceNoteStatus by remember { mutableStateOf(VoiceNoteStatus.Idle) }
+    var voiceNoteError by remember { mutableStateOf<String?>(null) }
+    var isRecordingVoiceNote by remember { mutableStateOf(false) }
+    var elapsedSeconds by remember { mutableStateOf(0) }
+    var savedVoiceNote by remember { mutableStateOf<VoiceNoteMetadata?>(null) }
     var observationText by remember {
         mutableStateOf(
             SampleDangerSignTranscript
         )
+    }
+
+    fun stopVoiceNote() {
+        audioRecorder.stop()
+            .onSuccess { metadata ->
+                savedVoiceNote = metadata
+                elapsedSeconds = metadata.audioDurationSeconds
+                voiceNoteStatus = VoiceNoteStatus.SavedLocally
+                voiceNoteError = null
+            }
+            .onFailure { error ->
+                voiceNoteStatus = VoiceNoteStatus.Error
+                voiceNoteError = error.message ?: "Could not save local voice note."
+            }
+        isRecordingVoiceNote = false
+    }
+
+    fun startVoiceNote() {
+        if (!audioPermissionGranted) {
+            voiceNoteStatus = VoiceNoteStatus.Error
+            voiceNoteError = "Microphone permission is required to record a local voice note."
+            onRequestAudioPermission()
+            return
+        }
+
+        audioRecorder.start()
+            .onSuccess {
+                savedVoiceNote = null
+                elapsedSeconds = 0
+                isRecordingVoiceNote = true
+                voiceNoteStatus = VoiceNoteStatus.RecordingLocally
+                voiceNoteError = null
+            }
+            .onFailure { error ->
+                isRecordingVoiceNote = false
+                voiceNoteStatus = VoiceNoteStatus.Error
+                voiceNoteError = error.message ?: "Could not start local voice recording."
+            }
+    }
+
+    LaunchedEffect(isRecordingVoiceNote) {
+        while (isRecordingVoiceNote) {
+            delay(1000L)
+            elapsedSeconds = (elapsedSeconds + 1).coerceAtMost(AudioRecorder.MAX_DURATION_SECONDS)
+            if (elapsedSeconds >= AudioRecorder.MAX_DURATION_SECONDS) {
+                stopVoiceNote()
+            }
+        }
+    }
+
+    DisposableEffect(audioRecorder) {
+        onDispose {
+            audioRecorder.cancel()
+        }
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -106,19 +174,42 @@ fun VisitScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Button(
-                            onClick = { isRecordingMockVoiceNote = !isRecordingMockVoiceNote },
+                            onClick = {
+                                if (isRecordingVoiceNote) {
+                                    stopVoiceNote()
+                                } else {
+                                    startVoiceNote()
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(if (isRecordingMockVoiceNote) "Stop voice note" else "Start voice note")
+                            Text(if (isRecordingVoiceNote) "Stop voice note" else "Start voice note")
                         }
                         Text(
-                            text = if (isRecordingMockVoiceNote) {
-                                "Listening locally... 30-second chunk"
-                            } else {
-                                "Ready for 30-second local voice-note chunk"
-                            },
+                            text = "Status: ${voiceNoteStatus.label}",
                             style = MaterialTheme.typography.labelLarge
                         )
+                        Text(
+                            text = "Elapsed: ${elapsedSeconds}s / ${AudioRecorder.MAX_DURATION_SECONDS}s",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = if (isRecordingVoiceNote) {
+                                "Listening locally... 30-second max chunk"
+                            } else {
+                                "Ready for local app-private audio storage"
+                            },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        savedVoiceNote?.let { voiceNote ->
+                            Text(
+                                text = "Saved locally: ${voiceNote.fileName} (${voiceNote.audioDurationSeconds}s)",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        voiceNoteError?.let { message ->
+                            Text(message, color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
@@ -153,7 +244,7 @@ fun VisitScreen(
 
             item {
                 Button(
-                    onClick = { onGenerate(observationText) },
+                    onClick = { onGenerate(observationText, savedVoiceNote) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = observationText.isNotBlank() && !isGenerating
                 ) {
@@ -190,3 +281,10 @@ private fun formatDate(millis: Long): String {
 
 private const val SampleDangerSignTranscript =
     "Meena is 28 years old and 7 months pregnant. She reports severe headache and blurred vision. Blood pressure is 150 over 95. She has reduced fetal movement today."
+
+private enum class VoiceNoteStatus(val label: String) {
+    Idle("Idle"),
+    RecordingLocally("Recording locally"),
+    SavedLocally("Saved locally"),
+    Error("Error")
+}

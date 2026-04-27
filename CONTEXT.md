@@ -1,10 +1,10 @@
 # Smriti Project Context
 
 ## Current Goal
-Create the initial offline-first Android Kotlin project skeleton for the Smriti MVP demo flow.
+Field Tool Milestone: make Smriti feel like a real offline CHW field tool while still using mock reasoning.
 
 ## Current Status
-The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The app builds, launches on the Pixel 9 Pro API 35 emulator, reaches the End-of-Day Supervisor Summary screen, has focused unit coverage for mock reasoning/protocol retrieval, includes demo reset support, uses an offline JSON maternal-health protocol corpus from app assets, and has a mock voice-note UI shell backed by simulated transcript text.
+The repository now has a working Android Kotlin + Jetpack Compose mock MVP. It supports local 30-second voice-note recording to app-private storage, simulated transcript reasoning, offline JSON protocol grounding, CHW review/confirm, Android TTS readout, local JSON export, demo reset, and an Offline Proof section. It still uses `MockGemmaAgent`; no real Gemma/LiteRT/Whisper/camera/cloud features are present.
 
 ## Completed Tasks
 - [x] Read `AGENTS.md`.
@@ -39,12 +39,20 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - [x] Added VisitScreen voice-note style UI shell without real audio capture.
 - [x] Added mock Start/Stop voice note state, local listening indicator, 30-second chunk label, sample danger-sign transcript button, and simulated transcript label.
 - [x] Verified `testDebugUnitTest` and `assembleDebug` after voice-note UI shell.
+- [x] Added Android `RECORD_AUDIO` permission and runtime permission request.
+- [x] Implemented `AudioRecorder` for local app-private `.m4a` voice notes with 30-second max duration.
+- [x] Added optional voice-note metadata to `VisitLog`: `audioFilePath`, `audioDurationSeconds`, and `transcriptSource`.
+- [x] Persisted voice-note metadata when a CHW confirms/saves a visit.
+- [x] Implemented offline Android TTS through `VoiceOutput`.
+- [x] Added ReviewScreen TTS button for referral suggestions and SummaryScreen TTS button for supervisor summaries.
+- [x] Added local JSON export for current visit note and end-of-day supervisor summary.
+- [x] Added Offline Proof section for judge/demo verification.
+- [x] Added unit tests for `VisitLog` audio metadata and JSON export contents.
+- [x] Verified `testDebugUnitTest` and `assembleDebug` for the Field Tool Milestone.
 
 ## Active Tasks
-- [ ] Reinstall the latest debug build on the emulator and click through the reset-enabled polished judge flow.
-- [ ] Decide whether to add a small Room reset/seed instrumentation test later.
-- [ ] Verify on emulator that ReviewScreen citations now show `Smriti Demo Maternal Health Protocol` sections from the asset corpus.
-- [ ] Verify on emulator that the VisitScreen mock voice-note shell reads clearly and the sample transcript still generates the expected referral flow.
+- [ ] Install the latest debug build on the Pixel 9 Pro API 35 emulator and verify microphone permission, local recording, TTS, JSON exports, and Offline Proof.
+- [ ] Start the LiteRT/Gemma integration spike behind the existing `GemmaAgent` interface.
 
 ## Blockers / Issues
 - Gradle wrapper now exists; direct sandboxed wrapper runs can still fail until Gradle can access the normal user-level `.gradle` cache.
@@ -55,6 +63,9 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - First local `.\gradlew.bat testDebugUnitTest` attempt in the sandbox failed for the same Gradle user-cache lock-file reason; rerun with normal user-level Gradle cache access worked.
 - Initial unit test run found one bad "normal visit" fixture because it contained the danger-sign keyword "bleeding"; the fixture was corrected and the tests passed.
 - Local `.\gradlew.bat testDebugUnitTest` still needs normal user-level Gradle cache access in this sandbox; the first sandboxed attempt failed on the known lock-file path, then passed with cache access.
+- Android compile emits a warning that the no-arg `MediaRecorder()` constructor is deprecated. It still compiles for the current min API 26 MVP; this can be modernized later with API-conditional construction.
+- Android TTS availability depends on the emulator/device installed TTS engine and language data. The UI reports unavailable/initializing states instead of failing.
+- Real ASR is not implemented. Voice-note transcripts remain simulated and saved audio is marked `REAL_ASR_PENDING`.
 - `git status` is blocked by Git dubious ownership because the repository is owned by `Sankalps-Razer/rajee` while the sandbox user is `Sankalps-Razer/CodexSandboxOffline`.
 
 ## Architecture Decisions
@@ -73,22 +84,26 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - `build.gradle.kts` - root Android/Kotlin plugin versions.
 - `app/build.gradle.kts` - Android app module configuration and dependencies.
 - `app/src/main/AndroidManifest.xml` - Android app manifest.
-- `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt` - app entry point, local seeding, screen flow, save/summary wiring, and demo reset wiring.
+- `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt` - app entry point, local seeding, runtime permission, screen flow, save/summary wiring, TTS/export wiring, and demo reset wiring.
+- `app/src/main/java/com/smriti/clinicalscribe/audio/` - local app-private voice-note recording and voice-note metadata.
 - `app/src/main/java/com/smriti/clinicalscribe/data/` - Room database, entities, DAOs, and demo seed data.
+- `app/src/main/java/com/smriti/clinicalscribe/export/JsonExporter.kt` - local app-private JSON export for visits and supervisor summaries.
 - `app/src/main/java/com/smriti/clinicalscribe/reasoning/` - Gemma interface, mock implementation, and reasoning result models.
 - `app/src/main/java/com/smriti/clinicalscribe/rag/` - protocol chunk model and keyword retriever.
 - `app/src/main/java/com/smriti/clinicalscribe/ui/` - Compose MVP screens, including VisitScreen mock voice-note shell.
-- `app/src/main/java/com/smriti/clinicalscribe/tts/VoiceOutput.kt` - future offline TTS abstraction stub.
+- `app/src/main/java/com/smriti/clinicalscribe/tts/` - Android TTS-backed offline voice output abstraction.
 - `app/src/main/assets/protocols/maternal_health_demo_protocols.json` - offline deterministic maternal-health demo protocol corpus with danger-sign chunks and referral guidance.
 - `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt` - deterministic unit tests for local mock visit-note/referral behavior.
 - `app/src/test/java/com/smriti/clinicalscribe/rag/ProtocolRetrieverTest.kt` - deterministic unit tests for local protocol keyword retrieval.
+- `app/src/test/java/com/smriti/clinicalscribe/data/VisitLogTest.kt` - unit test for optional audio metadata on visit logs.
+- `app/src/test/java/com/smriti/clinicalscribe/export/JsonExporterTest.kt` - unit test for visit JSON protocol citation and referral flag export.
 
 ## Next Steps
-1. Open the root folder in Android Studio and run Gradle sync.
-2. Run Build -> Make Project.
-3. Generate a Gradle wrapper from Android Studio or a local Gradle install.
-4. Install the latest debug build on the Pixel 9 Pro API 35 emulator and run the reset-enabled polished Meena demo flow end to end.
-5. Confirm the VisitScreen mock voice-note shell, sample transcript button, and asset-derived ReviewScreen citations all read cleanly.
+1. Install the latest debug build on the Pixel 9 Pro API 35 emulator.
+2. Verify microphone permission request, local 30-second recording, saved filename/duration, CHW review, TTS buttons, JSON export paths, and Offline Proof.
+3. Confirm the sample transcript still generates the protocol-grounded referral flow.
+4. Begin the LiteRT/Gemma integration spike behind `GemmaAgent`.
+5. Keep `MockGemmaAgent` available as the offline demo fallback.
 
 ## Change Log
 - 2026-04-27: Created `CONTEXT.md` with initial project state before Android scaffold.
@@ -100,3 +115,4 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - 2026-04-27: Fixed screenshot polish issues in the mock MVP only. Files touched: `app/src/main/java/com/smriti/clinicalscribe/data/AppDatabase.kt`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgent.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/ReviewScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt`, `CONTEXT.md`. Issues fixed: moved ReviewScreen "Edit Observation" below the header as a full-width button; made structured visit note output concise and sectioned; preserved "not a diagnosis" and "CHW confirmation required"; added editable ReviewScreen sections for Observation, Relevant history, Protocol-grounded support, and Protocol citation; added demo-mode Reset Demo Data action on SummaryScreen that clears saved mock visits/referral flags and restores original demo history. Test/build result: `.\gradlew.bat testDebugUnitTest` passed after the known sandbox cache retry; `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug APK and verify the reset-enabled demo flow on the Pixel 9 Pro API 35 emulator.
 - 2026-04-27: Added real local protocol grounding from an offline JSON asset corpus while keeping the mock MVP architecture. Files touched: `app/src/main/assets/protocols/maternal_health_demo_protocols.json`, `app/src/main/java/com/smriti/clinicalscribe/rag/ProtocolChunk.kt`, `app/src/main/java/com/smriti/clinicalscribe/rag/ProtocolRetriever.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgent.kt`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/AppDatabase.kt`, `app/src/test/java/com/smriti/clinicalscribe/rag/ProtocolRetrieverTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt`, `CONTEXT.md`. Protocol corpus added: 10 maternal-health demo chunks covering severe headache, blurred vision, high blood pressure, reduced fetal movement, vaginal bleeding, convulsions, severe abdominal pain, fever, swelling of face/hands, and same-day referral guidance. Tests added/updated: asset-backed retrieval for headache + blurred vision + high BP, unrelated-query no match, referral output including retrieved source/section, and no-protocol uncertain/no-citation output. Test/build result: first sandboxed `.\gradlew.bat testDebugUnitTest` failed on the known Gradle cache lock-file path; rerun with normal cache access passed. `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug build and verify the judge demo shows asset-derived protocol citations in the ReviewScreen.
 - 2026-04-27: Added a voice-note style UI shell without real ASR or audio recording. Files touched: `app/src/main/java/com/smriti/clinicalscribe/ui/VisitScreen.kt`, `CONTEXT.md`. Changes: added "Record Visit Note" section, mock Start/Stop voice note button, "Listening locally..." recording state, 30-second chunk label, "Simulated transcript for demo" text field label, "Use sample danger-sign transcript" fill button, and note that real Gemma 4 audio integration comes next. Test/build result: first sandboxed `.\gradlew.bat testDebugUnitTest` failed on the known Gradle cache lock-file path; rerun with normal cache access passed. `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug build and verify the mock voice workflow on the Pixel 9 Pro API 35 emulator.
+- 2026-04-27: Completed Field Tool Milestone while keeping mock reasoning. Files touched: `app/src/main/AndroidManifest.xml`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/audio/AudioRecorder.kt`, `app/src/main/java/com/smriti/clinicalscribe/audio/VoiceNoteMetadata.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/AppDatabase.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/TranscriptSource.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/VisitLog.kt`, `app/src/main/java/com/smriti/clinicalscribe/export/JsonExporter.kt`, `app/src/main/java/com/smriti/clinicalscribe/tts/AndroidVoiceOutput.kt`, `app/src/main/java/com/smriti/clinicalscribe/tts/VoiceOutput.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/VisitScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/ReviewScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/test/java/com/smriti/clinicalscribe/data/VisitLogTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/export/JsonExporterTest.kt`, `CONTEXT.md`. Features implemented: runtime microphone permission, local app-private 30-second voice-note recording, voice-note metadata persisted on confirmed visits, Android TTS readout for referral and summary, app-private visit/summary JSON export, and Offline Proof demo section. Test/build result: initial sandboxed Gradle run hit the known user-cache lock-file issue; `.\gradlew.bat testDebugUnitTest` passed with normal cache access; `.\gradlew.bat assembleDebug` passed. Known issues: `MediaRecorder()` no-arg constructor deprecation warning; TTS depends on device language data; real ASR remains pending and transcript source is marked `REAL_ASR_PENDING` when audio is attached. Next recommended step: emulator verification of recording/TTS/export, then start the LiteRT/Gemma integration spike behind `GemmaAgent`.

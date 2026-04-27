@@ -16,5 +16,8 @@ data class VisitLog(
     val structuredNote: String,
     val protocolCitation: String,
     val suggestedFollowUp: String,
-    val confirmed: Boolean
+    val confirmed: Boolean,
+    val audioFilePath: String? = null,
+    val audioDurationSeconds: Int? = null,
+    val transcriptSource: String = TranscriptSource.SIMULATED
 )

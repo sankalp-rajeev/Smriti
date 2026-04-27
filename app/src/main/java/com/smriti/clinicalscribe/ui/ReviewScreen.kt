@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 
@@ -31,7 +32,12 @@ import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 fun ReviewScreen(
     patient: Patient,
     result: VisitReasoningResult,
+    voiceNote: VoiceNoteMetadata?,
     isSaving: Boolean,
+    ttsStatusMessage: String?,
+    exportVisitPath: String?,
+    onReadReferralSuggestion: () -> Unit,
+    onExportVisitJson: (String, String) -> Unit,
     onConfirmSave: (String, String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -98,6 +104,33 @@ fun ReviewScreen(
                             Text("Danger signs: ${flag.dangerSigns}")
                             Text("Protocol citation: ${flag.protocolBasis}")
                             Text("Facility: ${flag.recommendedFacility}")
+                            OutlinedButton(
+                                onClick = onReadReferralSuggestion,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Read referral suggestion aloud")
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Locally Saved Voice Note", fontWeight = FontWeight.SemiBold)
+                        if (voiceNote == null) {
+                            Text("No real audio attached. Transcript source: SIMULATED")
+                        } else {
+                            Text("File: ${voiceNote.fileName}")
+                            Text("Duration: ${voiceNote.audioDurationSeconds}s")
+                            Text("Transcript source: REAL_ASR_PENDING")
                         }
                     }
                 }
@@ -162,6 +195,37 @@ fun ReviewScreen(
                         Text(result.protocolCitation)
                         result.protocolChunk?.let { Text(it.text) }
                     }
+                }
+            }
+
+            ttsStatusMessage?.let { message ->
+                item {
+                    Text(message, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = {
+                        onExportVisitJson(
+                            buildStructuredNote(
+                                observation = observationText,
+                                relevantHistory = historyText,
+                                protocolSupport = supportText
+                            ),
+                            followUpText
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Export Visit JSON")
+                }
+                exportVisitPath?.let { path ->
+                    Text(
+                        text = "Export saved locally: $path",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
                 }
             }
 

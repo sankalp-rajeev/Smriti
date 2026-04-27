@@ -24,6 +24,10 @@ import com.smriti.clinicalscribe.reasoning.SupervisorSummary
 fun SummaryScreen(
     summary: SupervisorSummary,
     isResettingDemoData: Boolean,
+    ttsStatusMessage: String?,
+    exportSummaryPath: String?,
+    onReadSummary: () -> Unit,
+    onExportSummaryJson: () -> Unit,
     onResetDemoData: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -71,6 +75,37 @@ fun SummaryScreen(
 
             item {
                 OutlinedButton(
+                    onClick = onReadSummary,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Read supervisor summary aloud")
+                }
+                OutlinedButton(
+                    onClick = onExportSummaryJson,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                ) {
+                    Text("Export Summary JSON")
+                }
+                ttsStatusMessage?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+                exportSummaryPath?.let { path ->
+                    Text(
+                        text = "Export saved locally: $path",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+            }
+
+            item {
+                OutlinedButton(
                     onClick = onResetDemoData,
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isResettingDemoData
@@ -82,6 +117,25 @@ fun SummaryScreen(
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 6.dp)
                 )
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Offline Proof", fontWeight = FontWeight.SemiBold)
+                        Text("Network required: No")
+                        Text("Protocol source: Local asset JSON")
+                        Text("Reasoning mode: MockGemmaAgent")
+                        Text("Audio storage: Local app-private file")
+                        Text("Last build/demo state: Mock MVP")
+                    }
+                }
             }
 
             item {
