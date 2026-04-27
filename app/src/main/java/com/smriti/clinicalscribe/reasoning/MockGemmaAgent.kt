@@ -26,6 +26,7 @@ class MockGemmaAgent : GemmaAgent {
         ).any { normalized.contains(it) }
         val hasClinicalDetail = observationText.trim().length >= 12
         val latestHistory = visitHistory.firstOrNull()?.structuredNote ?: "No prior visit history available."
+        val protocolCitation = protocol?.citation ?: "Uncertain"
 
         if (!hasClinicalDetail) {
             return VisitReasoningResult(
@@ -33,8 +34,8 @@ class MockGemmaAgent : GemmaAgent {
                 observationText = observationText,
                 structuredNote = "Observation is too brief to create a safe structured record.",
                 referralFlag = null,
-                protocolCitation = protocol?.citation ?: "Uncertain",
-                suggestedFollowUp = "Ask the CHW to repeat the observation with symptoms, vitals, and fetal movement if relevant.",
+                protocolCitation = protocolCitation,
+                suggestedFollowUp = "Ask the CHW to repeat the observation with symptoms, vitals, and fetal movement if relevant. Protocol citation: $protocolCitation.",
                 protocolChunk = protocol,
                 uncertain = true,
                 clarificationPrompt = "Please confirm symptoms, blood pressure if measured, fetal movement, and any bleeding or convulsions."
@@ -48,9 +49,9 @@ class MockGemmaAgent : GemmaAgent {
             append("\nRelevant history: $latestHistory")
             append("\nAssessment support: Documentation support only. ")
             if (hasDangerSign) {
-                append("Danger signs are present in the observation and require CHW review for referral.")
+                append("Danger signs are present in the observation and require CHW review for referral. Protocol citation: $protocolCitation.")
             } else {
-                append("No obvious danger sign keyword was detected in this mock pass.")
+                append("No obvious danger sign keyword was detected in this mock pass. Protocol citation: $protocolCitation.")
             }
         }
 
@@ -58,8 +59,8 @@ class MockGemmaAgent : GemmaAgent {
             ReferralFlag(
                 patientId = patient.id,
                 urgency = "IMMEDIATE",
-                reason = "Headache, visual symptoms, high BP, bleeding, convulsions, or reduced fetal movement may require urgent assessment in pregnancy.",
-                protocolBasis = protocol?.citation ?: "WHO ANC danger sign guidance",
+                reason = "Protocol-grounded referral suggestion only, not a diagnosis: headache, visual symptoms, high BP, bleeding, convulsions, or reduced fetal movement may require urgent assessment in pregnancy.",
+                protocolBasis = protocolCitation,
                 recommendedFacility = "Nearest PHC or obstetric referral facility",
                 dangerSigns = extractDangerSigns(normalized),
                 createdAtMillis = System.currentTimeMillis()
@@ -73,11 +74,11 @@ class MockGemmaAgent : GemmaAgent {
             observationText = observationText,
             structuredNote = note,
             referralFlag = referral,
-            protocolCitation = protocol?.citation ?: "Uncertain",
+            protocolCitation = protocolCitation,
             suggestedFollowUp = if (hasDangerSign) {
-                "Contact supervisor and support same-day referral confirmation."
+                "Contact supervisor and support same-day referral confirmation. Protocol citation: $protocolCitation."
             } else {
-                "Continue routine ANC follow-up and confirm next visit date."
+                "Continue routine ANC follow-up and confirm next visit date. Protocol citation: $protocolCitation."
             },
             protocolChunk = protocol,
             uncertain = false,
@@ -92,12 +93,17 @@ class MockGemmaAgent : GemmaAgent {
     ): SupervisorSummary {
         val patientNamesById = patients.associate { it.id to it.name }
         val urgentCases = referrals.map { flag ->
-            "${patientNamesById[flag.patientId] ?: flag.patientId}: ${flag.urgency} referral - ${flag.reason}"
+            "${patientNamesById[flag.patientId] ?: flag.patientId}: ${flag.urgency} protocol-grounded referral suggestion - ${flag.reason} Citation: ${flag.protocolBasis}."
         }
         val followUps = visits
             .filter { it.suggestedFollowUp.isNotBlank() }
             .map { visit ->
-                "${patientNamesById[visit.patientId] ?: visit.patientId}: ${visit.suggestedFollowUp}"
+                val citationText = if (visit.suggestedFollowUp.contains("citation", ignoreCase = true)) {
+                    ""
+                } else {
+                    " Citation: ${visit.protocolCitation}."
+                }
+                "${patientNamesById[visit.patientId] ?: visit.patientId}: ${visit.suggestedFollowUp}$citationText"
             }
 
         return SupervisorSummary(

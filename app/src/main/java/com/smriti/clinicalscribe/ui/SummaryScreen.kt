@@ -38,11 +38,12 @@ fun SummaryScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Supervisor Summary", style = MaterialTheme.typography.headlineSmall)
-                        Text("End-of-day local brief", style = MaterialTheme.typography.bodyMedium)
+                        Text("End-of-Day Supervisor Summary", style = MaterialTheme.typography.headlineSmall)
+                        Text("Offline demo mode", style = MaterialTheme.typography.labelLarge)
+                        Text("Local brief from confirmed visits", style = MaterialTheme.typography.bodyMedium)
                     }
                     OutlinedButton(onClick = onBack) {
-                        Text("Roster")
+                        Text("Back to Patient Roster")
                     }
                 }
             }

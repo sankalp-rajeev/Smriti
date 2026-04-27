@@ -51,11 +51,12 @@ fun ReviewScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Review Visit", style = MaterialTheme.typography.headlineSmall)
+                        Text("Review and Confirm Visit Note", style = MaterialTheme.typography.headlineSmall)
+                        Text("Offline demo mode", style = MaterialTheme.typography.labelLarge)
                         Text(patient.displayLabel(), style = MaterialTheme.typography.bodyMedium)
                     }
                     OutlinedButton(onClick = onBack, enabled = !isSaving) {
-                        Text("Edit")
+                        Text("Edit Observation")
                     }
                 }
             }
@@ -84,10 +85,12 @@ fun ReviewScreen(
                             modifier = Modifier.padding(14.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text("Referral Flag", fontWeight = FontWeight.SemiBold)
+                            Text("Protocol-Grounded Referral Suggestion", fontWeight = FontWeight.SemiBold)
+                            Text("This is not a diagnosis. CHW confirmation and clinical referral judgment are required.")
                             Text("Urgency: ${flag.urgency}")
                             Text(flag.reason)
                             Text("Danger signs: ${flag.dangerSigns}")
+                            Text("Protocol citation: ${flag.protocolBasis}")
                             Text("Facility: ${flag.recommendedFacility}")
                         }
                     }
@@ -111,7 +114,7 @@ fun ReviewScreen(
                     value = followUpText,
                     onValueChange = { followUpText = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Suggested follow-up") },
+                    label = { Text("Suggested follow-up with citation") },
                     minLines = 2
                 )
             }
@@ -138,7 +141,7 @@ fun ReviewScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = noteText.isNotBlank() && !isSaving
                 ) {
-                    Text(if (isSaving) "Saving..." else "Confirm and Save")
+                    Text(if (isSaving) "Saving Confirmed Visit..." else "Confirm CHW Review and Save")
                 }
             }
         }

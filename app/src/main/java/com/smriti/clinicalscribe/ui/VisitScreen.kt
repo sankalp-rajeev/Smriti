@@ -60,19 +60,24 @@ fun VisitScreen(
                 ) {
                     Column {
                         Text(patient.displayLabel(), style = MaterialTheme.typography.headlineSmall)
+                        Text("Offline demo mode", style = MaterialTheme.typography.labelLarge)
                         Text(
                             text = "${patient.pregnancyWeeks ?: "-"} weeks - ${patient.village}",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                     OutlinedButton(onClick = onBack) {
-                        Text("Back")
+                        Text("Patient Roster")
                     }
                 }
             }
 
             item {
                 Text("Prior Visit History", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "Review local history before entering the simulated voice observation.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
 
             if (history.isEmpty()) {
@@ -92,7 +97,7 @@ fun VisitScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 160.dp),
-                    label = { Text("Simulated voice observation") },
+                    label = { Text("Simulated voice observation text") },
                     placeholder = { Text("Type the CHW's spoken observation here") },
                     minLines = 5
                 )
@@ -110,7 +115,7 @@ fun VisitScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = observationText.isNotBlank() && !isGenerating
                 ) {
-                    Text(if (isGenerating) "Generating..." else "Generate Visit Note")
+                    Text(if (isGenerating) "Generating Local Visit Note..." else "Generate Local Visit Note")
                 }
             }
         }

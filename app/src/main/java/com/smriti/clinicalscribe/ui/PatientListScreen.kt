@@ -47,10 +47,11 @@ fun PatientListScreen(
             ) {
                 Column {
                     Text("Smriti", style = MaterialTheme.typography.headlineMedium)
-                    Text("Offline visit copilot", style = MaterialTheme.typography.bodyMedium)
+                    Text("Offline demo mode", style = MaterialTheme.typography.labelLarge)
+                    Text("Local maternal-health visit copilot", style = MaterialTheme.typography.bodyMedium)
                 }
                 OutlinedButton(onClick = onShowSummary, enabled = !isLoading) {
-                    Text("Summary")
+                    Text("End-of-Day Summary")
                 }
             }
 
@@ -100,7 +101,7 @@ private fun PatientRow(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Button(onClick = { onPatientSelected(patient) }) {
-                Text("Start Visit")
+                Text("Select Patient and View History")
             }
         }
     }

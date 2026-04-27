@@ -1,0 +1,72 @@
+# Gradle
+.gradle/
+build/
+*/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Gradle wrapper distribution
+gradle/wrapper/gradle-wrapper.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local machine config
+local.properties
+
+# Android generated files
+*.apk
+*.ap_
+*.aab
+*.dex
+
+# Signing / keystores
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Kotlin / Java
+*.class
+
+# Secrets / env
+.env
+.env.*
+secrets.properties
+
+# Benchmark/generated outputs that can be recreated
+benchmarks/*.tmp
+benchmarks/*.log
+
+# Model files - do not commit large local models
+*.tflite
+*.task
+*.gguf
+*.bin
+*.safetensors
+*.onnx
+models/
+app/src/main/assets/models/
+
+# Audio/video demo captures
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wav
+*.mp3
+demo/recordings/
