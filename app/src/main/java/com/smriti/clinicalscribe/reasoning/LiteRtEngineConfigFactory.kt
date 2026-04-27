@@ -1,23 +1,27 @@
 package com.smriti.clinicalscribe.reasoning
 
-import com.google.ai.edge.litertlm.Backend
-import com.google.ai.edge.litertlm.EngineConfig
-
 sealed class LiteRtEngineConfigPreparation {
     data class NotPrepared(
         val reason: String,
-        val modelStatus: ModelStatus
+        val modelStatus: ModelStatus,
+        val configConstructionAllowed: Boolean = false
     ) : LiteRtEngineConfigPreparation()
 
     data class Prepared(
         val modelPath: String,
-        val engineConfig: EngineConfig,
-        val backendLabel: String,
+        val backendLabel: String = "CPU",
+        val configConstructionAllowed: Boolean = false,
+        val reason: String = KAPT_BLOCKER_REASON,
         val engineCreated: Boolean = false,
         val engineInitializationAttempted: Boolean = false,
         val conversationCreated: Boolean = false,
         val inferenceAttempted: Boolean = false
     ) : LiteRtEngineConfigPreparation()
+
+    companion object {
+        const val KAPT_BLOCKER_REASON =
+            "LiteRT-LM EngineConfig construction deferred because KAPT cannot read Java 21 LiteRT classes."
+    }
 }
 
 class LiteRtEngineConfigFactory {
@@ -29,14 +33,9 @@ class LiteRtEngineConfigFactory {
             )
         }
 
-        val backend = Backend.CPU()
         return LiteRtEngineConfigPreparation.Prepared(
             modelPath = modelStatus.expectedPath,
-            engineConfig = EngineConfig(
-                modelPath = modelStatus.expectedPath,
-                backend = backend
-            ),
-            backendLabel = backend.name
+            backendLabel = "CPU"
         )
     }
 }

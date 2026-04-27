@@ -28,7 +28,7 @@ class ModelAvailabilityTest {
         assertEquals(ModelStatusKind.NOT_FOUND, status.kind)
         assertTrue(status.expectedPath.endsWith("models${File.separator}gemma-4-E2B-it-int4.litertlm"))
         assertNull(status.fileSizeBytes)
-        assertEquals("Not found (inference disabled)", status.proofLabel)
+        assertEquals("Not found", status.proofLabel)
     }
 
     @Test
@@ -43,6 +43,6 @@ class ModelAvailabilityTest {
         assertEquals(ModelStatusKind.FOUND_NOT_LOADED, status.kind)
         assertEquals(modelFile.absolutePath, status.expectedPath)
         assertEquals(2048L, status.fileSizeBytes)
-        assertTrue(status.proofLabel.contains("not loaded"))
+        assertEquals("Found, not loaded", status.proofLabel)
     }
 }

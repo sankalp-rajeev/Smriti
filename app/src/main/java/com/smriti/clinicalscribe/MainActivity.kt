@@ -36,11 +36,14 @@ import com.smriti.clinicalscribe.reasoning.AgentConfig
 import com.smriti.clinicalscribe.reasoning.AgentMode
 import com.smriti.clinicalscribe.reasoning.GemmaAgent
 import com.smriti.clinicalscribe.reasoning.GemmaAgentFactory
+import com.smriti.clinicalscribe.reasoning.LiteRtEngineConfigFactory
 import com.smriti.clinicalscribe.reasoning.ModelAvailability
+import com.smriti.clinicalscribe.reasoning.RealGemmaReadinessEvaluator
 import com.smriti.clinicalscribe.reasoning.SupervisorSummary
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import com.smriti.clinicalscribe.tts.AndroidVoiceOutput
 import com.smriti.clinicalscribe.tts.VoiceOutputResult
+import com.smriti.clinicalscribe.ui.OfflineProofStatus
 import com.smriti.clinicalscribe.ui.PatientListScreen
 import com.smriti.clinicalscribe.ui.ReviewScreen
 import com.smriti.clinicalscribe.ui.SummaryScreen
@@ -82,6 +85,22 @@ private fun SmritiApp(
     val voiceOutput = remember { AndroidVoiceOutput(context) }
     val modelAvailability = remember { ModelAvailability.fromFilesDir(context.filesDir) }
     val modelStatus = remember { modelAvailability.check() }
+    val engineConfigFactory = remember { LiteRtEngineConfigFactory() }
+    val readinessEvaluator = remember { RealGemmaReadinessEvaluator() }
+    val realGemmaReadiness = remember(agentMode, modelStatus) {
+        readinessEvaluator.evaluate(
+            agentMode = agentMode,
+            modelStatus = modelStatus,
+            engineConfigPreparation = engineConfigFactory.prepare(modelStatus)
+        )
+    }
+    val offlineProofStatus = remember(agentMode, modelStatus, realGemmaReadiness) {
+        OfflineProofStatus(
+            reasoningModeLabel = agentMode.displayName,
+            realGemmaModelStatusLabel = modelStatus.proofLabel,
+            realGemmaReadinessLabel = realGemmaReadiness.judgeLabel
+        )
+    }
     var audioPermissionGranted by remember {
         mutableStateOf(
             context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
@@ -165,9 +184,7 @@ private fun SmritiApp(
                         patients = patients,
                         visits = visits,
                         isLoading = isLoading,
-                        reasoningModeLabel = agentMode.displayName,
-                        agentModeLabel = agentMode.name,
-                        realGemmaModelStatusLabel = modelStatus.proofLabel,
+                        offlineProofStatus = offlineProofStatus,
                         onPatientSelected = { patient ->
                             errorMessage = null
                             currentScreen = SmritiScreen.Visit(patient)
@@ -285,9 +302,7 @@ private fun SmritiApp(
                     is SmritiScreen.Summary -> SummaryScreen(
                         summary = screen.summary,
                         isResettingDemoData = isResettingDemoData,
-                        reasoningModeLabel = agentMode.displayName,
-                        agentModeLabel = agentMode.name,
-                        realGemmaModelStatusLabel = modelStatus.proofLabel,
+                        offlineProofStatus = offlineProofStatus,
                         ttsStatusMessage = ttsStatusMessage,
                         exportSummaryPath = exportSummaryPath,
                         onReadSummary = {
@@ -311,7 +326,11 @@ private fun SmritiApp(
                                 exportSummaryPath = null
                                 runCatching {
                                     resetDemoData()
-                                    agent.generateSupervisorSummary(patients, visits, referrals)
+                                    agent.generateSupervisorSummary(
+                                        database.patientDao().getAll(),
+                                        database.visitLogDao().getAll(),
+                                        database.referralFlagDao().getAll()
+                                    )
                                 }.onSuccess { summary ->
                                     currentScreen = SmritiScreen.Summary(summary)
                                 }.onFailure { error ->

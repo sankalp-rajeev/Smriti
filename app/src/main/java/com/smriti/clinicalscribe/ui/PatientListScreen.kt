@@ -30,9 +30,7 @@ fun PatientListScreen(
     patients: List<Patient>,
     visits: List<VisitLog>,
     isLoading: Boolean,
-    reasoningModeLabel: String,
-    agentModeLabel: String,
-    realGemmaModelStatusLabel: String,
+    offlineProofStatus: OfflineProofStatus,
     onPatientSelected: (Patient) -> Unit,
     onShowSummary: () -> Unit
 ) {
@@ -74,11 +72,7 @@ fun PatientListScreen(
                         )
                     }
                     item {
-                        OfflineProofCard(
-                            reasoningModeLabel = reasoningModeLabel,
-                            agentModeLabel = agentModeLabel,
-                            realGemmaModelStatusLabel = realGemmaModelStatusLabel
-                        )
+                        OfflineProofCard(status = offlineProofStatus)
                     }
                 }
             }

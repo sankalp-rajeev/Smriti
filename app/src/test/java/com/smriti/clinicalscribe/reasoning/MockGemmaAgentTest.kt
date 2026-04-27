@@ -4,6 +4,7 @@ import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import java.io.File
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -104,6 +105,31 @@ class MockGemmaAgentTest {
         assertTrue(result.protocolCitation.contains("No matching protocol citation"))
         assertTrue(result.structuredNote.contains("No matching protocol citation"))
         assertTrue(result.clarificationPrompt!!.contains("No matching local protocol"))
+    }
+
+    @Test
+    fun supervisorSummaryDeduplicatesRepeatedUrgentCasesForDisplay() = runBlocking {
+        val first = agent.generateVisitNote(
+            patient = patient,
+            visitHistory = history,
+            observationText = "Meena has headache and blurred vision since yesterday. BP 150 over 95.",
+            protocolChunks = dangerProtocols
+        ).referralFlag!!
+        val latest = first.copy(
+            dangerSigns = "headache, blurred vision, high blood pressure, reduced fetal movement",
+            createdAtMillis = first.createdAtMillis + 1_000L
+        )
+
+        val summary = agent.generateSupervisorSummary(
+            patients = DemoSeedData.patients,
+            visits = history,
+            referrals = listOf(first, latest)
+        )
+
+        assertEquals(1, summary.urgentCases.size)
+        assertTrue(summary.urgentCases.single().contains("Meena - SAME_DAY"))
+        assertTrue(summary.urgentCases.single().contains("reduced fetal movement"))
+        assertFalse(summary.urgentCases.single().contains("Protocol-grounded referral suggestion"))
     }
 
     private fun assetCorpusJson(): String {

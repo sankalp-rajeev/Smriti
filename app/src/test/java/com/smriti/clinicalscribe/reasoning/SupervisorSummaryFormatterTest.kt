@@ -1,0 +1,103 @@
+package com.smriti.clinicalscribe.reasoning
+
+import com.smriti.clinicalscribe.data.DemoSeedData
+import com.smriti.clinicalscribe.data.ReferralFlag
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class SupervisorSummaryFormatterTest {
+    private val patient = DemoSeedData.patients.first { it.id == "patient-meena" }
+
+    @Test
+    fun urgentCasesUseLatestReferralPerPatient() {
+        val older = referral(
+            dangerSigns = "headache, blurred vision",
+            createdAtMillis = 100L
+        )
+        val latest = referral(
+            dangerSigns = "headache, blurred vision, high blood pressure, reduced fetal movement",
+            createdAtMillis = 200L
+        )
+
+        val urgentCases = SupervisorSummaryFormatter.urgentCases(
+            patients = DemoSeedData.patients,
+            referrals = listOf(older, latest)
+        )
+
+        assertEquals(1, urgentCases.size)
+        assertEquals(
+            "Meena - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            urgentCases.single()
+        )
+    }
+
+    @Test
+    fun urgentCaseFormatStaysConciseAndCited() {
+        val urgentCase = SupervisorSummaryFormatter.urgentCases(
+            patients = DemoSeedData.patients,
+            referrals = listOf(referral())
+        ).single()
+
+        assertTrue(urgentCase.contains("Meena - SAME_DAY"))
+        assertTrue(urgentCase.contains("Citation: Smriti Demo Maternal Health Protocol"))
+        assertFalse(urgentCase.contains("Protocol-grounded referral suggestion"))
+        assertFalse(urgentCase.contains("not a diagnosis"))
+    }
+
+    @Test
+    fun urgentCaseExtractsConciseSignsFromVerboseSavedText() {
+        val urgentCase = SupervisorSummaryFormatter.urgentCases(
+            patients = DemoSeedData.patients,
+            referrals = listOf(
+                referral(
+                    dangerSigns = "Protocol-grounded referral suggestion only, not a diagnosis: Severe headache, blurred vision, high blood pressure, bleeding, convulsions, and reduced fetal movement require urgent assessment and referral.",
+                    createdAtMillis = 300L
+                )
+            )
+        ).single()
+
+        assertEquals(
+            "Meena - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement, convulsions, bleeding. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            urgentCase
+        )
+        assertFalse(urgentCase.contains("Protocol-grounded referral suggestion"))
+        assertFalse(urgentCase.contains("urgent assessment and referral"))
+    }
+
+    @Test
+    fun urgentCaseUsesFirstProtocolCitationOnly() {
+        val urgentCase = SupervisorSummaryFormatter.urgentCases(
+            patients = DemoSeedData.patients,
+            referrals = listOf(
+                referral(
+                    dangerSigns = "headache",
+                    createdAtMillis = 400L,
+                    protocolBasis = "Smriti Demo Maternal Health Protocol - Danger Signs; WHO ANC Contact schedule"
+                )
+            )
+        ).single()
+
+        assertEquals(
+            "Meena - SAME_DAY - headache. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            urgentCase
+        )
+    }
+
+    private fun referral(
+        dangerSigns: String = "headache, blurred vision, high blood pressure",
+        createdAtMillis: Long = 100L,
+        protocolBasis: String = "Smriti Demo Maternal Health Protocol - Danger Signs"
+    ): ReferralFlag {
+        return ReferralFlag(
+            patientId = patient.id,
+            urgency = "SAME_DAY",
+            reason = "Protocol-grounded referral suggestion only, not a diagnosis: long protocol explanation.",
+            protocolBasis = protocolBasis,
+            recommendedFacility = "Nearest PHC",
+            dangerSigns = dangerSigns,
+            createdAtMillis = createdAtMillis
+        )
+    }
+}

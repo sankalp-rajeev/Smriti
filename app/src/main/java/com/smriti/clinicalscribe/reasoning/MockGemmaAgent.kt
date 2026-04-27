@@ -108,9 +108,7 @@ class MockGemmaAgent : GemmaAgent {
         referrals: List<ReferralFlag>
     ): SupervisorSummary {
         val patientNamesById = patients.associate { it.id to it.name }
-        val urgentCases = referrals.map { flag ->
-            "${patientNamesById[flag.patientId] ?: flag.patientId}: ${flag.urgency} protocol-grounded referral suggestion - ${flag.reason} Citation: ${flag.protocolBasis}."
-        }
+        val urgentCases = SupervisorSummaryFormatter.urgentCases(patients, referrals)
         val followUps = visits
             .filter { it.suggestedFollowUp.isNotBlank() }
             .map { visit ->

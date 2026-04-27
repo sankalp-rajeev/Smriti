@@ -24,9 +24,7 @@ import com.smriti.clinicalscribe.reasoning.SupervisorSummary
 fun SummaryScreen(
     summary: SupervisorSummary,
     isResettingDemoData: Boolean,
-    reasoningModeLabel: String,
-    agentModeLabel: String,
-    realGemmaModelStatusLabel: String,
+    offlineProofStatus: OfflineProofStatus,
     ttsStatusMessage: String?,
     exportSummaryPath: String?,
     onReadSummary: () -> Unit,
@@ -123,11 +121,7 @@ fun SummaryScreen(
             }
 
             item {
-                OfflineProofCard(
-                    reasoningModeLabel = reasoningModeLabel,
-                    agentModeLabel = agentModeLabel,
-                    realGemmaModelStatusLabel = realGemmaModelStatusLabel
-                )
+                OfflineProofCard(status = offlineProofStatus)
             }
 
             item {

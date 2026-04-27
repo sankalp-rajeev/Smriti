@@ -13,11 +13,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+data class OfflineProofStatus(
+    val reasoningModeLabel: String,
+    val realGemmaModelStatusLabel: String,
+    val realGemmaReadinessLabel: String
+) {
+    val lines: List<Pair<String, String>>
+        get() = listOf(
+            "Network required" to "No",
+            "Protocol source" to "Local asset JSON",
+            "Active reasoning mode" to reasoningModeLabel,
+            "LiteRT-LM dependency" to "Present",
+            "Real Gemma model" to realGemmaModelStatusLabel,
+            "EngineConfig" to "Deferred / prepared plan only, no Engine",
+            "RealGemma readiness" to realGemmaReadinessLabel,
+            "Inference" to "Disabled"
+        )
+}
+
 @Composable
 fun OfflineProofCard(
-    reasoningModeLabel: String,
-    agentModeLabel: String,
-    realGemmaModelStatusLabel: String,
+    status: OfflineProofStatus,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -29,19 +45,9 @@ fun OfflineProofCard(
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text("Offline Proof", fontWeight = FontWeight.SemiBold)
-            Text("Network required: No")
-            Text("Protocol source: Local asset JSON")
-            Text("Reasoning engine: $reasoningModeLabel")
-            Text("Active reasoning mode: $agentModeLabel")
-            Text("Fallback active: No")
-            Text("Audio storage: Local app-private .m4a file")
-            Text("Transcript source: Simulated / REAL_ASR_PENDING when audio is attached")
-            Text("Cloud APIs: None")
-            Text("LiteRT-LM dependency: Present")
-            Text("Real Gemma model: $realGemmaModelStatusLabel")
-            Text("EngineConfig: Prepared only if model found")
-            Text("RealGemma text client: Scaffolded, disabled")
-            Text("Inference: Disabled")
+            status.lines.forEach { (label, value) ->
+                Text("$label: $value")
+            }
         }
     }
 }

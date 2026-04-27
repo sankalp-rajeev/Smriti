@@ -23,7 +23,7 @@ class LiteRtEngineConfigFactoryTest {
     }
 
     @Test
-    fun engineConfigIsPreparedWhenFakeModelFileExists() {
+    fun configPlanIsPreparedWhenFakeModelFileExists() {
         val filesDir = Files.createTempDirectory("smriti-config-found").toFile()
         val modelFile = LiteRtModelPaths.expectedModelFile(filesDir)
         modelFile.parentFile!!.mkdirs()
@@ -35,11 +35,28 @@ class LiteRtEngineConfigFactoryTest {
         assertTrue(result is LiteRtEngineConfigPreparation.Prepared)
         val prepared = result as LiteRtEngineConfigPreparation.Prepared
         assertEquals(modelFile.absolutePath, prepared.modelPath)
-        assertEquals(modelFile.absolutePath, prepared.engineConfig.modelPath)
-        assertEquals("cpu", prepared.backendLabel.lowercase())
+        assertEquals("CPU", prepared.backendLabel)
+        assertFalse(prepared.configConstructionAllowed)
+        assertTrue(prepared.reason.contains("KAPT cannot read Java 21 LiteRT classes"))
         assertFalse(prepared.engineCreated)
         assertFalse(prepared.engineInitializationAttempted)
         assertFalse(prepared.conversationCreated)
         assertFalse(prepared.inferenceAttempted)
+    }
+
+    @Test
+    fun directEngineConfigConstructionIsNotAllowedInAppModule() {
+        val filesDir = Files.createTempDirectory("smriti-config-deferred").toFile()
+        val modelFile = LiteRtModelPaths.expectedModelFile(filesDir)
+        modelFile.parentFile!!.mkdirs()
+        modelFile.writeText("fake model placeholder for deferred config test only")
+        val modelStatus = ModelAvailability.fromFilesDir(filesDir).check()
+
+        val result = factory.prepare(modelStatus)
+
+        assertTrue(result is LiteRtEngineConfigPreparation.Prepared)
+        val prepared = result as LiteRtEngineConfigPreparation.Prepared
+        assertFalse(prepared.configConstructionAllowed)
+        assertTrue(prepared.reason.contains("EngineConfig construction deferred"))
     }
 }

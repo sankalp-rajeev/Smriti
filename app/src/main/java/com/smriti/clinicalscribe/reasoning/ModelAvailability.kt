@@ -14,15 +14,9 @@ data class ModelStatus(
 ) {
     val proofLabel: String
         get() = when (kind) {
-            ModelStatusKind.NOT_FOUND -> "Not found (inference disabled)"
-            ModelStatusKind.FOUND_NOT_LOADED -> "Found ${formatFileSize(fileSizeBytes ?: 0L)} (not loaded)"
+            ModelStatusKind.NOT_FOUND -> "Not found"
+            ModelStatusKind.FOUND_NOT_LOADED -> "Found, not loaded"
         }
-
-    private fun formatFileSize(bytes: Long): String {
-        if (bytes < 1024L) return "$bytes B"
-        val mib = bytes / (1024.0 * 1024.0)
-        return "%.1f MB".format(mib)
-    }
 }
 
 class ModelAvailability private constructor(
