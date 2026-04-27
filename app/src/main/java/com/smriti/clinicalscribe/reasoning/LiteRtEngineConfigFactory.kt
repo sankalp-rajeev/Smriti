@@ -1,5 +1,8 @@
 package com.smriti.clinicalscribe.reasoning
 
+import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.EngineConfig
+
 sealed class LiteRtEngineConfigPreparation {
     data class NotPrepared(
         val reason: String,
@@ -10,8 +13,9 @@ sealed class LiteRtEngineConfigPreparation {
     data class Prepared(
         val modelPath: String,
         val backendLabel: String = "CPU",
-        val configConstructionAllowed: Boolean = false,
-        val reason: String = TYPE_CHECK_PASSED_REASON,
+        val engineConfig: EngineConfig,
+        val configConstructionAllowed: Boolean = true,
+        val reason: String = ENGINE_CONFIG_READY_REASON,
         val engineCreated: Boolean = false,
         val engineInitializationAttempted: Boolean = false,
         val conversationCreated: Boolean = false,
@@ -19,8 +23,8 @@ sealed class LiteRtEngineConfigPreparation {
     ) : LiteRtEngineConfigPreparation()
 
     companion object {
-        const val TYPE_CHECK_PASSED_REASON =
-            "LiteRT-LM EngineConfig type check passed after KSP migration; Engine disabled."
+        const val ENGINE_CONFIG_READY_REASON =
+            "LiteRT-LM EngineConfig constructed; Engine initialization is manual-only."
     }
 }
 
@@ -35,7 +39,11 @@ class LiteRtEngineConfigFactory {
 
         return LiteRtEngineConfigPreparation.Prepared(
             modelPath = modelStatus.expectedPath,
-            backendLabel = "CPU"
+            backendLabel = "CPU",
+            engineConfig = EngineConfig(
+                modelPath = modelStatus.expectedPath,
+                backend = Backend.CPU()
+            )
         )
     }
 }

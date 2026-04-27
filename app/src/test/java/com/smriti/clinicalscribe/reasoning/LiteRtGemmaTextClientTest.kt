@@ -16,8 +16,8 @@ class LiteRtGemmaTextClientTest {
         assertTrue(result is TextGenerationResult.Unavailable)
         val unavailable = result as TextGenerationResult.Unavailable
         assertTrue(unavailable.status.contains("LiteRT-LM client scaffold present"))
-        assertTrue(unavailable.status.contains("direct API types compile after KSP migration"))
-        assertTrue(unavailable.status.contains("Engine remains disabled"))
+        assertTrue(unavailable.status.contains("Engine initialization is manual-only"))
+        assertTrue(unavailable.status.contains("inference remains disabled"))
         assertTrue(unavailable.status.contains("No diagnosis generated"))
         assertTrue(unavailable.status.contains("CHW confirmation required"))
         assertTrue(unavailable.status.contains("Protocol citation required before recommendation"))
@@ -50,8 +50,9 @@ class LiteRtGemmaTextClientTest {
 
         assertTrue(result is TextGenerationResult.Unavailable)
         val unavailable = result as TextGenerationResult.Unavailable
-        assertTrue(unavailable.status.contains("EngineConfig type check passed"))
-        assertTrue(unavailable.status.contains("Engine disabled"))
+        assertTrue(unavailable.status.contains("EngineConfig ready"))
+        assertTrue(unavailable.status.contains("EngineConfig constructed"))
+        assertTrue(unavailable.status.contains("manual-only"))
         assertFalse(client.modelLoadAttempted)
         assertFalse(client.engineInitializationAttempted)
         assertFalse(client.conversationCreated)

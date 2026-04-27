@@ -25,7 +25,7 @@ data class OfflineProofStatus(
             "Active reasoning mode" to reasoningModeLabel,
             "LiteRT-LM dependency" to "Present",
             "Real Gemma model" to realGemmaModelStatusLabel,
-            "EngineConfig" to "Type check passed, Engine disabled",
+            "EngineConfig" to "Ready when model found; Engine manual-only",
             "RealGemma readiness" to realGemmaReadinessLabel,
             "Inference" to "Disabled"
         )

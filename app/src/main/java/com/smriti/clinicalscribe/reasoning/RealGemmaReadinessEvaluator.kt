@@ -61,7 +61,7 @@ class RealGemmaReadinessEvaluator {
             is LiteRtEngineConfigPreparation.Prepared -> summary(
                 status = RealGemmaReadinessStatus.MODEL_FOUND_CONFIG_READY_ENGINE_DISABLED,
                 judgeLabel = "Model found, engine disabled",
-                developerReason = "Model file is present and a CPU config plan exists. Direct LiteRT-LM API types compile after KSP migration, but engine startup and inference remain disabled.",
+                developerReason = "Model file is present and a CPU EngineConfig exists. Engine initialization is manual-only, and inference remains disabled.",
                 engineConfigPreparation = engineConfigPreparation
             )
             is LiteRtEngineConfigPreparation.NotPrepared -> summary(

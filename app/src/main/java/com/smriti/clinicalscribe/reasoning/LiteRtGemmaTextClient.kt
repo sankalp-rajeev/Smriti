@@ -14,13 +14,13 @@ class LiteRtGemmaTextClient(
         val configStatus = modelStatus?.let { status ->
             when (val preparation = engineConfigFactory.prepare(status)) {
                 is LiteRtEngineConfigPreparation.Prepared ->
-                    " EngineConfig deferred for ${preparation.backendLabel}; ${preparation.reason}"
+                    " EngineConfig ready for ${preparation.backendLabel}; ${preparation.reason}"
                 is LiteRtEngineConfigPreparation.NotPrepared -> " ${preparation.reason}"
             }
         }.orEmpty()
         return TextGenerationResult.Unavailable(
             status = buildString {
-                append("LiteRT-LM client scaffold present; direct API types compile after KSP migration, but Engine remains disabled. ")
+                append("LiteRT-LM client scaffold present; Engine initialization is manual-only and inference remains disabled. ")
                 append("No diagnosis generated. CHW confirmation required. ")
                 append("Protocol citation required before recommendation.")
                 append(configStatus)

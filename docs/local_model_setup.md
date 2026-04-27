@@ -27,13 +27,23 @@ filesDir/models/gemma-4-E2B-it-int4.litertlm
 - The app checks whether the expected app-private model file exists.
 - If missing, Offline Proof reports the Real Gemma model as not found and inference disabled.
 - If present, the app reports the model as found but not loaded.
-- The LiteRT layer prepares a plain EngineConfig plan only when the model is found.
+- The LiteRT layer constructs `EngineConfig` with `Backend.CPU()` only when the model is found.
 - Passive direct LiteRT API type references compile after the Room KSP migration.
-- Engine initialization is intentionally disabled.
-- No `Engine` is created.
+- Engine initialization is manual-only and requires an explicit test flag.
+- Normal app startup and UI screens do not create `Engine`.
 - No conversation is created.
 - No inference is run.
 - `MockGemmaAgent` remains the safe default.
+
+## Manual Engine Check
+
+`LiteRtEngineInitializationChecker` is a developer-only readiness helper. It can instantiate `Engine`, call `initialize()`, and immediately `close()` the engine only when:
+
+- the model file was sideloaded outside git,
+- `EngineConfig` was prepared,
+- and `allowManualEngineInitialization` is explicitly `true`.
+
+It does not create a Conversation and does not call `sendMessage`.
 
 ## Development Note
 

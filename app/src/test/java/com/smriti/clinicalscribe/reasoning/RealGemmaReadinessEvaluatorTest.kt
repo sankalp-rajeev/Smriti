@@ -133,8 +133,8 @@ class RealGemmaReadinessEvaluatorTest {
         assertTrue(result is TextGenerationResult.Unavailable)
         val unavailable = result as TextGenerationResult.Unavailable
         assertTrue(unavailable.status.contains("LiteRT-LM client scaffold present"))
-        assertTrue(unavailable.status.contains("direct API types compile after KSP migration"))
-        assertTrue(unavailable.status.contains("Engine remains disabled"))
+        assertTrue(unavailable.status.contains("Engine initialization is manual-only"))
+        assertTrue(unavailable.status.contains("inference remains disabled"))
     }
 
     private fun assertSafeFlags(summary: RealGemmaReadinessSummary) {

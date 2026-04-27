@@ -1,5 +1,6 @@
 package com.smriti.clinicalscribe.reasoning
 
+import com.google.ai.edge.litertlm.Backend
 import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -35,10 +36,12 @@ class LiteRtEngineConfigFactoryTest {
         assertTrue(result is LiteRtEngineConfigPreparation.Prepared)
         val prepared = result as LiteRtEngineConfigPreparation.Prepared
         assertEquals(modelFile.absolutePath, prepared.modelPath)
+        assertEquals(modelFile.absolutePath, prepared.engineConfig.modelPath)
+        assertTrue(prepared.engineConfig.backend is Backend.CPU)
         assertEquals("CPU", prepared.backendLabel)
-        assertFalse(prepared.configConstructionAllowed)
-        assertTrue(prepared.reason.contains("EngineConfig type check passed"))
-        assertTrue(prepared.reason.contains("Engine disabled"))
+        assertTrue(prepared.configConstructionAllowed)
+        assertTrue(prepared.reason.contains("EngineConfig constructed"))
+        assertTrue(prepared.reason.contains("manual-only"))
         assertFalse(prepared.engineCreated)
         assertFalse(prepared.engineInitializationAttempted)
         assertFalse(prepared.conversationCreated)
@@ -57,8 +60,10 @@ class LiteRtEngineConfigFactoryTest {
 
         assertTrue(result is LiteRtEngineConfigPreparation.Prepared)
         val prepared = result as LiteRtEngineConfigPreparation.Prepared
-        assertFalse(prepared.configConstructionAllowed)
-        assertTrue(prepared.reason.contains("EngineConfig type check passed"))
-        assertTrue(prepared.reason.contains("Engine disabled"))
+        assertTrue(prepared.configConstructionAllowed)
+        assertTrue(prepared.reason.contains("EngineConfig constructed"))
+        assertTrue(prepared.reason.contains("manual-only"))
+        assertFalse(prepared.engineCreated)
+        assertFalse(prepared.engineInitializationAttempted)
     }
 }

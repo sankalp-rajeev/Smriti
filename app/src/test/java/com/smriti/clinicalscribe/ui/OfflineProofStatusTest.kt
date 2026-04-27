@@ -19,7 +19,7 @@ class OfflineProofStatusTest {
                 "Active reasoning mode" to "MockGemmaAgent",
                 "LiteRT-LM dependency" to "Present",
                 "Real Gemma model" to "Not found",
-                "EngineConfig" to "Type check passed, Engine disabled",
+                "EngineConfig" to "Ready when model found; Engine manual-only",
                 "RealGemma readiness" to "Mock active",
                 "Inference" to "Disabled"
             ),

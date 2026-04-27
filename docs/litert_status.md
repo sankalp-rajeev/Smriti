@@ -15,24 +15,26 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
 - If a model is present, Offline Proof says `Found, not loaded`.
 - Direct LiteRT-LM API types now compile through a passive type probe:
   `Engine`, `EngineConfig`, `Backend`, `Content.Text`, and `Conversation`.
+- `LiteRtEngineConfigFactory` constructs a real `EngineConfig` with `Backend.CPU()` only when the model file is found.
+- `LiteRtEngineInitializationChecker` can initialize and immediately close `Engine` only when an explicit manual-test flag is true.
 - No model file is committed to the repository.
 
-## Deferred Engine Work
+## Manual-Only Engine Work
 
-Smriti does not construct LiteRT runtime objects in app source today:
+Smriti still does not run LiteRT inference in normal app behavior:
 
 - No `.litertlm` model loading.
-- No `Engine` instantiation.
-- No `Engine.initialize()`.
+- No `Engine` instantiation during app startup or normal UI flow.
+- No `Engine.initialize()` during app startup or normal UI flow.
 - No Conversation creation.
 - No inference or message sending.
 - No Hugging Face or model download code.
 
-`LiteRtEngineConfigFactory` still prepares only a plain Kotlin plan with the model path and CPU backend label. It does not construct a direct LiteRT `EngineConfig` object.
+The manual checker requires all of the following before it touches `Engine`: a found app-private model file, a prepared `EngineConfig`, and `allowManualEngineInitialization = true`. `Engine` implements `AutoCloseable`, so the checker uses `use { initialize() }` to close it immediately after initialization. This path is not wired into Patient Roster, Visit, Review, Summary, or any visible app toggle.
 
 ## Why Direct API Use Is Deferred
 
-The LiteRT-LM artifact exposes Java 21 classfiles. The app previously used KAPT for Room, and direct references to LiteRT-LM runtime classes could trigger KAPT classfile compatibility failures. Room now uses KSP, so passive direct type references compile. Runtime LiteRT API usage remains deferred until a controlled device spike.
+The LiteRT-LM artifact exposes Java 21 classfiles. The app previously used KAPT for Room, and direct references to LiteRT-LM runtime classes could trigger KAPT classfile compatibility failures. Room now uses KSP, so direct type references and `EngineConfig` construction compile. Runtime `Engine` initialization remains manual-only.
 
 JDK 21 is required for direct LiteRT-LM API compile work.
 
@@ -40,7 +42,7 @@ JDK 21 is required for direct LiteRT-LM API compile work.
 
 `RealGemmaReadinessEvaluator` is the safety gate. It reports judge-readable readiness while keeping:
 
-- model loading disallowed,
+- model loading disallowed in normal app flow,
 - inference disallowed,
 - engine creation false,
 - engine initialization false,

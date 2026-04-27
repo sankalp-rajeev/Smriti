@@ -59,8 +59,9 @@ Mocked now:
 Experimental and disabled:
 
 - `RealGemmaAgent` is scaffolded behind an interface.
-- LiteRT-LM dependency is present, but direct API use is deferred.
-- Real `.litertlm` model loading, Engine creation, Conversation creation, and inference are disabled.
+- LiteRT-LM dependency is present, and `EngineConfig` construction is available when a sideloaded model is found.
+- Real `.litertlm` model loading in normal app flow, Conversation creation, and inference are disabled.
+- Engine initialization exists only as an explicit manual developer check and is not wired into the UI.
 - Real Gemma audio/ASR is not implemented yet.
 
 ## LiteRT-LM Status
@@ -68,7 +69,7 @@ Experimental and disabled:
 - Dependency pinned: `com.google.ai.edge.litertlm:litertlm-android:0.10.2`.
 - Expected future model path: `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
 - The app detects whether that file exists, but does not load it.
-- EngineConfig is represented as a plain prepared plan only; no direct LiteRT `EngineConfig` type is constructed in app source.
+- EngineConfig is constructed with `Backend.CPU()` only when that model file exists.
 - Direct LiteRT-LM API types compile after the Room KSP migration, but runtime Engine use is still disabled.
 - `RealGemmaReadinessEvaluator` keeps model loading and inference disabled.
 - No model files are committed.
