@@ -157,6 +157,26 @@ class RealGemmaAgentTest {
     }
 
     @Test
+    fun realGemmaAgentStillUsesInjectedFakeClientCorrectly() = runBlocking {
+        val protocol = protocolChunks.first()
+        val fakeClient = CapturingTextClient(
+            TextGenerationResult.Success(validJson(protocol.citation))
+        )
+        val fakeAgent = RealGemmaAgent(textClient = fakeClient)
+
+        val result = fakeAgent.generateVisitNote(
+            patient = patient,
+            visitHistory = history,
+            observationText = "Meena has severe headache and blurred vision. BP 150 over 95.",
+            protocolChunks = protocolChunks
+        )
+
+        assertTrue(fakeClient.prompt.contains("Return compact JSON only"))
+        assertFalse(result.uncertain)
+        assertEquals(protocol.citation, result.protocolCitation)
+    }
+
+    @Test
     fun unavailableSupervisorSummaryReturnsSafeFallbackMessage() = runBlocking {
         val summary = agent.generateSupervisorSummary(
             patients = DemoSeedData.patients,

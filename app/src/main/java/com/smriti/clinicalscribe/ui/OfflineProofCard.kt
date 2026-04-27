@@ -37,8 +37,9 @@ fun OfflineProofCard(
             Text("Audio storage: Local app-private .m4a file")
             Text("Transcript source: Simulated / REAL_ASR_PENDING when audio is attached")
             Text("Cloud APIs: None")
-            Text("LiteRT-LM dependency: Added")
+            Text("LiteRT-LM dependency: Present")
             Text("Real Gemma model: $realGemmaModelStatusLabel")
+            Text("RealGemma text client: Scaffolded, disabled")
         }
     }
 }
