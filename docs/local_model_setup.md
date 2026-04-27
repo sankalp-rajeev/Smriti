@@ -46,7 +46,7 @@ There is currently no debug `applicationIdSuffix`, so `run-as com.smriti.clinica
 
 ## Manual Text Inference Test
 
-The developer-only instrumentation harness is:
+The simplest developer-only instrumentation harness is:
 
 ```text
 app/src/androidTest/java/com/smriti/clinicalscribe/reasoning/ManualLiteRtTextInferenceInstrumentedTest.kt
@@ -82,6 +82,30 @@ adb logcat -s SmritiLiteRtManualTest:I "*:S"
 ```
 
 If the instrumentation argument is missing, the test is skipped. If the model is missing, the test is skipped with the expected app-private path in the skip reason. Normal validation should continue to use only `.\gradlew.bat testDebugUnitTest` and `.\gradlew.bat assembleDebug`.
+
+## Manual Visit JSON Inference Test
+
+After the simple text test works, run the structured visit JSON harness:
+
+```text
+app/src/androidTest/java/com/smriti/clinicalscribe/reasoning/ManualRealGemmaVisitJsonInstrumentedTest.kt
+```
+
+It builds a realistic Meena ANC prompt with `RealGemmaPromptBuilder`, demo prior history, supplied local protocol chunks, JSON-only instructions, non-diagnostic wording rules, protocol-citation requirements, and CHW-confirmation language. It calls `LiteRtGemmaTextClient.generateTextManual(...)`, logs raw model output, and runs `RealGemmaOutputParser`.
+
+The JSON test fails if the model is missing, inference fails, or output is empty. Parser rejection does not fail the test yet; it is logged as early model-behavior signal.
+
+Run only the manual JSON instrumentation test:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaVisitJsonInstrumentedTest -Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true
+```
+
+View the manual JSON test output:
+
+```powershell
+adb logcat -s SmritiRealGemmaJsonTest:I "*:S"
+```
 
 ## Manual Engine Check
 
