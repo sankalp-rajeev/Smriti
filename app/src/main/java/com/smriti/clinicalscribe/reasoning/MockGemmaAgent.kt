@@ -26,7 +26,7 @@ class MockGemmaAgent : GemmaAgent {
         ).any { normalized.contains(it) }
         val hasClinicalDetail = observationText.trim().length >= 12
         val latestHistory = visitHistory.firstOrNull()?.structuredNote ?: "No prior visit history available."
-        val protocolCitation = protocol?.citation ?: "Uncertain"
+        val protocolCitation = protocolChunks.citationSummary()
 
         if (!hasClinicalDetail) {
             return VisitReasoningResult(
@@ -39,6 +39,24 @@ class MockGemmaAgent : GemmaAgent {
                 protocolChunk = protocol,
                 uncertain = true,
                 clarificationPrompt = "Please confirm symptoms, blood pressure if measured, fetal movement, and any bleeding or convulsions."
+            )
+        }
+
+        if (protocolChunks.isEmpty()) {
+            return VisitReasoningResult(
+                patientId = patient.id,
+                observationText = observationText,
+                structuredNote = buildString {
+                    append("Observation:\n${observationText.trim()}")
+                    append("\n\nRelevant history:\n$latestHistory")
+                    append("\n\nProtocol-grounded support:\nNo matching protocol citation was found in the offline corpus. This is not a diagnosis. CHW confirmation required before saving or acting.")
+                },
+                referralFlag = null,
+                protocolCitation = protocolCitation,
+                suggestedFollowUp = "No matching protocol citation found. Ask the CHW to confirm details or consult a supervisor.",
+                protocolChunk = null,
+                uncertain = true,
+                clarificationPrompt = "No matching local protocol was found. Please confirm the observation and consult a supervisor if there are danger signs."
             )
         }
 
@@ -56,8 +74,8 @@ class MockGemmaAgent : GemmaAgent {
         val referral = if (hasDangerSign) {
             ReferralFlag(
                 patientId = patient.id,
-                urgency = "IMMEDIATE",
-                reason = "Protocol-grounded referral suggestion only, not a diagnosis: headache, visual symptoms, high BP, bleeding, convulsions, or reduced fetal movement may require urgent assessment in pregnancy.",
+                urgency = protocolChunks.highestReferralLevel(),
+                reason = "Protocol-grounded referral suggestion only, not a diagnosis: ${protocol!!.text}",
                 protocolBasis = protocolCitation,
                 recommendedFacility = "Nearest PHC or obstetric referral facility",
                 dangerSigns = extractDangerSigns(normalized),
@@ -126,5 +144,23 @@ class MockGemmaAgent : GemmaAgent {
             signs += "reduced fetal movement"
         }
         return signs.joinToString()
+    }
+
+    private fun List<ProtocolChunk>.citationSummary(): String {
+        return if (isEmpty()) {
+            "No matching protocol citation"
+        } else {
+            take(3).joinToString(separator = "; ") { it.citation }
+        }
+    }
+
+    private fun List<ProtocolChunk>.highestReferralLevel(): String {
+        val levels = map { it.referralLevel.uppercase() }
+        return when {
+            "IMMEDIATE" in levels -> "IMMEDIATE"
+            "SAME_DAY" in levels -> "SAME_DAY"
+            "WITHIN_24H" in levels -> "WITHIN_24H"
+            else -> firstOrNull()?.referralLevel?.uppercase().orEmpty().ifBlank { "CHW_CONFIRM" }
+        }
     }
 }

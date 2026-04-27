@@ -17,7 +17,7 @@ import com.smriti.clinicalscribe.rag.ProtocolChunk
         ReferralFlag::class,
         ProtocolChunk::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -35,7 +35,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "smriti.db"
-                ).build().also { instance = it }
+                ).fallbackToDestructiveMigration()
+                    .build()
+                    .also { instance = it }
             }
         }
     }

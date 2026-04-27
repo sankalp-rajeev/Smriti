@@ -1,0 +1,92 @@
+[
+  {
+    "id": "mh_severe_headache",
+    "title": "Severe headache in pregnancy",
+    "keywords": ["severe headache", "headache", "persistent headache"],
+    "source_name": "Smriti Demo Maternal Health Protocol",
+    "source_section": "Danger Signs 1.1",
+    "guidance_text": "Severe or persistent headache during pregnancy is a danger sign. Ask about visual symptoms and blood pressure, and arrange urgent review if danger signs are present.",
+    "referral_level": "SAME_DAY"
+  },
+  {
+    "id": "mh_blurred_vision",
+    "title": "Blurred vision in pregnancy",
+    "keywords": ["blurred vision", "vision changes", "visual symptoms"],
+    "source_name": "Smriti Demo Maternal Health Protocol",
+    "source_section": "Danger Signs 1.2",
+    "guidance_text": "Blurred vision or other visual symptoms in pregnancy can indicate a danger sign, especially with headache or high blood pressure. Escalate for same-day clinical assessment.",
+    "referral_level": "SAME_DAY"
+  },
+  {
+    "id": "mh_high_blood_pressure",
+    "title": "High blood pressure in pregnancy",
+    "keywords": ["high blood pressure", "high bp", "bp 150", "150 over 95", "hypertension", "blood pressure"],
+    "source_name": "Smriti Demo Maternal Health Protocol",
+    "source_section": "Danger Signs 1.3",
+    "guidance_text": "Elevated blood pressure in pregnancy with headache, visual symptoms, swelling, or abdominal pain requires urgent referral support and supervisor notification.",
+    "referral_level": "SAME_DAY"
+  },
+  {
+    "id": "mh_reduced_fetal_movement",
+    "title": "Reduced fetal movement",
+    "keywords": ["reduced fetal movement", "reduced movement", "less movement", "fetal movement"],
+    "source_name": "Smriti Demo Maternal Health Protocol",
+    "source_section": "Danger Signs 1.4",
+    "guidance_text": "Reduced or absent fetal movement reported by a pregnant patient should be treated as a danger sign and referred for clinical assessment.",
+    "referral_level": "SAME_DAY"
+  },
+  {
+    "id": "mh_vaginal_bleeding",
+    "title": "Vaginal bleeding during pregnancy",
+    "keywords": ["vaginal bleeding", "bleeding", "blood loss", "spotting"],
+    "source_name": "Smriti Demo Maternal Health Protocol",
+    "source_section": "Danger Signs 1.5",
+    "guidance_text": "Any vaginal bleeding during pregnancy should be escalated for urgent clinical assessment. Do not delay referral while documenting.",
+    "referral_level": "IMMEDIATE"
+  },
+  {
+    "id": "mh_convulsions",
+    "title": "Convulsions in pregnancy",
+    "keywords": ["convulsions", "convulsion", "seizure", "fits"],
+    "source_name": "Smriti Demo Maternal Health Protocol",
+    "source_section": "Danger Signs 1.6",
+    "guidance_text": "Convulsions or seizures in pregnancy require immediate emergency referral and supervisor notification.",
+    "referral_level": "IMMEDIATE"
+  },
+  {
+    "id": "mh_severe_abdominal_pain",
+    "title": "Severe abdominal pain",
+    "keywords": ["severe abdominal pain", "abdominal pain", "stomach pain", "severe pain"],
+    "source_name": "Smriti Demo Maternal Health Protocol",
+    "source_section": "Danger Signs 1.7",
+    "guidance_text": "Severe abdominal pain during pregnancy is a danger sign. Arrange urgent assessment and document associated bleeding, fever, or fetal movement changes.",
+    "referral_level": "SAME_DAY"
+  },
+  {
+    "id": "mh_fever",
+    "title": "Fever in pregnancy",
+    "keywords": ["fever", "high temperature", "temperature", "chills"],
+    "source_name": "Smriti Demo Maternal Health Protocol",
+    "source_section": "Danger Signs 1.8",
+    "guidance_text": "Fever in pregnancy requires assessment for infection and follow-up. Urgency increases when fever is severe or combined with abdominal pain, bleeding, or weakness.",
+    "referral_level": "WITHIN_24H"
+  },
+  {
+    "id": "mh_face_hands_swelling",
+    "title": "Swelling of face or hands",
+    "keywords": ["swelling of face", "swelling of hands", "face swelling", "hand swelling", "swollen face", "swollen hands"],
+    "source_name": "Smriti Demo Maternal Health Protocol",
+    "source_section": "Danger Signs 1.9",
+    "guidance_text": "Swelling of the face or hands during pregnancy can be a danger sign, especially with headache, visual symptoms, or high blood pressure.",
+    "referral_level": "SAME_DAY"
+  },
+  {
+    "id": "mh_same_day_referral",
+    "title": "Same-day referral guidance",
+    "keywords": ["same day referral", "urgent referral", "refer today", "supervisor", "phc"],
+    "source_name": "Smriti Demo Maternal Health Protocol",
+    "source_section": "Referral Actions 2.1",
+    "guidance_text": "When danger signs are present, support same-day referral to the nearest PHC or obstetric referral facility, notify the supervisor, and document CHW confirmation.",
+    "referral_level": "SAME_DAY"
+  }
+]

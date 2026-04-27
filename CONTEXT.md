@@ -4,7 +4,7 @@
 Create the initial offline-first Android Kotlin project skeleton for the Smriti MVP demo flow.
 
 ## Current Status
-The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The app builds, launches on the Pixel 9 Pro API 35 emulator, reaches the End-of-Day Supervisor Summary screen, has focused unit coverage for mock reasoning/protocol retrieval, and includes demo reset support for repeated judge walkthroughs.
+The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The app builds, launches on the Pixel 9 Pro API 35 emulator, reaches the End-of-Day Supervisor Summary screen, has focused unit coverage for mock reasoning/protocol retrieval, includes demo reset support, and uses an offline JSON maternal-health protocol corpus from app assets for deterministic citation grounding.
 
 ## Completed Tasks
 - [x] Read `AGENTS.md`.
@@ -31,10 +31,16 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - [x] Removed repetitive "Assessment support" wording from mock structured notes.
 - [x] Added a SummaryScreen "Reset Demo Data" action that clears saved mock visits/referral flags and restores original demo history.
 - [x] Verified `testDebugUnitTest` and `assembleDebug` after UI/demo polish.
+- [x] Added offline maternal-health protocol JSON corpus in app assets.
+- [x] Updated `ProtocolRetriever` to load and parse the offline asset corpus.
+- [x] Updated `MockGemmaAgent` to use retrieved protocol chunks for citations/referral basis.
+- [x] Added safe no-match behavior: no invented citation, uncertain result, and CHW/supervisor confirmation prompt.
+- [x] Updated unit tests for asset-backed protocol retrieval and no-citation fallback.
 
 ## Active Tasks
 - [ ] Reinstall the latest debug build on the emulator and click through the reset-enabled polished judge flow.
 - [ ] Decide whether to add a small Room reset/seed instrumentation test later.
+- [ ] Verify on emulator that ReviewScreen citations now show `Smriti Demo Maternal Health Protocol` sections from the asset corpus.
 
 ## Blockers / Issues
 - Gradle wrapper now exists; direct sandboxed wrapper runs can still fail until Gradle can access the normal user-level `.gradle` cache.
@@ -44,6 +50,7 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - First local `.\gradlew.bat assembleDebug` attempt in the sandbox failed because Gradle could not create a lock file under `C:\Users\CodexSandboxOffline\.gradle\wrapper\dists\...`.
 - First local `.\gradlew.bat testDebugUnitTest` attempt in the sandbox failed for the same Gradle user-cache lock-file reason; rerun with normal user-level Gradle cache access worked.
 - Initial unit test run found one bad "normal visit" fixture because it contained the danger-sign keyword "bleeding"; the fixture was corrected and the tests passed.
+- Local `.\gradlew.bat testDebugUnitTest` still needs normal user-level Gradle cache access in this sandbox; the first sandboxed attempt failed on the known lock-file path, then passed with cache access.
 - `git status` is blocked by Git dubious ownership because the repository is owned by `Sankalps-Razer/rajee` while the sandbox user is `Sankalps-Razer/CodexSandboxOffline`.
 
 ## Architecture Decisions
@@ -68,6 +75,7 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - `app/src/main/java/com/smriti/clinicalscribe/rag/` - protocol chunk model and keyword retriever.
 - `app/src/main/java/com/smriti/clinicalscribe/ui/` - Compose MVP screens.
 - `app/src/main/java/com/smriti/clinicalscribe/tts/VoiceOutput.kt` - future offline TTS abstraction stub.
+- `app/src/main/assets/protocols/maternal_health_demo_protocols.json` - offline deterministic maternal-health demo protocol corpus with danger-sign chunks and referral guidance.
 - `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt` - deterministic unit tests for local mock visit-note/referral behavior.
 - `app/src/test/java/com/smriti/clinicalscribe/rag/ProtocolRetrieverTest.kt` - deterministic unit tests for local protocol keyword retrieval.
 
@@ -76,7 +84,7 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 2. Run Build -> Make Project.
 3. Generate a Gradle wrapper from Android Studio or a local Gradle install.
 4. Install the latest debug build on the Pixel 9 Pro API 35 emulator and run the reset-enabled polished Meena demo flow end to end.
-5. Consider a small Room reset/seed instrumentation test if reset behavior becomes important for automated demo validation.
+5. Confirm the review screen cites asset corpus sections and the unrelated/no-match path remains uncertain.
 
 ## Change Log
 - 2026-04-27: Created `CONTEXT.md` with initial project state before Android scaffold.
@@ -86,3 +94,4 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - 2026-04-27: User verified the app builds and launches on the Pixel 9 Pro API 35 emulator, including the mock supervisor summary with total visits, referral flags, urgent cases, and follow-ups. Polished only mock MVP UI copy and local mock output wording. Files touched: `app/src/main/java/com/smriti/clinicalscribe/ui/PatientListScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/VisitScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/ReviewScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgent.kt`, `CONTEXT.md`. Changes: added visible "Offline demo mode" labels, renamed the summary to "End-of-Day Supervisor Summary", made roster return clearer, and clarified that referral output is a protocol-grounded suggestion rather than a diagnosis. Build result: first `.\gradlew.bat assembleDebug` failed in the sandbox because Gradle could not create its user-cache lock file; rerun with normal user-level Gradle cache access passed. Next recommended step: reinstall the latest debug build and run the polished Meena demo flow end to end on the emulator.
 - 2026-04-27: Added focused deterministic unit tests for mock reasoning and protocol retrieval only. Files touched: `app/build.gradle.kts`, `app/src/main/java/com/smriti/clinicalscribe/rag/ProtocolRetriever.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/rag/ProtocolRetrieverTest.kt`, `CONTEXT.md`. Changes: added JUnit test dependency, removed `ProtocolRetriever` fallback that returned the first protocol for unrelated queries, tested normal mock notes, danger-sign referral suggestions, protocol citation language, diagnostic-language avoidance, danger-sign retrieval, and unrelated-query empty retrieval. Test result: first sandboxed test command failed on Gradle cache lock-file creation; first real test run compiled but failed one fixture because the normal visit text included "bleeding"; after correcting the fixture, `.\gradlew.bat testDebugUnitTest` passed with 6 tests. Next recommended step: run the app again and confirm the unchanged mock flow still feels right after the retriever no-match behavior change.
 - 2026-04-27: Fixed screenshot polish issues in the mock MVP only. Files touched: `app/src/main/java/com/smriti/clinicalscribe/data/AppDatabase.kt`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgent.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/ReviewScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt`, `CONTEXT.md`. Issues fixed: moved ReviewScreen "Edit Observation" below the header as a full-width button; made structured visit note output concise and sectioned; preserved "not a diagnosis" and "CHW confirmation required"; added editable ReviewScreen sections for Observation, Relevant history, Protocol-grounded support, and Protocol citation; added demo-mode Reset Demo Data action on SummaryScreen that clears saved mock visits/referral flags and restores original demo history. Test/build result: `.\gradlew.bat testDebugUnitTest` passed after the known sandbox cache retry; `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug APK and verify the reset-enabled demo flow on the Pixel 9 Pro API 35 emulator.
+- 2026-04-27: Added real local protocol grounding from an offline JSON asset corpus while keeping the mock MVP architecture. Files touched: `app/src/main/assets/protocols/maternal_health_demo_protocols.json`, `app/src/main/java/com/smriti/clinicalscribe/rag/ProtocolChunk.kt`, `app/src/main/java/com/smriti/clinicalscribe/rag/ProtocolRetriever.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgent.kt`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/AppDatabase.kt`, `app/src/test/java/com/smriti/clinicalscribe/rag/ProtocolRetrieverTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt`, `CONTEXT.md`. Protocol corpus added: 10 maternal-health demo chunks covering severe headache, blurred vision, high blood pressure, reduced fetal movement, vaginal bleeding, convulsions, severe abdominal pain, fever, swelling of face/hands, and same-day referral guidance. Tests added/updated: asset-backed retrieval for headache + blurred vision + high BP, unrelated-query no match, referral output including retrieved source/section, and no-protocol uncertain/no-citation output. Test/build result: first sandboxed `.\gradlew.bat testDebugUnitTest` failed on the known Gradle cache lock-file path; rerun with normal cache access passed. `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug build and verify the judge demo shows asset-derived protocol citations in the ReviewScreen.

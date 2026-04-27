@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.smriti.clinicalscribe.data.AppDatabase
 import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.data.Patient
@@ -57,7 +58,8 @@ private fun SmritiApp(
     agent: GemmaAgent = MockGemmaAgent()
 ) {
     val scope = rememberCoroutineScope()
-    val retriever = remember { ProtocolRetriever() }
+    val context = LocalContext.current
+    val retriever = remember { ProtocolRetriever.fromAsset(context) }
 
     var currentScreen by remember { mutableStateOf<SmritiScreen>(SmritiScreen.PatientRoster) }
     var patients by remember { mutableStateOf<List<Patient>>(emptyList()) }
@@ -79,7 +81,7 @@ private fun SmritiApp(
         database.referralFlagDao().deleteAll()
         database.visitLogDao().deleteAll()
         database.patientDao().upsertAll(DemoSeedData.patients)
-        database.protocolChunkDao().upsertAll(DemoSeedData.protocolChunks)
+        database.protocolChunkDao().upsertAll(retriever.allChunks())
         DemoSeedData.initialVisitLogs().forEach { database.visitLogDao().insert(it) }
         refreshLocalState()
     }
@@ -91,7 +93,7 @@ private fun SmritiApp(
                 database.patientDao().upsertAll(DemoSeedData.patients)
             }
             if (database.protocolChunkDao().getAll().isEmpty()) {
-                database.protocolChunkDao().upsertAll(DemoSeedData.protocolChunks)
+                database.protocolChunkDao().upsertAll(retriever.allChunks())
             }
             if (database.visitLogDao().getAll().isEmpty()) {
                 DemoSeedData.initialVisitLogs().forEach { database.visitLogDao().insert(it) }
