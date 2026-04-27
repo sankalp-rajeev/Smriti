@@ -32,6 +32,27 @@ class LiteRtGemmaTextClientTest {
 
         assertFalse(client.modelLoadAttempted)
         assertFalse(client.engineInitializationAttempted)
+        assertFalse(client.conversationCreated)
+        assertFalse(client.inferenceAttempted)
+    }
+
+    @Test
+    fun liteRtClientCanPrepareConfigPlanButStillReturnsUnavailable() = runBlocking {
+        val filesDir = Files.createTempDirectory("smriti-litert-client-found").toFile()
+        val modelFile = java.io.File(java.io.File(filesDir, "models").also { it.mkdirs() }, "gemma-4-E2B-it-int4.litertlm")
+        modelFile.writeText("fake model placeholder for status test only")
+        val modelStatus = ModelAvailability.fromFilesDir(filesDir).check()
+        val client = LiteRtGemmaTextClient(modelStatus = modelStatus)
+
+        val result = client.generateText("This prompt must not run inference.")
+
+        assertTrue(result is TextGenerationResult.Unavailable)
+        val unavailable = result as TextGenerationResult.Unavailable
+        assertTrue(unavailable.status.contains("EngineConfig prepared"))
+        assertTrue(unavailable.status.contains("Engine not created"))
+        assertFalse(client.modelLoadAttempted)
+        assertFalse(client.engineInitializationAttempted)
+        assertFalse(client.conversationCreated)
         assertFalse(client.inferenceAttempted)
     }
 
