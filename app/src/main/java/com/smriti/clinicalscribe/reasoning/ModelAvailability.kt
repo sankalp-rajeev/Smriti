@@ -2,9 +2,6 @@ package com.smriti.clinicalscribe.reasoning
 
 import java.io.File
 
-private const val MODEL_DIRECTORY_NAME = "models"
-private const val GEMMA_E2B_MODEL_FILE_NAME = "gemma-4-E2B-it-int4.litertlm"
-
 enum class ModelStatusKind {
     NOT_FOUND,
     FOUND_NOT_LOADED
@@ -48,12 +45,7 @@ class ModelAvailability private constructor(
 
     companion object {
         fun fromFilesDir(filesDir: File): ModelAvailability {
-            return ModelAvailability(
-                expectedModelFile = File(
-                    File(filesDir, MODEL_DIRECTORY_NAME),
-                    GEMMA_E2B_MODEL_FILE_NAME
-                )
-            )
+            return ModelAvailability(expectedModelFile = LiteRtModelPaths.expectedModelFile(filesDir))
         }
     }
 }

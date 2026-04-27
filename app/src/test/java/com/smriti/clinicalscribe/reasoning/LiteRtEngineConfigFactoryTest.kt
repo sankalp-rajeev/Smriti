@@ -1,6 +1,5 @@
 package com.smriti.clinicalscribe.reasoning
 
-import java.io.File
 import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -26,7 +25,8 @@ class LiteRtEngineConfigFactoryTest {
     @Test
     fun engineConfigIsPreparedWhenFakeModelFileExists() {
         val filesDir = Files.createTempDirectory("smriti-config-found").toFile()
-        val modelFile = File(File(filesDir, "models").also { it.mkdirs() }, "gemma-4-E2B-it-int4.litertlm")
+        val modelFile = LiteRtModelPaths.expectedModelFile(filesDir)
+        modelFile.parentFile!!.mkdirs()
         modelFile.writeText("fake model placeholder for config path test only")
         val modelStatus = ModelAvailability.fromFilesDir(filesDir).check()
 

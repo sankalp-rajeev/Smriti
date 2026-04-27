@@ -39,7 +39,8 @@ class LiteRtGemmaTextClientTest {
     @Test
     fun liteRtClientCanPrepareConfigPlanButStillReturnsUnavailable() = runBlocking {
         val filesDir = Files.createTempDirectory("smriti-litert-client-found").toFile()
-        val modelFile = java.io.File(java.io.File(filesDir, "models").also { it.mkdirs() }, "gemma-4-E2B-it-int4.litertlm")
+        val modelFile = LiteRtModelPaths.expectedModelFile(filesDir)
+        modelFile.parentFile!!.mkdirs()
         modelFile.writeText("fake model placeholder for status test only")
         val modelStatus = ModelAvailability.fromFilesDir(filesDir).check()
         val client = LiteRtGemmaTextClient(modelStatus = modelStatus)

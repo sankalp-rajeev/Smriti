@@ -53,6 +53,7 @@ benchmarks/*.tmp
 benchmarks/*.log
 
 # Model files - do not commit large local models
+*.litertlm
 *.tflite
 *.task
 *.gguf
@@ -60,7 +61,12 @@ benchmarks/*.log
 *.safetensors
 *.onnx
 models/
+**/models/**
 app/src/main/assets/models/
+app/src/main/assets/**/*.litertlm
+app/src/main/assets/**/*.task
+app/src/main/assets/**/*.tflite
+app/src/main/assets/**/*.onnx
 
 # Audio/video demo captures
 *.mp4

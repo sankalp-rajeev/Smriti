@@ -39,7 +39,9 @@ fun OfflineProofCard(
             Text("Cloud APIs: None")
             Text("LiteRT-LM dependency: Present")
             Text("Real Gemma model: $realGemmaModelStatusLabel")
+            Text("EngineConfig: Prepared only if model found")
             Text("RealGemma text client: Scaffolded, disabled")
+            Text("Inference: Disabled")
         }
     }
 }
