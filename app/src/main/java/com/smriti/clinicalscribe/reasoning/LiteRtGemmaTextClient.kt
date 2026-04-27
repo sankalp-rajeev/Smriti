@@ -1,5 +1,11 @@
 package com.smriti.clinicalscribe.reasoning
 
+import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
+import com.google.ai.edge.litertlm.Conversation
+import com.google.ai.edge.litertlm.Engine
+import com.google.ai.edge.litertlm.EngineConfig
+
 class LiteRtGemmaTextClient(
     private val modelStatus: ModelStatus? = null
 ) : RealGemmaTextClient {
@@ -25,8 +31,17 @@ class LiteRtGemmaTextClient(
     }
 
     fun apiSurfaceProbeStatus(): String {
-        return "Direct LiteRT-LM imports are deferred: the current KAPT/JDK 17 path cannot read LiteRT-LM classfile version 65."
+        return "Direct LiteRT-LM imports compile under JDK 21; engine initialization intentionally disabled."
     }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun compileOnlyApiSurfaceProbe(
+        engine: Engine? = null,
+        engineConfig: EngineConfig? = null,
+        backend: Backend? = null,
+        textContent: Content.Text? = null,
+        conversation: Conversation? = null
+    ) = Unit
 
     private companion object {
         val LITERT_API_SURFACE_CLASS_NAMES = listOf(

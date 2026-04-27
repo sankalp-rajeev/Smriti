@@ -45,7 +45,7 @@ class LiteRtGemmaTextClientTest {
         assertTrue(classNames.contains("com.google.ai.edge.litertlm.Backend"))
         assertTrue(classNames.contains("com.google.ai.edge.litertlm.Content\$Text"))
         assertTrue(classNames.contains("com.google.ai.edge.litertlm.Conversation"))
-        assertTrue(client.apiSurfaceProbeStatus().contains("Direct LiteRT-LM imports are deferred"))
+        assertTrue(client.apiSurfaceProbeStatus().contains("Direct LiteRT-LM imports compile under JDK 21"))
     }
 
     @Test
