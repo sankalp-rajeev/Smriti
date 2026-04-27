@@ -4,7 +4,7 @@
 Create the initial offline-first Android Kotlin project skeleton for the Smriti MVP demo flow.
 
 ## Current Status
-The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The app builds, launches on the Pixel 9 Pro API 35 emulator, reaches the End-of-Day Supervisor Summary screen, has focused unit coverage for mock reasoning/protocol retrieval, includes demo reset support, and uses an offline JSON maternal-health protocol corpus from app assets for deterministic citation grounding.
+The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The app builds, launches on the Pixel 9 Pro API 35 emulator, reaches the End-of-Day Supervisor Summary screen, has focused unit coverage for mock reasoning/protocol retrieval, includes demo reset support, uses an offline JSON maternal-health protocol corpus from app assets, and has a mock voice-note UI shell backed by simulated transcript text.
 
 ## Completed Tasks
 - [x] Read `AGENTS.md`.
@@ -36,11 +36,15 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - [x] Updated `MockGemmaAgent` to use retrieved protocol chunks for citations/referral basis.
 - [x] Added safe no-match behavior: no invented citation, uncertain result, and CHW/supervisor confirmation prompt.
 - [x] Updated unit tests for asset-backed protocol retrieval and no-citation fallback.
+- [x] Added VisitScreen voice-note style UI shell without real audio capture.
+- [x] Added mock Start/Stop voice note state, local listening indicator, 30-second chunk label, sample danger-sign transcript button, and simulated transcript label.
+- [x] Verified `testDebugUnitTest` and `assembleDebug` after voice-note UI shell.
 
 ## Active Tasks
 - [ ] Reinstall the latest debug build on the emulator and click through the reset-enabled polished judge flow.
 - [ ] Decide whether to add a small Room reset/seed instrumentation test later.
 - [ ] Verify on emulator that ReviewScreen citations now show `Smriti Demo Maternal Health Protocol` sections from the asset corpus.
+- [ ] Verify on emulator that the VisitScreen mock voice-note shell reads clearly and the sample transcript still generates the expected referral flow.
 
 ## Blockers / Issues
 - Gradle wrapper now exists; direct sandboxed wrapper runs can still fail until Gradle can access the normal user-level `.gradle` cache.
@@ -73,7 +77,7 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - `app/src/main/java/com/smriti/clinicalscribe/data/` - Room database, entities, DAOs, and demo seed data.
 - `app/src/main/java/com/smriti/clinicalscribe/reasoning/` - Gemma interface, mock implementation, and reasoning result models.
 - `app/src/main/java/com/smriti/clinicalscribe/rag/` - protocol chunk model and keyword retriever.
-- `app/src/main/java/com/smriti/clinicalscribe/ui/` - Compose MVP screens.
+- `app/src/main/java/com/smriti/clinicalscribe/ui/` - Compose MVP screens, including VisitScreen mock voice-note shell.
 - `app/src/main/java/com/smriti/clinicalscribe/tts/VoiceOutput.kt` - future offline TTS abstraction stub.
 - `app/src/main/assets/protocols/maternal_health_demo_protocols.json` - offline deterministic maternal-health demo protocol corpus with danger-sign chunks and referral guidance.
 - `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt` - deterministic unit tests for local mock visit-note/referral behavior.
@@ -84,7 +88,7 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 2. Run Build -> Make Project.
 3. Generate a Gradle wrapper from Android Studio or a local Gradle install.
 4. Install the latest debug build on the Pixel 9 Pro API 35 emulator and run the reset-enabled polished Meena demo flow end to end.
-5. Confirm the review screen cites asset corpus sections and the unrelated/no-match path remains uncertain.
+5. Confirm the VisitScreen mock voice-note shell, sample transcript button, and asset-derived ReviewScreen citations all read cleanly.
 
 ## Change Log
 - 2026-04-27: Created `CONTEXT.md` with initial project state before Android scaffold.
@@ -95,3 +99,4 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. The 
 - 2026-04-27: Added focused deterministic unit tests for mock reasoning and protocol retrieval only. Files touched: `app/build.gradle.kts`, `app/src/main/java/com/smriti/clinicalscribe/rag/ProtocolRetriever.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/rag/ProtocolRetrieverTest.kt`, `CONTEXT.md`. Changes: added JUnit test dependency, removed `ProtocolRetriever` fallback that returned the first protocol for unrelated queries, tested normal mock notes, danger-sign referral suggestions, protocol citation language, diagnostic-language avoidance, danger-sign retrieval, and unrelated-query empty retrieval. Test result: first sandboxed test command failed on Gradle cache lock-file creation; first real test run compiled but failed one fixture because the normal visit text included "bleeding"; after correcting the fixture, `.\gradlew.bat testDebugUnitTest` passed with 6 tests. Next recommended step: run the app again and confirm the unchanged mock flow still feels right after the retriever no-match behavior change.
 - 2026-04-27: Fixed screenshot polish issues in the mock MVP only. Files touched: `app/src/main/java/com/smriti/clinicalscribe/data/AppDatabase.kt`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgent.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/ReviewScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt`, `CONTEXT.md`. Issues fixed: moved ReviewScreen "Edit Observation" below the header as a full-width button; made structured visit note output concise and sectioned; preserved "not a diagnosis" and "CHW confirmation required"; added editable ReviewScreen sections for Observation, Relevant history, Protocol-grounded support, and Protocol citation; added demo-mode Reset Demo Data action on SummaryScreen that clears saved mock visits/referral flags and restores original demo history. Test/build result: `.\gradlew.bat testDebugUnitTest` passed after the known sandbox cache retry; `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug APK and verify the reset-enabled demo flow on the Pixel 9 Pro API 35 emulator.
 - 2026-04-27: Added real local protocol grounding from an offline JSON asset corpus while keeping the mock MVP architecture. Files touched: `app/src/main/assets/protocols/maternal_health_demo_protocols.json`, `app/src/main/java/com/smriti/clinicalscribe/rag/ProtocolChunk.kt`, `app/src/main/java/com/smriti/clinicalscribe/rag/ProtocolRetriever.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgent.kt`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/AppDatabase.kt`, `app/src/test/java/com/smriti/clinicalscribe/rag/ProtocolRetrieverTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt`, `CONTEXT.md`. Protocol corpus added: 10 maternal-health demo chunks covering severe headache, blurred vision, high blood pressure, reduced fetal movement, vaginal bleeding, convulsions, severe abdominal pain, fever, swelling of face/hands, and same-day referral guidance. Tests added/updated: asset-backed retrieval for headache + blurred vision + high BP, unrelated-query no match, referral output including retrieved source/section, and no-protocol uncertain/no-citation output. Test/build result: first sandboxed `.\gradlew.bat testDebugUnitTest` failed on the known Gradle cache lock-file path; rerun with normal cache access passed. `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug build and verify the judge demo shows asset-derived protocol citations in the ReviewScreen.
+- 2026-04-27: Added a voice-note style UI shell without real ASR or audio recording. Files touched: `app/src/main/java/com/smriti/clinicalscribe/ui/VisitScreen.kt`, `CONTEXT.md`. Changes: added "Record Visit Note" section, mock Start/Stop voice note button, "Listening locally..." recording state, 30-second chunk label, "Simulated transcript for demo" text field label, "Use sample danger-sign transcript" fill button, and note that real Gemma 4 audio integration comes next. Test/build result: first sandboxed `.\gradlew.bat testDebugUnitTest` failed on the known Gradle cache lock-file path; rerun with normal cache access passed. `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug build and verify the mock voice workflow on the Pixel 9 Pro API 35 emulator.

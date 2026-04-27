@@ -41,9 +41,10 @@ fun VisitScreen(
     onGenerate: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    var isRecordingMockVoiceNote by remember { mutableStateOf(false) }
     var observationText by remember {
         mutableStateOf(
-            "Meena is 32 weeks pregnant. Complaining of headache and blurred vision since yesterday. BP 150 over 95. Fetal movement reduced today."
+            SampleDangerSignTranscript
         )
     }
 
@@ -91,13 +92,54 @@ fun VisitScreen(
             }
 
             item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text("Record Visit Note", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = "MVP uses simulated transcript. Real Gemma 4 audio integration comes next.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Button(
+                            onClick = { isRecordingMockVoiceNote = !isRecordingMockVoiceNote },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (isRecordingMockVoiceNote) "Stop voice note" else "Start voice note")
+                        }
+                        Text(
+                            text = if (isRecordingMockVoiceNote) {
+                                "Listening locally... 30-second chunk"
+                            } else {
+                                "Ready for 30-second local voice-note chunk"
+                            },
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = { observationText = SampleDangerSignTranscript },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Use sample danger-sign transcript")
+                }
+            }
+
+            item {
                 OutlinedTextField(
                     value = observationText,
                     onValueChange = { observationText = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 160.dp),
-                    label = { Text("Simulated voice observation text") },
+                    label = { Text("Simulated transcript for demo") },
                     placeholder = { Text("Type the CHW's spoken observation here") },
                     minLines = 5
                 )
@@ -145,3 +187,6 @@ private fun HistoryCard(visit: VisitLog) {
 private fun formatDate(millis: Long): String {
     return SimpleDateFormat("MMM d, yyyy", Locale.US).format(Date(millis))
 }
+
+private const val SampleDangerSignTranscript =
+    "Meena is 28 years old and 7 months pregnant. She reports severe headache and blurred vision. Blood pressure is 150 over 95. She has reduced fetal movement today."
