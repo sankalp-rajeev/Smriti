@@ -24,6 +24,7 @@ import com.smriti.clinicalscribe.reasoning.SupervisorSummary
 fun SummaryScreen(
     summary: SupervisorSummary,
     isResettingDemoData: Boolean,
+    reasoningModeLabel: String,
     ttsStatusMessage: String?,
     exportSummaryPath: String?,
     onReadSummary: () -> Unit,
@@ -131,7 +132,7 @@ fun SummaryScreen(
                         Text("Offline Proof", fontWeight = FontWeight.SemiBold)
                         Text("Network required: No")
                         Text("Protocol source: Local asset JSON")
-                        Text("Reasoning mode: MockGemmaAgent")
+                        Text("Reasoning mode: $reasoningModeLabel")
                         Text("Audio storage: Local app-private file")
                         Text("Last build/demo state: Mock MVP")
                     }

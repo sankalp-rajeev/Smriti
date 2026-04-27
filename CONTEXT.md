@@ -1,10 +1,10 @@
 # Smriti Project Context
 
 ## Current Goal
-Field Tool Milestone: make Smriti feel like a real offline CHW field tool while still using mock reasoning.
+LiteRT/Gemma Integration Spike: scaffold `RealGemmaAgent` behind the existing `GemmaAgent` interface while keeping the mock offline demo safe.
 
 ## Current Status
-The repository now has a working Android Kotlin + Jetpack Compose mock MVP. It supports local 30-second voice-note recording to app-private storage, simulated transcript reasoning, offline JSON protocol grounding, CHW review/confirm, Android TTS readout, local JSON export, demo reset, and an Offline Proof section. It still uses `MockGemmaAgent`; no real Gemma/LiteRT/Whisper/camera/cloud features are present.
+The repository now has a working Android Kotlin + Jetpack Compose offline field-tool prototype. It supports local 30-second voice-note recording, simulated transcript reasoning, offline JSON protocol grounding, CHW review/confirm, Android TTS readout, local JSON export, demo reset, and an Offline Proof section. `MockGemmaAgent` remains the default. `RealGemmaAgent` exists as a safe experimental stub only; no LiteRT dependencies, model files, real Gemma, Whisper, camera, or cloud features are present.
 
 ## Completed Tasks
 - [x] Read `AGENTS.md`.
@@ -49,10 +49,18 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. It s
 - [x] Added Offline Proof section for judge/demo verification.
 - [x] Added unit tests for `VisitLog` audio metadata and JSON export contents.
 - [x] Verified `testDebugUnitTest` and `assembleDebug` for the Field Tool Milestone.
+- [x] Added `AgentMode` with `MOCK` and `REAL_GEMMA_EXPERIMENTAL`.
+- [x] Added `AgentConfig` with `MOCK` as the default mode.
+- [x] Added `GemmaAgentFactory` for replaceable agent creation.
+- [x] Added `RealGemmaAgent` safe stub implementing `GemmaAgent`.
+- [x] Added LiteRT-LM TODOs for model loading, prompt construction, audio/transcript input, structured parsing, and fallback behavior.
+- [x] Updated Offline Proof to display the active reasoning mode dynamically.
+- [x] Added unit tests for default mock mode and RealGemma unavailable behavior.
+- [x] Verified `testDebugUnitTest` and `assembleDebug` for the Gemma integration scaffold.
 
 ## Active Tasks
-- [ ] Install the latest debug build on the Pixel 9 Pro API 35 emulator and verify microphone permission, local recording, TTS, JSON exports, and Offline Proof.
-- [ ] Start the LiteRT/Gemma integration spike behind the existing `GemmaAgent` interface.
+- [ ] Install the latest debug build and confirm Offline Proof still shows `MockGemmaAgent` by default.
+- [ ] Begin LiteRT-LM dependency/model-loading research without committing model files.
 
 ## Blockers / Issues
 - Gradle wrapper now exists; direct sandboxed wrapper runs can still fail until Gradle can access the normal user-level `.gradle` cache.
@@ -66,12 +74,16 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. It s
 - Android compile emits a warning that the no-arg `MediaRecorder()` constructor is deprecated. It still compiles for the current min API 26 MVP; this can be modernized later with API-conditional construction.
 - Android TTS availability depends on the emulator/device installed TTS engine and language data. The UI reports unavailable/initializing states instead of failing.
 - Real ASR is not implemented. Voice-note transcripts remain simulated and saved audio is marked `REAL_ASR_PENDING`.
+- `RealGemmaAgent` is intentionally unavailable. It returns uncertain safe results and asks for MockGemmaAgent fallback until LiteRT-LM support is added.
+- No LiteRT dependencies or model files are committed yet.
 - `git status` is blocked by Git dubious ownership because the repository is owned by `Sankalps-Razer/rajee` while the sandbox user is `Sankalps-Razer/CodexSandboxOffline`.
 
 ## Architecture Decisions
 - Build Android native with Kotlin and Jetpack Compose to match the PRD and demo needs.
 - Keep all MVP core behavior offline with local mock data and no network APIs.
 - Put Gemma behavior behind a `GemmaAgent` interface so LiteRT-LM can replace `MockGemmaAgent` later.
+- Keep `MockGemmaAgent` as the default demo-safe mode via `AgentConfig.DEFAULT_MODE = AgentMode.MOCK`.
+- Keep `RealGemmaAgent` as a safe stub until LiteRT-LM model loading and structured parsing are proven.
 - Use Room entities/DAOs as the local persistence boundary and seed demo data on first app launch.
 - Use a simple in-app screen state machine instead of adding Navigation Compose for the first scaffold.
 - Use a flat keyword `ProtocolRetriever` for protocol chunks until the P1 local RAG corpus is added.
@@ -89,6 +101,10 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. It s
 - `app/src/main/java/com/smriti/clinicalscribe/data/` - Room database, entities, DAOs, and demo seed data.
 - `app/src/main/java/com/smriti/clinicalscribe/export/JsonExporter.kt` - local app-private JSON export for visits and supervisor summaries.
 - `app/src/main/java/com/smriti/clinicalscribe/reasoning/` - Gemma interface, mock implementation, and reasoning result models.
+- `app/src/main/java/com/smriti/clinicalscribe/reasoning/AgentMode.kt` - agent mode enum for mock vs experimental real Gemma.
+- `app/src/main/java/com/smriti/clinicalscribe/reasoning/AgentConfig.kt` - default agent mode configuration.
+- `app/src/main/java/com/smriti/clinicalscribe/reasoning/GemmaAgentFactory.kt` - creates the selected `GemmaAgent`.
+- `app/src/main/java/com/smriti/clinicalscribe/reasoning/RealGemmaAgent.kt` - safe unavailable stub for future LiteRT-LM integration.
 - `app/src/main/java/com/smriti/clinicalscribe/rag/` - protocol chunk model and keyword retriever.
 - `app/src/main/java/com/smriti/clinicalscribe/ui/` - Compose MVP screens, including VisitScreen mock voice-note shell.
 - `app/src/main/java/com/smriti/clinicalscribe/tts/` - Android TTS-backed offline voice output abstraction.
@@ -97,13 +113,15 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. It s
 - `app/src/test/java/com/smriti/clinicalscribe/rag/ProtocolRetrieverTest.kt` - deterministic unit tests for local protocol keyword retrieval.
 - `app/src/test/java/com/smriti/clinicalscribe/data/VisitLogTest.kt` - unit test for optional audio metadata on visit logs.
 - `app/src/test/java/com/smriti/clinicalscribe/export/JsonExporterTest.kt` - unit test for visit JSON protocol citation and referral flag export.
+- `app/src/test/java/com/smriti/clinicalscribe/reasoning/AgentModeTest.kt` - unit test ensuring mock mode is default.
+- `app/src/test/java/com/smriti/clinicalscribe/reasoning/RealGemmaAgentTest.kt` - unit tests for the safe unavailable RealGemma path.
 
 ## Next Steps
-1. Install the latest debug build on the Pixel 9 Pro API 35 emulator.
-2. Verify microphone permission request, local 30-second recording, saved filename/duration, CHW review, TTS buttons, JSON export paths, and Offline Proof.
-3. Confirm the sample transcript still generates the protocol-grounded referral flow.
-4. Begin the LiteRT/Gemma integration spike behind `GemmaAgent`.
-5. Keep `MockGemmaAgent` available as the offline demo fallback.
+1. Install the latest debug build on the Pixel 9 Pro API 35 emulator and confirm Offline Proof shows `MockGemmaAgent`.
+2. Research LiteRT-LM Android setup and model packaging constraints without adding model files.
+3. Implement model availability checks inside `RealGemmaAgent.initializeModel()`.
+4. Add timeout/error fallback from `RealGemmaAgent` to `MockGemmaAgent` before any real model call is used in the demo.
+5. Keep `MockGemmaAgent` as the default until the real Gemma path is benchmarked offline.
 
 ## Change Log
 - 2026-04-27: Created `CONTEXT.md` with initial project state before Android scaffold.
@@ -116,3 +134,4 @@ The repository now has a working Android Kotlin + Jetpack Compose mock MVP. It s
 - 2026-04-27: Added real local protocol grounding from an offline JSON asset corpus while keeping the mock MVP architecture. Files touched: `app/src/main/assets/protocols/maternal_health_demo_protocols.json`, `app/src/main/java/com/smriti/clinicalscribe/rag/ProtocolChunk.kt`, `app/src/main/java/com/smriti/clinicalscribe/rag/ProtocolRetriever.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgent.kt`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/AppDatabase.kt`, `app/src/test/java/com/smriti/clinicalscribe/rag/ProtocolRetrieverTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/MockGemmaAgentTest.kt`, `CONTEXT.md`. Protocol corpus added: 10 maternal-health demo chunks covering severe headache, blurred vision, high blood pressure, reduced fetal movement, vaginal bleeding, convulsions, severe abdominal pain, fever, swelling of face/hands, and same-day referral guidance. Tests added/updated: asset-backed retrieval for headache + blurred vision + high BP, unrelated-query no match, referral output including retrieved source/section, and no-protocol uncertain/no-citation output. Test/build result: first sandboxed `.\gradlew.bat testDebugUnitTest` failed on the known Gradle cache lock-file path; rerun with normal cache access passed. `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug build and verify the judge demo shows asset-derived protocol citations in the ReviewScreen.
 - 2026-04-27: Added a voice-note style UI shell without real ASR or audio recording. Files touched: `app/src/main/java/com/smriti/clinicalscribe/ui/VisitScreen.kt`, `CONTEXT.md`. Changes: added "Record Visit Note" section, mock Start/Stop voice note button, "Listening locally..." recording state, 30-second chunk label, "Simulated transcript for demo" text field label, "Use sample danger-sign transcript" fill button, and note that real Gemma 4 audio integration comes next. Test/build result: first sandboxed `.\gradlew.bat testDebugUnitTest` failed on the known Gradle cache lock-file path; rerun with normal cache access passed. `.\gradlew.bat assembleDebug` passed. Next recommended step: install the latest debug build and verify the mock voice workflow on the Pixel 9 Pro API 35 emulator.
 - 2026-04-27: Completed Field Tool Milestone while keeping mock reasoning. Files touched: `app/src/main/AndroidManifest.xml`, `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/audio/AudioRecorder.kt`, `app/src/main/java/com/smriti/clinicalscribe/audio/VoiceNoteMetadata.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/AppDatabase.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/TranscriptSource.kt`, `app/src/main/java/com/smriti/clinicalscribe/data/VisitLog.kt`, `app/src/main/java/com/smriti/clinicalscribe/export/JsonExporter.kt`, `app/src/main/java/com/smriti/clinicalscribe/tts/AndroidVoiceOutput.kt`, `app/src/main/java/com/smriti/clinicalscribe/tts/VoiceOutput.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/VisitScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/ReviewScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/test/java/com/smriti/clinicalscribe/data/VisitLogTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/export/JsonExporterTest.kt`, `CONTEXT.md`. Features implemented: runtime microphone permission, local app-private 30-second voice-note recording, voice-note metadata persisted on confirmed visits, Android TTS readout for referral and summary, app-private visit/summary JSON export, and Offline Proof demo section. Test/build result: initial sandboxed Gradle run hit the known user-cache lock-file issue; `.\gradlew.bat testDebugUnitTest` passed with normal cache access; `.\gradlew.bat assembleDebug` passed. Known issues: `MediaRecorder()` no-arg constructor deprecation warning; TTS depends on device language data; real ASR remains pending and transcript source is marked `REAL_ASR_PENDING` when audio is attached. Next recommended step: emulator verification of recording/TTS/export, then start the LiteRT/Gemma integration spike behind `GemmaAgent`.
+- 2026-04-27: Added controlled LiteRT/Gemma integration scaffold behind `GemmaAgent`. Files touched: `app/src/main/java/com/smriti/clinicalscribe/MainActivity.kt`, `app/src/main/java/com/smriti/clinicalscribe/ui/SummaryScreen.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/AgentMode.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/AgentConfig.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/GemmaAgentFactory.kt`, `app/src/main/java/com/smriti/clinicalscribe/reasoning/RealGemmaAgent.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/AgentModeTest.kt`, `app/src/test/java/com/smriti/clinicalscribe/reasoning/RealGemmaAgentTest.kt`, `CONTEXT.md`. Features implemented: agent mode enum, mock default config, factory-based agent selection, RealGemmaAgent unavailable stub, dynamic Offline Proof reasoning mode, and TODOs for LiteRT-LM model loading, prompt construction, audio/transcript input, structured function-call parsing, and timeout/error fallback. Test/build result: first sandboxed `.\gradlew.bat testDebugUnitTest` failed on the known Gradle cache lock-file path; rerun with normal cache access passed. `.\gradlew.bat assembleDebug` passed. Known issues: RealGemmaAgent intentionally does not load a model and returns uncertain fallback-required results. Next recommended step: verify Offline Proof still shows `MockGemmaAgent`, then research LiteRT-LM Android dependencies/model packaging without adding model files.

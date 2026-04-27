@@ -32,8 +32,10 @@ import com.smriti.clinicalscribe.data.TranscriptSource
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.export.JsonExporter
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
+import com.smriti.clinicalscribe.reasoning.AgentConfig
+import com.smriti.clinicalscribe.reasoning.AgentMode
 import com.smriti.clinicalscribe.reasoning.GemmaAgent
-import com.smriti.clinicalscribe.reasoning.MockGemmaAgent
+import com.smriti.clinicalscribe.reasoning.GemmaAgentFactory
 import com.smriti.clinicalscribe.reasoning.SupervisorSummary
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import com.smriti.clinicalscribe.tts.AndroidVoiceOutput
@@ -69,7 +71,8 @@ private sealed interface SmritiScreen {
 @Composable
 private fun SmritiApp(
     database: AppDatabase,
-    agent: GemmaAgent = MockGemmaAgent()
+    agentMode: AgentMode = AgentConfig.DEFAULT_MODE,
+    agent: GemmaAgent = GemmaAgentFactory.create(agentMode)
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -276,6 +279,7 @@ private fun SmritiApp(
                     is SmritiScreen.Summary -> SummaryScreen(
                         summary = screen.summary,
                         isResettingDemoData = isResettingDemoData,
+                        reasoningModeLabel = agentMode.displayName,
                         ttsStatusMessage = ttsStatusMessage,
                         exportSummaryPath = exportSummaryPath,
                         onReadSummary = {
