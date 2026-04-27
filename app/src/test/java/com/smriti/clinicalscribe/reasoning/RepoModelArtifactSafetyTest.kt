@@ -12,7 +12,7 @@ class RepoModelArtifactSafetyTest {
             .walkTopDown()
             .onEnter { dir -> !dir.shouldSkipDirectory() }
             .filter { file ->
-                file.isFile && listOf(".litertlm", ".task").any { suffix ->
+                file.isFile && listOf(".litertlm", ".task", ".tflite", ".onnx").any { suffix ->
                     file.name.endsWith(suffix, ignoreCase = true)
                 }
             }

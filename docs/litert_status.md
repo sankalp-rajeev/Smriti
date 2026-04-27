@@ -17,6 +17,8 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
   `Engine`, `EngineConfig`, `Backend`, `Content.Text`, and `Conversation`.
 - `LiteRtEngineConfigFactory` constructs a real `EngineConfig` with `Backend.CPU()` only when the model file is found.
 - `LiteRtEngineInitializationChecker` can initialize and immediately close `Engine` only when an explicit manual-test flag is true.
+- `LiteRtGemmaTextClient.generateTextManual(...)` can run one text-only `sendMessage` call only when an explicit manual inference flag is true.
+- `ManualLiteRtTextInferenceInstrumentedTest` is the only developer harness for the first real text inference attempt with a sideloaded model.
 - No model file is committed to the repository.
 
 ## Manual-Only Engine Work
@@ -26,11 +28,25 @@ Smriti still does not run LiteRT inference in normal app behavior:
 - No `.litertlm` model loading.
 - No `Engine` instantiation during app startup or normal UI flow.
 - No `Engine.initialize()` during app startup or normal UI flow.
-- No Conversation creation.
-- No inference or message sending.
+- No Conversation creation during app startup or normal UI flow.
+- No inference or message sending during app startup or normal UI flow.
 - No Hugging Face or model download code.
 
 The manual checker requires all of the following before it touches `Engine`: a found app-private model file, a prepared `EngineConfig`, and `allowManualEngineInitialization = true`. `Engine` implements `AutoCloseable`, so the checker uses `use { initialize() }` to close it immediately after initialization. This path is not wired into Patient Roster, Visit, Review, Summary, or any visible app toggle.
+
+Manual text inference is similarly explicit: `LiteRtGemmaTextClient.generateText(...)` still returns unavailable by default, while `generateTextManual(...)` requires a found model, prepared `EngineConfig`, and `allowManualTextInference = true`. The manual path initializes `Engine`, creates one `Conversation`, sends one text prompt, extracts `Content.Text`, and closes both Conversation and Engine. It is not wired into the normal demo flow.
+
+The instrumentation harness uses the debug application ID `com.smriti.clinicalscribe`, the app-private path `filesDir/models/gemma-4-E2B-it-int4.litertlm`, and the non-clinical prompt `Reply with exactly: SMRITI_LITERT_OK`. It must be run explicitly with:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualLiteRtTextInferenceInstrumentedTest -Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true
+```
+
+Logcat output is tagged:
+
+```powershell
+adb logcat -s SmritiLiteRtManualTest:I "*:S"
+```
 
 ## Why Direct API Use Is Deferred
 
@@ -43,7 +59,7 @@ JDK 21 is required for direct LiteRT-LM API compile work.
 `RealGemmaReadinessEvaluator` is the safety gate. It reports judge-readable readiness while keeping:
 
 - model loading disallowed in normal app flow,
-- inference disallowed,
+- inference disallowed by default,
 - engine creation false,
 - engine initialization false,
 - conversation creation false,

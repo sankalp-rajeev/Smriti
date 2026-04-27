@@ -27,7 +27,7 @@ data class OfflineProofStatus(
             "Real Gemma model" to realGemmaModelStatusLabel,
             "EngineConfig" to "Ready when model found; Engine manual-only",
             "RealGemma readiness" to realGemmaReadinessLabel,
-            "Inference" to "Disabled"
+            "Inference" to "Disabled by default; manual-only"
         )
 }
 

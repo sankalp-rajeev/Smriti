@@ -62,6 +62,7 @@ Experimental and disabled:
 - LiteRT-LM dependency is present, and `EngineConfig` construction is available when a sideloaded model is found.
 - Real `.litertlm` model loading in normal app flow, Conversation creation, and inference are disabled.
 - Engine initialization exists only as an explicit manual developer check and is not wired into the UI.
+- Text-only LiteRT inference exists only as an explicit manual developer call and is not wired into the UI.
 - Real Gemma audio/ASR is not implemented yet.
 
 ## LiteRT-LM Status
@@ -70,7 +71,8 @@ Experimental and disabled:
 - Expected future model path: `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
 - The app detects whether that file exists, but does not load it.
 - EngineConfig is constructed with `Backend.CPU()` only when that model file exists.
-- Direct LiteRT-LM API types compile after the Room KSP migration, but runtime Engine use is still disabled.
+- Direct LiteRT-LM API types compile after the Room KSP migration.
+- Runtime Engine initialization and text inference are disabled by default and manual-only.
 - `RealGemmaReadinessEvaluator` keeps model loading and inference disabled.
 - No model files are committed.
 

@@ -21,7 +21,7 @@ class OfflineProofStatusTest {
                 "Real Gemma model" to "Not found",
                 "EngineConfig" to "Ready when model found; Engine manual-only",
                 "RealGemma readiness" to "Mock active",
-                "Inference" to "Disabled"
+                "Inference" to "Disabled by default; manual-only"
             ),
             status.lines
         )

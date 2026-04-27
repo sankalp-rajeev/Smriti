@@ -2,6 +2,7 @@ package com.smriti.clinicalscribe.reasoning
 
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -24,6 +25,27 @@ class LiteRtGemmaTextClientTest {
     }
 
     @Test
+    fun defaultGenerateTextDoesNotCallManualInferenceRunner() = runBlocking {
+        var runnerCalled = false
+        val client = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = LiteRtGemmaTextClient.ManualTextInferenceRunner { _, _ ->
+                runnerCalled = true
+                "should not run"
+            }
+        )
+
+        val result = client.generateText("Normal RealGemma text client call")
+
+        assertTrue(result is TextGenerationResult.Unavailable)
+        assertFalse(runnerCalled)
+        assertFalse(client.modelLoadAttempted)
+        assertFalse(client.engineInitializationAttempted)
+        assertFalse(client.conversationCreated)
+        assertFalse(client.inferenceAttempted)
+    }
+
+    @Test
     fun liteRtClientDoesNotAttemptModelLoadingEngineInitializationOrInference() = runBlocking {
         val filesDir = Files.createTempDirectory("smriti-litert-client").toFile()
         val modelStatus = ModelAvailability.fromFilesDir(filesDir).check()
@@ -35,6 +57,101 @@ class LiteRtGemmaTextClientTest {
         assertFalse(client.engineInitializationAttempted)
         assertFalse(client.conversationCreated)
         assertFalse(client.inferenceAttempted)
+    }
+
+    @Test
+    fun manualTextInferenceFlagFalseNeverInitializesEngine() = runBlocking {
+        var runnerCalled = false
+        val client = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = LiteRtGemmaTextClient.ManualTextInferenceRunner { _, _ ->
+                runnerCalled = true
+                "should not run"
+            }
+        )
+
+        val result = client.generateTextManual(
+            prompt = "Manual test prompt",
+            allowManualTextInference = false
+        )
+
+        assertTrue(result is TextGenerationResult.Unavailable)
+        assertFalse(runnerCalled)
+        assertFalse(client.modelLoadAttempted)
+        assertFalse(client.engineInitializationAttempted)
+        assertFalse(client.conversationCreated)
+        assertFalse(client.inferenceAttempted)
+    }
+
+    @Test
+    fun manualTextInferenceMissingModelReturnsUnavailable() = runBlocking {
+        var runnerCalled = false
+        val client = LiteRtGemmaTextClient(
+            modelStatus = missingModelStatus(),
+            manualInferenceRunner = LiteRtGemmaTextClient.ManualTextInferenceRunner { _, _ ->
+                runnerCalled = true
+                "should not run"
+            }
+        )
+
+        val result = client.generateTextManual(
+            prompt = "Manual test prompt",
+            allowManualTextInference = true
+        )
+
+        assertTrue(result is TextGenerationResult.Unavailable)
+        val unavailable = result as TextGenerationResult.Unavailable
+        assertTrue(unavailable.status.contains("model not found"))
+        assertFalse(runnerCalled)
+        assertFalse(client.modelLoadAttempted)
+        assertFalse(client.engineInitializationAttempted)
+        assertFalse(client.conversationCreated)
+        assertFalse(client.inferenceAttempted)
+    }
+
+    @Test
+    fun manualTextInferenceFakeSuccessReturnsGeneratedText() = runBlocking {
+        val client = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = LiteRtGemmaTextClient.ManualTextInferenceRunner { engineConfig, prompt ->
+                assertTrue(engineConfig.modelPath.endsWith(LiteRtModelPaths.GEMMA_E2B_MODEL_FILE_NAME))
+                assertEquals("Manual test prompt", prompt)
+                "generated text"
+            }
+        )
+
+        val result = client.generateTextManual(
+            prompt = "Manual test prompt",
+            allowManualTextInference = true
+        )
+
+        assertEquals(TextGenerationResult.Success("generated text"), result)
+        assertTrue(client.modelLoadAttempted)
+        assertTrue(client.engineInitializationAttempted)
+        assertTrue(client.conversationCreated)
+        assertTrue(client.inferenceAttempted)
+    }
+
+    @Test
+    fun manualTextInferenceFakeEngineFailureReturnsSafeFailure() = runBlocking {
+        val client = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = LiteRtGemmaTextClient.ManualTextInferenceRunner { _, _ ->
+                throw RuntimeException("engine failed safely")
+            }
+        )
+
+        val result = client.generateTextManual(
+            prompt = "Manual test prompt",
+            allowManualTextInference = true
+        )
+
+        assertTrue(result is TextGenerationResult.Failed)
+        assertTrue((result as TextGenerationResult.Failed).error.contains("engine failed safely"))
+        assertTrue(client.modelLoadAttempted)
+        assertTrue(client.engineInitializationAttempted)
+        assertTrue(client.conversationCreated)
+        assertTrue(client.inferenceAttempted)
     }
 
     @Test
@@ -80,5 +197,18 @@ class LiteRtGemmaTextClientTest {
     @Test
     fun defaultModeStillUsesMockAgent() {
         assertTrue(GemmaAgentFactory.create() is MockGemmaAgent)
+    }
+
+    private fun missingModelStatus(): ModelStatus {
+        val filesDir = Files.createTempDirectory("smriti-litert-client-missing").toFile()
+        return ModelAvailability.fromFilesDir(filesDir).check()
+    }
+
+    private fun foundModelStatus(): ModelStatus {
+        val filesDir = Files.createTempDirectory("smriti-litert-client-found").toFile()
+        val modelFile = LiteRtModelPaths.expectedModelFile(filesDir)
+        modelFile.parentFile!!.mkdirs()
+        modelFile.writeText("fake model placeholder for manual inference test only")
+        return ModelAvailability.fromFilesDir(filesDir).check()
     }
 }
