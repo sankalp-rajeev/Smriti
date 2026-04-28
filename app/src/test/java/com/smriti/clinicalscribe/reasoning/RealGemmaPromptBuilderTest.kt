@@ -28,6 +28,29 @@ class RealGemmaPromptBuilderTest {
         assertTrue(prompt.contains("This is not a diagnosis"))
         assertTrue(prompt.contains("CHW confirmation is required"))
         assertTrue(prompt.contains("Return compact JSON only"))
+        assertTrue(prompt.contains("protocolCitation must be exactly one supplied citation string"))
+        assertTrue(prompt.contains("choose the single most urgent or primary citation"))
+        assertTrue(prompt.contains("Do not join citations with semicolons"))
+        assertTrue(prompt.contains("same exact supplied citation as protocolCitation"))
+    }
+
+    @Test
+    fun promptExplainsEmptyCitationContractWhenNoProtocolChunksSupplied() {
+        val patient = DemoSeedData.patients.first { it.id == "patient-meena" }
+        val history = DemoSeedData.initialVisitLogs(nowMillis = 1_700_000_000_000L)
+
+        val prompt = RealGemmaPromptBuilder().buildVisitReasoningPrompt(
+            patient = patient,
+            visitHistory = history,
+            observationText = "Meena feels unwell but vitals are missing.",
+            protocolChunks = emptyList()
+        )
+
+        assertTrue(prompt.contains("No protocol chunk was supplied"))
+        assertTrue(prompt.contains("Set protocolCitation to \"\""))
+        assertTrue(prompt.contains("Set uncertain to true"))
+        assertTrue(prompt.contains("Set referralFlag to null"))
+        assertTrue(prompt.contains("Do not write \"No matching protocol citation\""))
     }
 
     private fun protocolChunk() = ProtocolChunk(

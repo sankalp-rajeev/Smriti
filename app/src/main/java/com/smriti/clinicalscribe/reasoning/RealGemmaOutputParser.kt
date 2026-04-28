@@ -9,7 +9,9 @@ sealed class RealGemmaParseResult {
     data class Rejected(val reason: String, val fallback: VisitReasoningResult) : RealGemmaParseResult()
 }
 
-class RealGemmaOutputParser {
+class RealGemmaOutputParser(
+    private val citationValidator: ProtocolCitationValidator = ProtocolCitationValidator()
+) {
     fun parseVisitReasoning(
         rawOutput: String,
         patient: Patient,
@@ -38,8 +40,8 @@ class RealGemmaOutputParser {
             ?: return rejected("observationText must be a non-empty string.", patient, originalObservationText, protocolChunks)
         val structuredNote = json.requiredString("structuredNote")
             ?: return rejected("structuredNote must be a non-empty string.", patient, originalObservationText, protocolChunks)
-        val protocolCitation = json.requiredString("protocolCitation")
-            ?: return rejected("protocolCitation must be a non-empty string.", patient, originalObservationText, protocolChunks)
+        val protocolCitation = json.requiredStringAllowingEmpty("protocolCitation")
+            ?: return rejected("protocolCitation must be a string.", patient, originalObservationText, protocolChunks)
         val suggestedFollowUp = json.requiredString("suggestedFollowUp")
             ?: return rejected("suggestedFollowUp must be a non-empty string.", patient, originalObservationText, protocolChunks)
         val uncertain = json["uncertain"] as? Boolean
@@ -67,35 +69,31 @@ class RealGemmaOutputParser {
             return rejected("Output used diagnostic language.", patient, originalObservationText, protocolChunks)
         }
 
-        val allowedCitations = protocolChunks.map { it.citation }.toSet()
-        val noProtocolCitation = protocolCitation.equals(NO_MATCHING_CITATION, ignoreCase = true)
-        if (protocolChunks.isEmpty()) {
-            if (!noProtocolCitation || referralFlag != null) {
-                return rejected("Output invented a protocol citation when no protocol chunk was supplied.", patient, originalObservationText, protocolChunks)
-            }
-        } else {
-            if (protocolCitation !in allowedCitations) {
-                return rejected("protocolCitation did not match a supplied protocol chunk.", patient, originalObservationText, protocolChunks)
-            }
-            if (referralFlag != null && referralFlag.protocolBasis !in allowedCitations) {
-                return rejected("Referral or recommendation was not grounded in a supplied protocol citation.", patient, originalObservationText, protocolChunks)
-            }
+        val citationValidation = when (val validation = citationValidator.validate(
+            protocolCitation = protocolCitation,
+            referralProtocolBasis = referralFlag?.protocolBasis,
+            protocolChunks = protocolChunks,
+            uncertain = uncertain,
+            hasReferral = referralFlag != null
+        )) {
+            is ProtocolCitationValidationResult.Accepted -> validation.validation
+            is ProtocolCitationValidationResult.Rejected ->
+                return rejected(validation.reason, patient, originalObservationText, protocolChunks)
         }
 
-        if (!uncertain && suggestedFollowUp.isNotBlank() && (protocolChunks.isEmpty() || noProtocolCitation)) {
+        if (!uncertain && suggestedFollowUp.isNotBlank() && citationValidation.acceptedCitation.isBlank()) {
             return rejected("Recommendation text was present without a valid protocol citation.", patient, originalObservationText, protocolChunks)
         }
 
-        val matchedChunk = protocolChunks.firstOrNull { it.citation == protocolCitation }
         return RealGemmaParseResult.Success(
             VisitReasoningResult(
                 patientId = patientId,
                 observationText = observationText,
                 structuredNote = structuredNote,
                 referralFlag = referralFlag,
-                protocolCitation = protocolCitation,
+                protocolCitation = citationValidation.acceptedCitation,
                 suggestedFollowUp = suggestedFollowUp,
-                protocolChunk = matchedChunk,
+                protocolChunk = citationValidation.matchedChunk,
                 uncertain = uncertain,
                 clarificationPrompt = clarificationPrompt
             )
@@ -154,6 +152,10 @@ class RealGemmaOutputParser {
 
     private fun Map<*, *>.requiredString(name: String): String? {
         return (this[name] as? String)?.trim()?.ifBlank { null }
+    }
+
+    private fun Map<*, *>.requiredStringAllowingEmpty(name: String): String? {
+        return (this[name] as? String)?.trim()
     }
 
     private fun Map<*, *>.optNullableString(name: String): String? {

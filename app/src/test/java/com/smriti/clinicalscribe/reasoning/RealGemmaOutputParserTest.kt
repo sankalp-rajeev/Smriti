@@ -90,7 +90,43 @@ class RealGemmaOutputParserTest {
             protocolChunks = listOf(protocol)
         )
 
-        assertRejected(result, "protocolCitation did not match")
+        assertRejected(result, "not valid model output")
+    }
+
+    @Test
+    fun semicolonJoinedMultipleCitationsAreRejected() {
+        val joined = validJson(
+            protocolCitation = "${protocol.citation}; WHO ANC Contact schedule",
+            referralFlag = "null"
+        )
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = joined,
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertRejected(result, "exactly match one supplied protocol citation")
+    }
+
+    @Test
+    fun noMatchingProtocolCitationIsRejectedEvenWithoutProtocolChunks() {
+        val noMatching = validJson(
+            protocolCitation = "No matching protocol citation",
+            suggestedFollowUp = "CHW should collect missing vitals and review manually.",
+            referralFlag = "null",
+            uncertain = true
+        )
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = noMatching,
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = emptyList()
+        )
+
+        assertRejected(result, "not valid model output")
     }
 
     @Test
@@ -110,7 +146,7 @@ class RealGemmaOutputParserTest {
     @Test
     fun noProtocolNoCitationUncertainOutputParses() {
         val noProtocol = validJson(
-            protocolCitation = "No matching protocol citation",
+            protocolCitation = "",
             suggestedFollowUp = "CHW should review manually because no matching local protocol was retrieved.",
             referralFlag = "null",
             uncertain = true
@@ -127,6 +163,32 @@ class RealGemmaOutputParserTest {
         val visit = (result as RealGemmaParseResult.Success).result
         assertNull(visit.referralFlag)
         assertTrue(visit.uncertain)
+        assertEquals("", visit.protocolCitation)
+        assertNull(visit.protocolChunk)
+    }
+
+    @Test
+    fun referralWithoutValidCitationIsRejected() {
+        val invalidReferral = validJson(
+            referralFlag = """
+                {
+                  "urgency":"SAME_DAY",
+                  "reason":"Protocol-grounded referral suggestion; not a diagnosis.",
+                  "protocolBasis":"Invented Protocol Section 1",
+                  "recommendedFacility":"Primary health centre",
+                  "dangerSigns":["headache","blurred vision"]
+                }
+            """.trimIndent()
+        )
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = invalidReferral,
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertRejected(result, "not grounded in a supplied protocol citation")
     }
 
     private fun assertRejected(result: RealGemmaParseResult, reasonFragment: String) {

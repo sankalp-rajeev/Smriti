@@ -129,6 +129,28 @@ View the manual RealGemmaAgent test output:
 adb logcat -s SmritiRealGemmaAgentTest:I "*:S"
 ```
 
+## Manual RealGemma Benchmark Test
+
+To collect judge/demo timing and reliability metrics for the real on-device path, run the manual benchmark harness:
+
+```text
+app/src/androidTest/java/com/smriti/clinicalscribe/reasoning/ManualRealGemmaBenchmarkInstrumentedTest.kt
+```
+
+It runs three text scenarios through `RealGemmaAgent` backed by `LiteRtGemmaTextClient.generateTextManual(...)`: an ANC danger-sign case, a normal ANC follow-up case, and an incomplete observation case. It requires the sideloaded app-private model and `allowManualTextInference=true`. It logs prompt length, raw output length, raw model `protocolCitation`, single-citation contract adherence, parser success, referral presence, citation presence, safety wording, uncertainty/clarification, per-scenario latency, and an aggregate summary. It does not write benchmark output to Room patient, visit, or referral tables.
+
+Run only the manual benchmark instrumentation test:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaBenchmarkInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
+```
+
+View the benchmark output:
+
+```powershell
+adb logcat -s SmritiRealGemmaBenchmark:I "*:S"
+```
+
 Normal validation should continue to use:
 
 ```powershell
