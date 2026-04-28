@@ -1,6 +1,6 @@
 # Local Model Setup
 
-Smriti is prepared for manual Gemma `.litertlm` sideloading, but the normal app does not load or run a model. The only real text inference entry point is a developer-run instrumentation test.
+Smriti is prepared for manual Gemma `.litertlm` sideloading, but the normal app does not load or run a model. The only real text inference entry points are developer-run instrumentation tests.
 
 ## Safety Rules
 
@@ -105,6 +105,36 @@ View the manual JSON test output:
 
 ```powershell
 adb logcat -s SmritiRealGemmaJsonTest:I "*:S"
+```
+
+## Manual RealGemmaAgent End-to-End Test
+
+After the structured JSON harness works, run the full experimental agent path:
+
+```text
+app/src/androidTest/java/com/smriti/clinicalscribe/reasoning/ManualRealGemmaAgentInstrumentedTest.kt
+```
+
+It constructs `RealGemmaAgent` with an androidTest-only `RealGemmaTextClient` adapter backed by `LiteRtGemmaTextClient.generateTextManual(...)`. The test feeds the Meena danger-sign scenario through `RealGemmaPromptBuilder`, real manual LiteRT text inference, `RealGemmaOutputParser`, and `VisitReasoningResult`. It requires `allowManualTextInference=true`, fails if the sideloaded model is missing, logs raw model output with tag `SmritiRealGemmaAgentTest`, and does not write to Room patient, visit, or referral tables.
+
+Run only the manual RealGemmaAgent instrumentation test:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaAgentInstrumentedTest -Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true
+```
+
+View the manual RealGemmaAgent test output:
+
+```powershell
+adb logcat -s SmritiRealGemmaAgentTest:I "*:S"
+```
+
+Normal validation should continue to use:
+
+```powershell
+.\gradlew.bat testDebugUnitTest
+.\gradlew.bat assembleDebug
+.\gradlew.bat :app:compileDebugAndroidTestKotlin
 ```
 
 ## Manual Engine Check

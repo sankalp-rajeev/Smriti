@@ -83,6 +83,58 @@ class RealGemmaAgentTest {
     }
 
     @Test
+    fun parsedValidJsonWithoutSafetyWordingGetsSafetyWordingAdded() = runBlocking {
+        val protocol = protocolChunks.first()
+        val fakeAgent = RealGemmaAgent(
+            textClient = StaticTextClient(
+                TextGenerationResult.Success(
+                    validJson(
+                        protocolCitation = protocol.citation,
+                        structuredNote = "Patient reports severe headache and blurred vision with BP 150/95."
+                    )
+                )
+            )
+        )
+
+        val result = fakeAgent.generateVisitNote(
+            patient = patient,
+            visitHistory = history,
+            observationText = "Meena has severe headache and blurred vision. BP 150 over 95.",
+            protocolChunks = protocolChunks
+        )
+
+        assertFalse(result.uncertain)
+        assertTrue(result.structuredNote.contains("This is not a diagnosis."))
+        assertTrue(result.structuredNote.contains("CHW confirmation is required before saving."))
+    }
+
+    @Test
+    fun existingSafetyWordingIsNotDuplicated() = runBlocking {
+        val protocol = protocolChunks.first()
+        val safeNote = "Protocol-grounded support only. This is not a diagnosis. CHW confirmation is required before saving."
+        val fakeAgent = RealGemmaAgent(
+            textClient = StaticTextClient(
+                TextGenerationResult.Success(
+                    validJson(
+                        protocolCitation = protocol.citation,
+                        structuredNote = safeNote
+                    )
+                )
+            )
+        )
+
+        val result = fakeAgent.generateVisitNote(
+            patient = patient,
+            visitHistory = history,
+            observationText = "Meena has severe headache and blurred vision. BP 150 over 95.",
+            protocolChunks = protocolChunks
+        )
+
+        assertEquals(1, result.structuredNote.countOccurrences("This is not a diagnosis."))
+        assertEquals(1, result.structuredNote.countOccurrences("CHW confirmation is required before saving."))
+    }
+
+    @Test
     fun invalidFakeJsonReturnsSafeUncertainResult() = runBlocking {
         val result = RealGemmaAgent(
             textClient = StaticTextClient(TextGenerationResult.Success("not json"))
@@ -219,6 +271,10 @@ class RealGemmaAgentTest {
               }
             }
         """.trimIndent()
+    }
+
+    private fun String.countOccurrences(needle: String): Int {
+        return split(needle).size - 1
     }
 
     private fun assetCorpusJson(): String {

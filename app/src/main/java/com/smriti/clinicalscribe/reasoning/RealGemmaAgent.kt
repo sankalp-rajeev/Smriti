@@ -8,7 +8,8 @@ import com.smriti.clinicalscribe.rag.ProtocolChunk
 class RealGemmaAgent(
     private val textClient: RealGemmaTextClient = UnavailableGemmaTextClient(),
     private val promptBuilder: RealGemmaPromptBuilder = RealGemmaPromptBuilder(),
-    private val outputParser: RealGemmaOutputParser = RealGemmaOutputParser()
+    private val outputParser: RealGemmaOutputParser = RealGemmaOutputParser(),
+    private val safetyPostProcessor: RealGemmaSafetyPostProcessor = RealGemmaSafetyPostProcessor()
 ) : GemmaAgent {
     fun initializeModel(): Boolean {
         // TODO LiteRT-LM integration: initialize only in a future client implementation, never in this scaffold.
@@ -84,7 +85,7 @@ class RealGemmaAgent(
     ): VisitReasoningResult {
         return try {
             when (val parsed = outputParser.parseVisitReasoning(rawOutput, patient, observationText, protocolChunks)) {
-                is RealGemmaParseResult.Success -> parsed.result
+                is RealGemmaParseResult.Success -> safetyPostProcessor.enforce(parsed.result)
                 is RealGemmaParseResult.Rejected -> safeUncertainResult(
                     patient = patient,
                     visitHistory = visitHistory,
