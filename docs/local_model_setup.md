@@ -151,6 +151,79 @@ View the benchmark output:
 adb logcat -s SmritiRealGemmaBenchmark:I "*:S"
 ```
 
+## Manual Function-Calling Probe
+
+LiteRT-LM Android `0.10.2` exposes native tool/function-calling classes such as `OpenApiTool`, `ToolCall`, `ToolProvider`, and `ConversationConfig(tools=..., automaticToolCalling=...)`. Smriti keeps JSON parsing as the safe fallback until a manual probe proves the model reliably executes a native tool call.
+
+Run only the manual function-calling probe:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualLiteRtFunctionCallingInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true" "-Pandroid.testInstrumentationRunnerArguments.allowManualFunctionCalling=true"
+```
+
+View the function-calling probe output:
+
+```powershell
+adb logcat -s SmritiLiteRtFunctionTest:I "*:S"
+```
+
+## Manual Memory Stress Benchmark
+
+The memory stress harness builds synthetic Room-style prior visit history with 10, 20, and 40 compact visits. It uses single-line numbered history entries such as `V01: date=..., issue=..., action=..., citation=...`, adds a strict JSON-only reminder, and runs the real manual RealGemmaAgent path. It logs prompt length, latency, output length, parser/citation/safety/referral/uncertainty status, malformed-JSON/citation/safety failure categories, a first-500-character invalid-output preview when parsing fails, and approximate JVM memory before/after.
+
+Run only the manual memory stress instrumentation test:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaMemoryStressInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
+```
+
+View the memory stress output:
+
+```powershell
+adb logcat -s SmritiRealGemmaMemory:I "*:S"
+```
+
+## Manual Audio Capability Probe
+
+LiteRT-LM Android `0.10.2` exposes `Content.AudioBytes`, `Content.AudioFile`, `InputData.Audio`, `Session.generateContent(...)`, and `Conversation.sendMessage(Contents)`. The local AAR inspection did not find a public `AudioPreprocessor`/`AudioProcessor`/`preprocess(...)` API. Smriti does not wire audio into RealGemma or the UI yet. The audio probe logs the available API surface and preprocessing finding without committing audio assets or changing the normal recording flow.
+
+Run the API-surface-only audio probe:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualLiteRtAudioCapabilityInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualAudioProbe=true"
+```
+
+View the audio probe output:
+
+```powershell
+adb logcat -s SmritiLiteRtAudioProbe:I "*:S"
+```
+
+## Manual Audio Inference Test
+
+Real audio inference is intentionally not part of the normal flow. It requires a manually sideloaded small audio file, the sideloaded Gemma model, and explicit arguments. Do not commit the audio file.
+
+Current status: raw `InputData.Audio` reached runtime, but LiteRT-LM returned `Audio must be preprocessed before being used in SessionAdvanced.` The manual test now tries the `Content.AudioFile` conversation route first and the raw `InputData.Audio` session route second. If no public/wired preprocessing path is available, it logs `Audio runtime blocked: LiteRT-LM requires preprocessing, but preprocessing API was not found/wired in litertlm-android 0.10.2.` and reports skipped/blocked rather than failing or claiming transcription works.
+
+Push a tiny manually recorded WAV file to the emulator:
+
+```powershell
+adb push "C:\path\to\manual-smriti-audio.wav" /data/local/tmp/manual-smriti-audio.wav
+adb shell ls -lh /data/local/tmp/manual-smriti-audio.wav
+```
+
+Run only the manual audio inference instrumentation test:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualLiteRtAudioInferenceInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualAudioInference=true" "-Pandroid.testInstrumentationRunnerArguments.manualAudioFilePath=/data/local/tmp/manual-smriti-audio.wav"
+```
+
+View the manual audio inference output:
+
+```powershell
+adb logcat -s SmritiLiteRtAudioInference:I "*:S"
+```
+
 Normal validation should continue to use:
 
 ```powershell

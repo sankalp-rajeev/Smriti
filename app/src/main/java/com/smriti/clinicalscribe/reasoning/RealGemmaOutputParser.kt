@@ -208,6 +208,7 @@ class RealGemmaOutputParser(
                 't' -> parseLiteral("true", true)
                 'f' -> parseLiteral("false", false)
                 'n' -> parseLiteral("null", null)
+                '-', in '0'..'9' -> parseNumber()
                 else -> throw IllegalArgumentException("Unsupported JSON token")
             }
         }
@@ -301,6 +302,35 @@ class RealGemmaOutputParser(
             return value
         }
 
+        private fun parseNumber(): Number {
+            val start = index
+            if (peek('-')) index++
+            readDigits()
+            if (peek('.')) {
+                index++
+                readDigits()
+            }
+            if (peek('e') || peek('E')) {
+                index++
+                if (peek('+') || peek('-')) index++
+                readDigits()
+            }
+            val rawNumber = input.substring(start, index)
+            return if (rawNumber.contains('.') || rawNumber.contains('e', ignoreCase = true)) {
+                rawNumber.toDoubleOrNull() ?: throw IllegalArgumentException("Bad number")
+            } else {
+                rawNumber.toLongOrNull() ?: throw IllegalArgumentException("Bad number")
+            }
+        }
+
+        private fun readDigits() {
+            val start = index
+            while (index < input.length && input[index].isDigit()) {
+                index++
+            }
+            if (start == index) throw IllegalArgumentException("Expected number digit")
+        }
+
         private fun skipWhitespace() {
             while (index < input.length && input[index].isWhitespace()) {
                 index++
@@ -325,7 +355,6 @@ class RealGemmaOutputParser(
             "protocolCitation",
             "suggestedFollowUp",
             "uncertain",
-            "clarificationPrompt",
             "referralFlag"
         )
         const val NO_MATCHING_CITATION = "No matching protocol citation"

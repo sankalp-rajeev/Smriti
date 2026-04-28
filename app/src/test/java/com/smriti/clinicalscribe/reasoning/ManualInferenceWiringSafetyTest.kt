@@ -41,6 +41,12 @@ class ManualInferenceWiringSafetyTest {
             .map { it.relativeTo(appRoot).invariantSeparatorsPath }
             .toList()
 
-        assertEquals(listOf("reasoning/LiteRtGemmaTextClient.kt"), filesWithConversationOrSendMessage)
+        assertEquals(
+            listOf(
+                "reasoning/LiteRtApiSurfaceProbe.kt",
+                "reasoning/LiteRtGemmaTextClient.kt"
+            ),
+            filesWithConversationOrSendMessage
+        )
     }
 }

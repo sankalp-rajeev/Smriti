@@ -4,20 +4,17 @@ import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.rag.ProtocolChunk
 
-class RealGemmaPromptBuilder {
+class RealGemmaPromptBuilder(
+    private val maxHistoryVisits: Int = DEFAULT_MAX_HISTORY_VISITS,
+    private val historyFormatter: RealGemmaHistoryFormatter = RealGemmaHistoryFormatter.Default
+) {
     fun buildVisitReasoningPrompt(
         patient: Patient,
         visitHistory: List<VisitLog>,
         observationText: String,
         protocolChunks: List<ProtocolChunk>
     ): String {
-        val historySummary = visitHistory
-            .sortedByDescending { it.visitDateMillis }
-            .take(5)
-            .joinToString(separator = "\n") { visit ->
-                "- ${visit.structuredNote.take(240)} | Citation: ${visit.protocolCitation}"
-            }
-            .ifBlank { "- No prior visits available in local history." }
+        val historySummary = historyFormatter.format(visitHistory, maxHistoryVisits)
 
         val protocolContext = protocolChunks
             .joinToString(separator = "\n") { chunk ->
@@ -59,6 +56,12 @@ class RealGemmaPromptBuilder {
             - If no protocol chunk is supplied, return an uncertain result with an empty protocolCitation.
             - Avoid diagnostic wording such as "diagnosis", "diagnosed with", or "patient has preeclampsia".
             - Return compact JSON only. Do not include markdown, commentary, or extra text.
+            - Output exactly one JSON object and nothing else.
+            - Do not add a preface, code fence, markdown, bullet list, repeated JSON object, or trailing explanation.
+            - Keep JSON string values single-line; avoid newline characters inside JSON string values.
+            - Do not add trailing commas. Keep clinical measurements inside string values, not as standalone JSON numbers.
+            - Keep the whole JSON under 700 characters when possible.
+            - Use concise values: observationText max 120 chars, structuredNote max 90 chars, suggestedFollowUp max 90 chars, referral reason max 90 chars.
 
             Patient identity:
             - id: ${patient.id}
@@ -80,6 +83,15 @@ class RealGemmaPromptBuilder {
 
             Required JSON shape:
             {"patientId":"string","observationText":"string","structuredNote":"string","protocolCitation":"exactly one supplied citation or empty string when no protocol chunk is supplied","suggestedFollowUp":"string","uncertain":boolean,"clarificationPrompt":null|"string","referralFlag":null|{"urgency":"string","reason":"string","protocolBasis":"same exact supplied citation as protocolCitation","recommendedFacility":"string","dangerSigns":["string"]}}
+
+            Final output rule:
+            Return the JSON object on one line. The first character must be { and the last character must be }.
+            Use only these top-level keys. Do not add extra keys.
+            For referralFlag, keep urgency, reason, protocolBasis, recommendedFacility, and dangerSigns concise.
         """.trimIndent()
+    }
+
+    private companion object {
+        const val DEFAULT_MAX_HISTORY_VISITS = 5
     }
 }

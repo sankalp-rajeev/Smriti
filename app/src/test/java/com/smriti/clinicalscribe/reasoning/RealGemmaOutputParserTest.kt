@@ -63,6 +63,39 @@ class RealGemmaOutputParserTest {
     }
 
     @Test
+    fun harmlessExtraNumericJsonFieldsDoNotBreakParsing() {
+        val withNumericMetadata = validJson().replace(
+            oldValue = "\"referralFlag\":",
+            newValue = "\"bpSystolic\":150,\"bpDiastolic\":95,\"referralFlag\":"
+        )
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = withNumericMetadata,
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertTrue("Expected numeric metadata to parse, got: ${result.describe()}", result is RealGemmaParseResult.Success)
+    }
+
+    @Test
+    fun missingNullableClarificationPromptParsesAsNull() {
+        val withoutClarificationPrompt = validJson()
+            .replace("""  "clarificationPrompt":null,""", "")
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = withoutClarificationPrompt,
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertTrue("Expected missing nullable clarificationPrompt to parse, got: ${result.describe()}", result is RealGemmaParseResult.Success)
+        assertNull((result as RealGemmaParseResult.Success).result.clarificationPrompt)
+    }
+
+    @Test
     fun diagnosticLanguageIsRejected() {
         val unsafe = validJson(
             structuredNote = "This is a diagnosis: patient has preeclampsia.",

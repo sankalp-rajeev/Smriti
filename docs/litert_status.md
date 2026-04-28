@@ -14,11 +14,16 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
 - If the model is absent, Offline Proof says `Real Gemma model: Not found`.
 - If a model is present, Offline Proof says `Found, not loaded`.
 - Direct LiteRT-LM API types now compile through a passive type probe:
-  `Engine`, `EngineConfig`, `Backend`, `Content.Text`, and `Conversation`.
+  `Engine`, `EngineConfig`, `Backend`, `Content.Text`, `Content.AudioBytes`, `Content.AudioFile`, `InputData.Audio`, `Conversation`, `ConversationConfig`, `ToolCall`, and `OpenApiTool`.
 - `LiteRtEngineConfigFactory` constructs a real `EngineConfig` with `Backend.CPU()` only when the model file is found.
 - `LiteRtEngineInitializationChecker` can initialize and immediately close `Engine` only when an explicit manual-test flag is true.
 - `LiteRtGemmaTextClient.generateTextManual(...)` can run one text-only `sendMessage` call only when an explicit manual inference flag is true.
 - `ManualLiteRtTextInferenceInstrumentedTest` is the only developer harness for the first real text inference attempt with a sideloaded model.
+- `ManualRealGemmaBenchmarkInstrumentedTest` is the manual benchmark harness for real text inference reliability and latency.
+- `ManualRealGemmaMemoryStressInstrumentedTest` is the manual 10/20/40 prior-visit context stress harness.
+- `ManualLiteRtFunctionCallingInstrumentedTest` probes native tool/function calling with `OpenApiTool` and `ConversationConfig(tools=...)`.
+- `ManualLiteRtAudioCapabilityInstrumentedTest` probes the exposed audio API surface.
+- `ManualLiteRtAudioInferenceInstrumentedTest` is the separate real-audio manual inference harness.
 - No model file is committed to the repository.
 
 ## Manual-Only Engine Work
@@ -35,6 +40,48 @@ Smriti still does not run LiteRT inference in normal app behavior:
 The manual checker requires all of the following before it touches `Engine`: a found app-private model file, a prepared `EngineConfig`, and `allowManualEngineInitialization = true`. `Engine` implements `AutoCloseable`, so the checker uses `use { initialize() }` to close it immediately after initialization. This path is not wired into Patient Roster, Visit, Review, Summary, or any visible app toggle.
 
 Manual text inference is similarly explicit: `LiteRtGemmaTextClient.generateText(...)` still returns unavailable by default, while `generateTextManual(...)` requires a found model, prepared `EngineConfig`, and `allowManualTextInference = true`. The manual path initializes `Engine`, creates one `Conversation`, sends one text prompt, extracts `Content.Text`, and closes both Conversation and Engine. It is not wired into the normal demo flow.
+
+## Function Calling Status
+
+LiteRT-LM Android `0.10.2` exposes native function/tool classes:
+
+- `OpenApiTool`
+- `ToolCall`
+- `ToolProvider`
+- `ToolManager`
+- `ConversationConfig(tools=..., automaticToolCalling=...)`
+
+Smriti added a manual probe, `ManualLiteRtFunctionCallingInstrumentedTest`, that registers a native `log_visit` tool and asks the model to call it. This is a real native tool-call probe, not JSON prompting. On the current Phase 1 device run, the model executed `log_visit` once and supplied `patientId`, `observationText`, `protocolCitation`, and `referralRequired`. The app still uses the strict JSON prompt/parser path as the safe fallback until native tool calling is productized safely. It is not wired into app startup or UI.
+
+## Memory Stress Status
+
+`ManualRealGemmaMemoryStressInstrumentedTest` generates synthetic Room-style prior visit history at 10, 20, and 40 compressed visits. It uses `RealGemmaPromptBuilder(maxHistoryVisits = visitCount, historyFormatter = RealGemmaHistoryFormatter.Compact)` so larger contexts are included as single-line numbered entries, then runs the manual RealGemmaAgent path with an extra strict JSON-only reminder. It logs prompt length, latency, raw output length, parser status, citation/safety/referral/uncertainty flags, malformed-JSON/citation/safety failure categories, invalid-output previews for parser failures, and approximate JVM memory before/after.
+
+The previous Phase 1 run completed all 10/20/40 contexts without crashing, but JSON reliability was only 1/3 because the 10-visit and 40-visit cases returned invalid JSON. The updated harness tightened history compression and output-format instructions, kept outputs under a compact character budget, and added narrow parser tolerance for harmless JSON numbers plus missing nullable `clarificationPrompt`. The latest manual run reached 3/3 parser success: all 10/20/40 contexts had citations, referral flags, safety wording, and no failure categories. Diagnostic-language and invented-citation rejection remain strict.
+
+This is manual-only and does not write outputs to Room.
+
+## Audio API Status
+
+LiteRT-LM Android `0.10.2` exposes audio-capable classes:
+
+- `Content.AudioBytes`
+- `Content.AudioFile`
+- `InputData.Audio`
+- `Session.generateContent(...)` over `InputData`
+- `Conversation.sendMessage(Contents)` with `Content.AudioFile` / `Content.AudioBytes`
+
+Smriti added `ManualLiteRtAudioCapabilityInstrumentedTest` to log this API surface. It does not claim Gemma 4 E2B transcription quality by itself.
+
+Audio preprocessing investigation for the local `litertlm-android-0.10.2` AAR found no public class or method named like `AudioPreprocessor`, `AudioProcessor`, `Preprocessor`, or `preprocess(...)` in `classes.jar`. The public audio holders are raw containers. The runtime raw-audio attempt failed with:
+
+```text
+LiteRtLmJniException: Failed to generate content: INTERNAL: Audio must be preprocessed before being used in SessionAdvanced.
+```
+
+`ManualLiteRtAudioInferenceInstrumentedTest` is the separate real-audio manual harness. It requires `allowManualAudioInference=true`, `manualAudioFilePath=/data/local/tmp/manual-smriti-audio.wav`, and the sideloaded app-private Gemma model. It now tries the `Conversation.sendMessage(Contents.of(Content.Text(...), Content.AudioFile(...)))` route first, then the raw `Session.generateContent(InputData.Text(...), InputData.Audio(...))` route. If both routes hit the preprocessing requirement, the test logs and skips as blocked instead of claiming transcription works.
+
+Current audio status: API surface available, real raw-audio runtime blocked until a public/wired LiteRT-LM audio preprocessing path is identified. Phase 2 fallback remains the existing Android `MediaRecorder` capture plus manual/simulated transcript for demo, or future external/offline ASR preprocessing if LiteRT-LM requires it. No audio file is committed, and no audio/Gemma path is wired into the normal app flow.
 
 The instrumentation harness uses the debug application ID `com.smriti.clinicalscribe`, the app-private path `filesDir/models/gemma-4-E2B-it-int4.litertlm`, and the non-clinical prompt `Reply with exactly: SMRITI_LITERT_OK`. It must be run explicitly with:
 
