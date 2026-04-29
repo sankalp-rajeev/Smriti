@@ -11,7 +11,7 @@ MainActivity / SmritiApp
 -> editable transcript
 -> Generate Local Visit Note
 -> VisitReasoningPipeline
--> ProtocolRetriever
+-> ProtocolRetriever with ProtocolRetrievalContext
 -> MockGemmaAgent
 -> ReviewScreen
 -> CHW confirm/save
@@ -25,6 +25,7 @@ Important boundaries:
 - `GemmaAgentFactory.create()` returns `MockGemmaAgent` by default.
 - RealGemma text is exposed only through developer-only mode when both gates are enabled.
 - Offline Proof shows readiness/status but does not enable inference.
+- The normal Meena demo uses `countryCode=IN` and `region=INDIA`, with `GLOBAL_CORE` fallback.
 
 ## Manual RealGemma Instrumentation Flow
 
@@ -85,6 +86,19 @@ recorded .m4a voice note
 ```
 
 Direct Gemma 4 audio is not wired into this flow.
+
+## Protocol Retrieval Flow
+
+```text
+editable transcript
+-> ProtocolRetrievalContext(countryCode, region)
+-> local JSON Global Protocol Pack v1
+-> keyword score
+-> location rank: exact country, then region, then GLOBAL_CORE
+-> supplied protocol chunks for GemmaAgent
+```
+
+The corpus is local JSON, not cloud RAG or a vector database. It currently includes global, India, Bangladesh, Ethiopia, Africa-region, and South-America-region maternal/ANC referral-support chunks. Recommendations must be grounded in retrieved protocol chunks or returned as uncertain.
 
 ## Local Storage Flow
 

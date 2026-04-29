@@ -15,7 +15,7 @@ class OfflineProofStatusTest {
         assertEquals(
             listOf(
                 "Network required" to "No",
-                "Protocol source" to "Local asset JSON",
+                "Protocol source" to "Local asset JSON; country-aware retrieval",
                 "Active reasoning mode" to "MockGemmaAgent",
                 "LiteRT-LM dependency" to "Present",
                 "Real Gemma model" to "Not found",

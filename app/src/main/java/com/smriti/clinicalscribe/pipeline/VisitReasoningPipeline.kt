@@ -3,6 +3,7 @@ package com.smriti.clinicalscribe.pipeline
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.rag.ProtocolChunk
+import com.smriti.clinicalscribe.rag.ProtocolRetrievalContext
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import com.smriti.clinicalscribe.reasoning.GemmaAgent
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
@@ -29,7 +30,7 @@ class VisitReasoningPipeline(
             )
         }
 
-        val protocolChunks = protocolRetriever.retrieve(transcript.text)
+        val protocolChunks = protocolRetriever.retrieve(transcript.text, input.protocolContext)
         val reasoningResult = gemmaAgent.generateVisitNote(
             patient = input.patient,
             visitHistory = input.priorVisits,
@@ -102,7 +103,11 @@ data class VisitPipelineInput(
     val patient: Patient,
     val priorVisits: List<VisitLog>,
     val transcriptText: String? = null,
-    val audioPath: String? = null
+    val audioPath: String? = null,
+    val protocolContext: ProtocolRetrievalContext? = ProtocolRetrievalContext(
+        countryCode = "IN",
+        region = "INDIA"
+    )
 )
 
 data class VisitPipelineResult(

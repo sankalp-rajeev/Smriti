@@ -27,9 +27,9 @@ Android offline speech recognition depends on the emulator/device:
 
 If the offline language pack is unavailable, the UI asks the CHW to type or use the sample transcript.
 
-## Protocol Corpus Size
+## Protocol Corpus Coverage
 
-The local protocol corpus is demo-sized. It supports the current maternal-health danger-sign and routine ANC demo flow, but Phase 3 should expand and review the corpus before broader use.
+Global Protocol Pack v1 is a local 46-chunk corpus for maternal/ANC and CHW referral support across global, country, and regional tags. It is still not clinically complete. Before broader use, country-specific content needs review against official program materials and local referral pathways.
 
 ## No Real Patient Data
 

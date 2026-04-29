@@ -24,7 +24,7 @@ data class OfflineProofStatus(
     val lines: List<Pair<String, String>>
         get() = listOf(
             "Network required" to "No",
-            "Protocol source" to "Local asset JSON",
+            "Protocol source" to "Local asset JSON; country-aware retrieval",
             "Active reasoning mode" to reasoningModeLabel,
             "LiteRT-LM dependency" to "Present",
             "Real Gemma model" to realGemmaModelStatusLabel,

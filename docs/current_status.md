@@ -1,6 +1,6 @@
 # Current Status
 
-Smriti is an offline Android maternal-health visit copilot prototype for community health workers. The normal demo is complete through Phase 2 and remains demo-safe: `MockGemmaAgent` is the default, RealGemma/LiteRT-LM inference is manual-only, and the core app path does not require internet.
+Smriti is an offline Android maternal-health visit copilot prototype for community health workers. The normal demo is complete through Phase 2 and remains demo-safe: `MockGemmaAgent` is the default, RealGemma/LiteRT-LM inference is developer-gated, and the core app path does not require internet.
 
 ## Phase 1 Status
 
@@ -31,13 +31,17 @@ Phase 2 is complete for the local core visit flow:
 - Supervisor Summary reads fresh confirmed local data and keeps urgent cases concise.
 - Reset Demo Data clears saved visits/referrals and restores seeded Meena history.
 
-## Phase 3 Next
+## Phase 3 Status
 
-Phase 3 has started with a developer-only RealGemma text UI mode. This is not the default demo path and is not CHW-facing.
+Phase 3 has started with two controlled additions:
+
+- Developer-only RealGemma text UI mode, guarded by both a build-time gate and an app-private local gate. This is not the default demo path and is not CHW-facing.
+- Global Protocol Pack v1, a local 46-chunk maternal/ANC corpus with country/region-aware keyword retrieval for `GLOBAL_CORE`, `INDIA`, `BANGLADESH`, `ETHIOPIA`, `AFRICA_REGION`, and `SOUTH_AMERICA_REGION`.
+- A 10-case synthetic global benchmark suite for protocol retrieval, grounding, referral behavior, uncertainty handling, and country/region/global fallback through the mock local pipeline.
 
 Recommended order:
 
-1. Expand and harden the local protocol corpus.
+1. Review and refine the new protocol pack and synthetic cases against official country program materials.
 2. Improve offline speech setup guidance and device diagnostics.
 3. Capture more developer-mode RealGemma runs and failure cases.
 4. Add stronger structured-output telemetry for manual RealGemma runs.
@@ -48,7 +52,8 @@ Recommended order:
 - Android Kotlin + Jetpack Compose app.
 - Room/SQLite local storage.
 - Local patient roster, local visit history, local referral flags.
-- Local JSON protocol corpus and keyword retrieval.
+- Local JSON protocol corpus and country/region-aware keyword retrieval.
+- Synthetic global benchmark cases that run locally through `ProtocolRetriever + VisitReasoningPipeline + MockGemmaAgent`.
 - Review/edit/confirm save gate.
 - Supervisor summary from confirmed local records.
 - Reset Demo Data.
@@ -69,7 +74,8 @@ Recommended order:
 - Direct Gemma 4 audio transcription is blocked by the current LiteRT-LM public audio preprocessing path.
 - The current LiteRT-LM Android/Kotlin path also does not expose the prompt-template customization needed for multimodal placeholder injection.
 - Android offline speech recognition depends on device/emulator recognizer support and installed offline language packs.
-- The protocol corpus is still demo-sized and needs Phase 3 expansion.
+- Global Protocol Pack v1 is not clinically complete and needs expert/country-program review before broader use.
+- Synthetic global benchmark cases are protocol-scaffold tests, not clinical validation.
 
 ## Manual-Only
 
@@ -89,5 +95,6 @@ These tests require explicit instrumentation arguments and, for inference, a sid
 - Run one full emulator smoke test of the Phase 2 judge loop in airplane mode.
 - Keep `MockGemmaAgent` as default for submission.
 - Capture fresh manual RealGemma benchmark Logcat metrics only if a sideloaded model is available.
-- Start Phase 3 with protocol-corpus expansion and offline speech diagnostics, not RealGemma UI wiring.
+- Harden the Global Protocol Pack v1 with reviewed country-specific sources and more coverage.
+- Expand the synthetic benchmark suite after protocol content review.
 - Use developer-only RealGemma text mode only for local validation; keep `MockGemmaAgent` as the submission default.

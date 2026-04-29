@@ -12,7 +12,7 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
 
 1. **Show Patient Roster**
    - Point out the `Offline Proof` card.
-   - Key lines: `Network required: No`, `Protocol source: Local asset JSON`, `Active reasoning mode: MockGemmaAgent`, `Inference: Disabled`.
+   - Key lines: `Network required: No`, `Protocol source: Local asset JSON; country-aware retrieval`, `Active reasoning mode: MockGemmaAgent`, `Inference: Disabled`.
 
 2. **Select Meena**
    - Tap `Meena, 28F`.

@@ -8,7 +8,7 @@ Phase 2 completes the local visit cycle for the normal demo path while keeping `
 transcript input or offline speech fallback
 -> SpeechToTextClient / transcript metadata
 -> VisitReasoningPipeline
--> ProtocolRetriever
+-> ProtocolRetriever with optional country/region context
 -> GemmaAgent
 -> VisitReasoningResult
 -> ReviewScreen
@@ -59,10 +59,13 @@ Stored `.m4a` transcription is still unavailable because Android `SpeechRecogniz
 - prior visits,
 - transcript text or audio path,
 - local protocol retrieval,
+- optional protocol country/region context,
 - injected `GemmaAgent`,
 - structured `VisitReasoningResult`.
 
 It does not write to Room. It returns warnings/unavailable reasons when transcript resolution fails.
+
+The default demo context is India-focused and still falls back to global protocol chunks when country-specific chunks are absent.
 
 ## LocalVisitMemoryStore
 

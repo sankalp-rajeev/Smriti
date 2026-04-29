@@ -53,6 +53,7 @@ fun VisitScreen(
     realGemmaModelStatusLabel: String,
     realGemmaInferenceLabel: String,
     realGemmaDeveloperWarning: String?,
+    protocolContextLabel: String,
     onRequestAudioPermission: () -> Unit,
     onGenerate: (String, VoiceNoteMetadata?) -> Unit,
     onBack: () -> Unit
@@ -197,6 +198,7 @@ fun VisitScreen(
                     ) {
                         Text("Reasoning Mode", style = MaterialTheme.typography.titleMedium)
                         Text("Active mode: $reasoningModeLabel")
+                        Text("Protocol pack: $protocolContextLabel")
                         Text("Real Gemma model: $realGemmaModelStatusLabel")
                         Text("Inference: $realGemmaInferenceLabel")
                         realGemmaDeveloperWarning?.let { warning ->

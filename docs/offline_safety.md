@@ -5,7 +5,7 @@ Smriti is designed so the core demo can run in airplane mode.
 ## Offline Runtime
 
 - Patient roster, visit history, referral flags, and protocol chunks are stored locally with Room/SQLite.
-- Protocol retrieval uses a local asset JSON corpus.
+- Protocol retrieval uses a local country/region-aware asset JSON corpus.
 - Voice notes are recorded to app-private local storage.
 - Visit and summary JSON exports are written locally.
 - Android TTS is used locally when device language data is available.
@@ -23,12 +23,11 @@ Smriti is designed so the core demo can run in airplane mode.
 ## RealGemma Safety Gate
 
 - `MockGemmaAgent` remains the default mode.
-- `RealGemmaAgent` is experimental.
+- `RealGemmaAgent` is experimental and developer-gated.
 - LiteRT-LM dependency and readiness checks are present.
-- Real model loading is disabled.
-- Engine creation and initialization are disabled.
-- Conversation creation and inference are disabled.
-- Real Gemma audio/ASR is not implemented.
+- Normal app startup does not load or run a model.
+- Developer-only RealGemma text mode requires both the build-time gate and app-private local gate.
+- Direct Gemma 4 audio remains blocked by the public LiteRT-LM Android/Kotlin preprocessing path.
 
 ## Data Boundary
 

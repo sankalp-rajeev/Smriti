@@ -5,15 +5,28 @@ import android.content.Context
 class ProtocolRetriever(
     private val chunks: List<ProtocolChunk>
 ) {
-    fun retrieve(query: String): List<ProtocolChunk> {
+    fun retrieve(
+        query: String,
+        context: ProtocolRetrievalContext? = null
+    ): List<ProtocolChunk> {
         val normalizedQuery = query.lowercase()
         if (normalizedQuery.isBlank()) return emptyList()
 
         return chunks
-            .map { chunk -> chunk to score(chunk, normalizedQuery) }
-            .filter { (_, score) -> score > 0 }
-            .sortedByDescending { (_, score) -> score }
-            .map { (chunk, _) -> chunk }
+            .map { chunk ->
+                ProtocolMatch(
+                    chunk = chunk,
+                    keywordScore = score(chunk, normalizedQuery),
+                    locationScore = locationScore(chunk, context)
+                )
+            }
+            .filter { match -> match.keywordScore > 0 }
+            .sortedWith(
+                compareByDescending<ProtocolMatch> { it.locationScore }
+                    .thenByDescending { it.keywordScore }
+                    .thenBy { it.chunk.id }
+            )
+            .map { match -> match.chunk }
     }
 
     fun allChunks(): List<ProtocolChunk> = chunks
@@ -29,6 +42,31 @@ class ProtocolRetriever(
             .map { it.trim().lowercase() }
             .filter { it.isNotBlank() }
     }
+
+    private fun locationScore(
+        chunk: ProtocolChunk,
+        context: ProtocolRetrievalContext?
+    ): Int {
+        if (context == null) return 0
+
+        val requestedCountry = context.countryCode?.uppercase()
+        val requestedRegion = context.region?.uppercase()
+        val chunkCountry = chunk.countryCode?.uppercase()
+        val chunkRegion = chunk.region.uppercase()
+
+        return when {
+            requestedCountry != null && chunkCountry == requestedCountry -> 30
+            requestedRegion != null && chunkRegion == requestedRegion -> 20
+            chunkRegion == ProtocolRegion.GLOBAL_CORE.name -> 10
+            else -> 0
+        }
+    }
+
+    private data class ProtocolMatch(
+        val chunk: ProtocolChunk,
+        val keywordScore: Int,
+        val locationScore: Int
+    )
 
     companion object {
         const val ASSET_PATH = "protocols/maternal_health_demo_protocols.json"
@@ -48,14 +86,29 @@ class ProtocolRetriever(
                 val objectText = objectMatch.groupValues[1]
                 ProtocolChunk(
                     id = stringField(objectText, "id"),
-                    title = stringField(objectText, "title"),
-                    source = stringField(objectText, "source_name"),
-                    section = stringField(objectText, "source_section"),
-                    text = stringField(objectText, "guidance_text"),
+                    title = stringField(objectText, "title").ifBlank { stringField(objectText, "topic") },
+                    source = stringField(objectText, "source_name")
+                        .ifBlank { sourceFromCitation(stringField(objectText, "citation")) },
+                    section = stringField(objectText, "source_section")
+                        .ifBlank { sectionFromCitation(stringField(objectText, "citation")) },
+                    text = stringField(objectText, "guidance_text").ifBlank { stringField(objectText, "text") },
                     keywords = arrayField(objectText, "keywords").joinToString("|"),
                     referralLevel = stringField(objectText, "referral_level")
+                        .ifBlank { stringField(objectText, "referralLevel") }
+                        .ifBlank { "UNSPECIFIED" },
+                    region = stringField(objectText, "region").ifBlank { ProtocolRegion.GLOBAL_CORE.name },
+                    countryCode = nullableStringField(objectText, "countryCode")?.uppercase(),
+                    topic = stringField(objectText, "topic").ifBlank { stringField(objectText, "title") },
+                    safetyNotes = nullableStringField(objectText, "safetyNotes"),
+                    citationText = stringField(objectText, "citation")
                 )
             }.toList()
+        }
+
+        private fun nullableStringField(objectText: String, fieldName: String): String? {
+            val nullRegex = Regex("\"$fieldName\"\\s*:\\s*null")
+            if (nullRegex.containsMatchIn(objectText)) return null
+            return stringField(objectText, fieldName).ifBlank { null }
         }
 
         private fun stringField(objectText: String, fieldName: String): String {
@@ -77,5 +130,27 @@ class ProtocolRetriever(
                 .replace("\\\\", "\\")
                 .replace("\\n", "\n")
         }
+
+        private fun sourceFromCitation(citation: String): String {
+            return citation.substringBefore(" - ").ifBlank { citation }
+        }
+
+        private fun sectionFromCitation(citation: String): String {
+            return citation.substringAfter(" - ", missingDelimiterValue = "").ifBlank { "Protocol" }
+        }
     }
+}
+
+data class ProtocolRetrievalContext(
+    val countryCode: String? = null,
+    val region: String? = null
+)
+
+enum class ProtocolRegion {
+    GLOBAL_CORE,
+    INDIA,
+    BANGLADESH,
+    ETHIOPIA,
+    AFRICA_REGION,
+    SOUTH_AMERICA_REGION
 }

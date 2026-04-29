@@ -2,7 +2,7 @@
 
 Smriti is an offline maternal-health visit copilot for community health workers. It helps a CHW select a patient, review local visit history, capture a voice-note-style observation, generate a structured visit note, surface protocol-grounded referral support, confirm the record, and produce an end-of-day supervisor summary.
 
-The current hackathon demo is intentionally demo-safe: `MockGemmaAgent` is the default reasoning path, LiteRT-LM readiness is visible, and real model loading/inference is disabled until controlled device testing is complete.
+The current hackathon demo is intentionally demo-safe: `MockGemmaAgent` is the default reasoning path, LiteRT-LM readiness is visible, and RealGemma text mode is available only behind developer gates.
 
 Developer-only RealGemma text mode exists for local validation behind two gates, but it is not the default demo path and has no public CHW-facing toggle.
 
@@ -12,7 +12,7 @@ Community health workers often work from paper records, memory, and limited conn
 
 ## Why Offline Matters
 
-The core runtime must work in airplane mode. Smriti stores patient data locally, reads a local protocol asset corpus, records voice notes to app-private storage, and uses Android TTS locally when available. No cloud APIs are used for core runtime.
+The core runtime must work in airplane mode. Smriti stores patient data locally, reads a local country/region-aware protocol asset corpus, records voice notes to app-private storage, and uses Android TTS locally when available. No cloud APIs are used for core runtime.
 
 ## Core Demo Flow
 
@@ -36,6 +36,8 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 
 - [Phase 1 stack validation](docs/phase_1_stack_validation.md)
 - [Phase 2 core pipeline](docs/phase_2_core_pipeline.md)
+- [Phase 3 protocol pack](docs/phase_3_protocol_pack.md)
+- [Phase 3 synthetic benchmarks](docs/phase_3_benchmarks.md)
 - [Architecture](docs/architecture.md)
 - [Known limitations](docs/known_limitations.md)
 - [LiteRT-LM status](docs/litert_status.md)
@@ -45,7 +47,7 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 - Android native app in Kotlin and Jetpack Compose.
 - Local patient roster with Meena and prior visit history.
 - Room/SQLite local storage for patients, visits, referrals, and protocols.
-- Local protocol retrieval from `app/src/main/assets/protocols/maternal_health_demo_protocols.json`.
+- Local country/region-aware protocol retrieval from `app/src/main/assets/protocols/maternal_health_demo_protocols.json`.
 - Mock visit-note generation through `MockGemmaAgent`.
 - Referral flag generation for pregnancy danger-sign keywords.
 - CHW review/edit/confirm before saving.
@@ -56,6 +58,7 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 - Android TTS buttons for offline voice output when device language data is available.
 - Offline Proof visible on Patient Roster and Summary.
 - Repo safety checks against committed model artifacts.
+- Synthetic global benchmark cases for local protocol retrieval and mock visit reasoning.
 
 ## Mocked vs Real
 
@@ -72,10 +75,9 @@ Experimental and disabled:
 
 - `RealGemmaAgent` is scaffolded behind an interface.
 - LiteRT-LM dependency is present, and `EngineConfig` construction is available when a sideloaded model is found.
-- Real `.litertlm` model loading in normal app flow, Conversation creation, and inference are disabled.
-- Engine initialization exists only as an explicit manual developer check and is not wired into the UI.
-- Text-only LiteRT inference exists only as an explicit manual developer call and is not wired into the UI.
-- Real Gemma audio/ASR is not implemented yet.
+- Real `.litertlm` inference is not the default normal app flow.
+- Developer-only RealGemma text mode requires both a debug/build-time gate and an app-private local gate.
+- Direct Gemma 4 audio remains blocked by the public LiteRT-LM Android/Kotlin audio preprocessing path.
 
 ## LiteRT-LM Status
 

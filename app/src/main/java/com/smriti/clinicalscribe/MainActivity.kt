@@ -34,6 +34,7 @@ import com.smriti.clinicalscribe.data.VisitMemorySnapshot
 import com.smriti.clinicalscribe.export.JsonExporter
 import com.smriti.clinicalscribe.pipeline.VisitPipelineInput
 import com.smriti.clinicalscribe.pipeline.VisitReasoningPipeline
+import com.smriti.clinicalscribe.rag.ProtocolRetrievalContext
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import com.smriti.clinicalscribe.reasoning.AgentConfig
 import com.smriti.clinicalscribe.reasoning.GemmaAgentFactory
@@ -85,6 +86,9 @@ private fun SmritiApp(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val retriever = remember { ProtocolRetriever.fromAsset(context) }
+    val demoProtocolContext = remember {
+        ProtocolRetrievalContext(countryCode = "IN", region = "INDIA")
+    }
     val visitMemoryStore = remember(database) { LocalVisitMemoryStore(database) }
     val jsonExporter = remember { JsonExporter.appPrivate(context) }
     val voiceOutput = remember { AndroidVoiceOutput(context) }
@@ -224,6 +228,7 @@ private fun SmritiApp(
                         realGemmaModelStatusLabel = modelStatus.proofLabel,
                         realGemmaInferenceLabel = realGemmaDeveloperModeStatus.inferenceStatusLabel,
                         realGemmaDeveloperWarning = realGemmaDeveloperModeStatus.developerWarning,
+                        protocolContextLabel = "India / Global fallback",
                         onRequestAudioPermission = {
                             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         },
@@ -242,7 +247,8 @@ private fun SmritiApp(
                                         VisitPipelineInput(
                                             patient = screen.patient,
                                             priorVisits = history,
-                                            transcriptText = observation
+                                            transcriptText = observation,
+                                            protocolContext = demoProtocolContext
                                         )
                                     )
                                     pipelineResult.reasoningResult ?: error(

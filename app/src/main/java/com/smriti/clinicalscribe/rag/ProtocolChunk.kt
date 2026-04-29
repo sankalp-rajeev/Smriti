@@ -11,8 +11,13 @@ data class ProtocolChunk(
     val section: String,
     val text: String,
     val keywords: String,
-    val referralLevel: String = "UNSPECIFIED"
+    val referralLevel: String = "UNSPECIFIED",
+    val region: String = "GLOBAL_CORE",
+    val countryCode: String? = null,
+    val topic: String = title,
+    val safetyNotes: String? = null,
+    val citationText: String = ""
 ) {
     val citation: String
-        get() = "$source $section"
+        get() = citationText.ifBlank { "$source $section" }
 }
