@@ -22,6 +22,17 @@ class LocalVisitMemoryStoreTest {
     )
 
     @Test
+    fun seedDemoIfNeededLoadsPatientsProtocolsAndSeededMeenaHistory() = runBlocking {
+        val store = fakeStore()
+
+        val snapshot = store.seedDemoIfNeeded(listOf(protocolChunk), nowMillis = SEED_TIME)
+
+        assertEquals(DemoSeedData.patients.size, snapshot.patients.size)
+        assertEquals(2, store.historyForPatient(snapshot, patient.id).size)
+        assertEquals(0, snapshot.referrals.size)
+    }
+
+    @Test
     fun confirmedVisitIsPersistedAfterReviewSave() = runBlocking {
         val store = fakeStore()
         val result = visitResultWithReferral()

@@ -2,6 +2,8 @@ package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.data.ReferralFlag
+import com.smriti.clinicalscribe.data.VisitLog
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -85,6 +87,39 @@ class SupervisorSummaryFormatterTest {
         )
     }
 
+    @Test
+    fun mockSupervisorSummaryCountsConfirmedLocalDataAndLatestUrgentCases() = runBlocking {
+        val visits = listOf(
+            visit(id = 1L, followUp = "Routine ANC follow-up. Protocol citation: WHO ANC Contact schedule."),
+            visit(id = 2L, followUp = "Same-day referral support. Protocol citation: Smriti Demo Maternal Health Protocol - Danger Signs."),
+            visit(id = 3L, followUp = "Return visit BP review. Protocol citation: WHO ANC Contact schedule.")
+        )
+        val older = referral(
+            dangerSigns = "headache, blurred vision",
+            createdAtMillis = 100L
+        )
+        val latest = referral(
+            dangerSigns = "headache, blurred vision, high blood pressure, reduced fetal movement",
+            createdAtMillis = 300L
+        )
+
+        val summary = MockGemmaAgent().generateSupervisorSummary(
+            patients = DemoSeedData.patients,
+            visits = visits,
+            referrals = listOf(older, latest)
+        )
+
+        assertEquals(3, summary.totalVisits)
+        assertEquals(2, summary.referralsFlagged)
+        assertEquals(1, summary.urgentCases.size)
+        assertEquals(
+            "Meena - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            summary.urgentCases.single()
+        )
+        assertFalse(summary.urgentCases.single().contains("long protocol explanation"))
+        assertEquals(3, summary.followUpsDue.size)
+    }
+
     private fun referral(
         dangerSigns: String = "headache, blurred vision, high blood pressure",
         createdAtMillis: Long = 100L,
@@ -98,6 +133,22 @@ class SupervisorSummaryFormatterTest {
             recommendedFacility = "Nearest PHC",
             dangerSigns = dangerSigns,
             createdAtMillis = createdAtMillis
+        )
+    }
+
+    private fun visit(
+        id: Long,
+        followUp: String
+    ): VisitLog {
+        return VisitLog(
+            id = id,
+            patientId = patient.id,
+            visitDateMillis = 1_700_000_000_000L + id,
+            observationText = "Confirmed local visit $id",
+            structuredNote = "Confirmed local note $id. This is not a diagnosis. CHW confirmation required.",
+            protocolCitation = "WHO ANC Contact schedule",
+            suggestedFollowUp = followUp,
+            confirmed = true
         )
     }
 }

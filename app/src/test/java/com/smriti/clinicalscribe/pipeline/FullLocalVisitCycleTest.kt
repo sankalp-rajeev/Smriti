@@ -12,6 +12,7 @@ import com.smriti.clinicalscribe.data.VisitLogDao
 import com.smriti.clinicalscribe.rag.ProtocolChunk
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import com.smriti.clinicalscribe.reasoning.MockGemmaAgent
+import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import com.smriti.clinicalscribe.transcript.SimulatedTranscriptClient
 import com.smriti.clinicalscribe.transcript.SpeechToTextClient
 import com.smriti.clinicalscribe.transcript.TranscriptResult
@@ -26,6 +27,47 @@ class FullLocalVisitCycleTest {
     private val patient = DemoSeedData.patients.first { it.id == "patient-meena" }
     private val retriever = ProtocolRetriever.fromJson(assetCorpusJson())
     private val agent = MockGemmaAgent()
+
+    @Test
+    fun normalAncFollowUpProducesCitedNonDiagnosticNoReferralResult() = runBlocking {
+        val store = fakeStore()
+        val seeded = store.seedDemoIfNeeded(retriever.allChunks(), nowMillis = SEED_TIME)
+
+        val reasoning = processTranscript(
+            priorVisits = store.historyForPatient(seeded, patient.id),
+            transcript = "Meena reports normal blood pressure 120 over 80. Fetal movement is present. Eating well and taking iron tablets."
+        )
+
+        assertEquals(null, reasoning.referralFlag)
+        assertFalse(reasoning.uncertain)
+        assertTrue(reasoning.protocolCitation.contains("Smriti Demo Maternal Health Protocol"))
+        assertSafetyWording(reasoning)
+
+        val beforeConfirmation = store.refresh()
+        assertEquals(2, beforeConfirmation.visits.size)
+        assertEquals(0, beforeConfirmation.referrals.size)
+    }
+
+    @Test
+    fun incompleteObservationProducesUncertainClarificationWithoutReferralOrSave() = runBlocking {
+        val store = fakeStore()
+        val seeded = store.seedDemoIfNeeded(retriever.allChunks(), nowMillis = SEED_TIME)
+
+        val reasoning = processTranscript(
+            priorVisits = store.historyForPatient(seeded, patient.id),
+            transcript = "Meena feels unwell today but vitals were not taken."
+        )
+
+        assertEquals(null, reasoning.referralFlag)
+        assertTrue(reasoning.uncertain)
+        assertTrue(reasoning.clarificationPrompt!!.contains("No matching local protocol"))
+        assertTrue(reasoning.protocolCitation.contains("No matching protocol citation"))
+        assertSafetyWording(reasoning)
+
+        val beforeConfirmation = store.refresh()
+        assertEquals(2, beforeConfirmation.visits.size)
+        assertEquals(0, beforeConfirmation.referrals.size)
+    }
 
     @Test
     fun fullLocalVisitCyclePersistsOnlyAfterConfirmationAndFeedsReturnHistoryAndSummary() = runBlocking {
@@ -54,6 +96,8 @@ class FullLocalVisitCycleTest {
         assertTrue(pipelineResult.protocolChunks.isNotEmpty())
         assertTrue(pipelineResult.protocolChunks.first().source.contains("Smriti Demo Maternal Health Protocol"))
         val referral = reasoning.referralFlag ?: throw AssertionError("Expected referral flag")
+        assertTrue(reasoning.protocolCitation.contains("Smriti Demo Maternal Health Protocol"))
+        assertSafetyWording(reasoning)
 
         val beforeConfirmation = store.refresh()
         assertEquals(2, beforeConfirmation.visits.size)
@@ -105,6 +149,7 @@ class FullLocalVisitCycleTest {
         assertEquals(2, repeatedSummary.referralsFlagged)
         assertEquals(1, repeatedSummary.urgentCases.size)
         assertTrue(repeatedSummary.urgentCases.single().startsWith("Meena - SAME_DAY"))
+        assertFalse(repeatedSummary.urgentCases.single().contains("Severe or persistent headache during pregnancy"))
 
         val reset = store.resetDemoData(retriever.allChunks(), nowMillis = SEED_TIME)
         assertEquals(2, store.historyForPatient(reset, patient.id).size)
@@ -135,6 +180,35 @@ class FullLocalVisitCycleTest {
         assertTrue(result.warnings.joinToString().contains("manual transcript"))
         assertEquals(2, store.refresh().visits.size)
         assertEquals(0, store.refresh().referrals.size)
+    }
+
+    private suspend fun processTranscript(
+        priorVisits: List<VisitLog>,
+        transcript: String
+    ): VisitReasoningResult {
+        val pipeline = VisitReasoningPipeline(
+            protocolRetriever = retriever,
+            gemmaAgent = agent,
+            speechToTextClient = UnavailableSpeechClient()
+        )
+        val result = pipeline.process(
+            VisitPipelineInput(
+                patient = patient,
+                priorVisits = priorVisits,
+                transcriptText = transcript
+            )
+        )
+        return result.reasoningResult ?: throw AssertionError("Expected reasoning result")
+    }
+
+    private fun assertSafetyWording(reasoning: VisitReasoningResult) {
+        val combined = listOf(
+            reasoning.structuredNote,
+            reasoning.suggestedFollowUp,
+            reasoning.referralFlag?.reason.orEmpty()
+        ).joinToString(separator = "\n").lowercase()
+        assertTrue(combined.contains("not a diagnosis"))
+        assertTrue(combined.contains("chw confirmation") || combined.contains("confirm"))
     }
 
     private fun fakeStore(): LocalVisitMemoryStore {
