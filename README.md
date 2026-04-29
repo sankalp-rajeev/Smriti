@@ -6,6 +6,8 @@ The current hackathon demo is intentionally demo-safe: `MockGemmaAgent` is the d
 
 Developer-only RealGemma text mode exists for local validation behind two gates, but it is not the default demo path and has no public CHW-facing toggle.
 
+Judge-facing framing: local patient memory plus a local protocol pack, protocol-grounded referral support rather than diagnosis, and CHW review/confirm before saving.
+
 ## Problem
 
 Community health workers often work from paper records, memory, and limited connectivity. That makes it easy to miss longitudinal context, such as a prior high blood pressure note during a later pregnancy danger-sign visit. Existing hospital scribes and cloud chatbots assume stable internet, EHR access, or clinician workflows. Smriti targets the field setting: one Android phone, local patient memory, local protocols, and no required network.
@@ -27,6 +29,8 @@ The core runtime must work in airplane mode. Smriti stores patient data locally,
 9. CHW edits/confirms before saving.
 10. Open End-of-Day Supervisor Summary.
 11. Show urgent case, follow-ups, Offline Proof, and optional JSON export.
+
+Do not claim direct Gemma 4 audio works or that the synthetic/global protocol pack is clinical validation. RealGemma text mode remains optional, local, and developer-gated.
 
 See [docs/demo_flow.md](docs/demo_flow.md) for the step-by-step judge script.
 

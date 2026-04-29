@@ -39,11 +39,28 @@ class NormalVisitFlowWiringTest {
         assertTrue(visitScreen.contains("observationText = speechResult.transcript"))
         assertTrue(visitScreen.contains("Review and edit before generating"))
         assertTrue(visitScreen.contains("Offline speech unavailable"))
-        assertTrue(visitScreen.contains("Offline speech fallback is active"))
-        assertTrue(visitScreen.contains("direct Gemma 4 audio remains blocked and documented"))
+        assertTrue(visitScreen.contains("Android offline speech"))
+        assertTrue(visitScreen.contains("Direct Gemma 4 audio remains blocked and documented"))
         assertFalse(visitScreen.contains("Real Gemma 4 audio integration comes next"))
-        assertTrue(visitScreen.contains("Reasoning Mode"))
+        assertTrue(visitScreen.contains("Local Reasoning and Protocol"))
         assertTrue(visitScreen.contains("Active mode: \$reasoningModeLabel"))
+        assertTrue(visitScreen.contains("Protocol pack: \$protocolContextLabel"))
+        assertTrue(visitScreen.contains("Protocol-grounded referral support, not diagnosis."))
+    }
+
+    @Test
+    fun judgeFacingScreensKeepOfflineSafetyCopy() {
+        val patientListScreen = appSourceFile("ui/PatientListScreen.kt").readText()
+        val reviewScreen = appSourceFile("ui/ReviewScreen.kt").readText()
+        val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
+
+        assertTrue(patientListScreen.contains("Local patient memory + local protocol pack."))
+        assertTrue(patientListScreen.contains("Works offline; no cloud API required for core runtime."))
+        assertTrue(reviewScreen.contains("Protocol-grounded referral support, not diagnosis."))
+        assertTrue(reviewScreen.contains("CHW reviews and confirms before saving."))
+        assertTrue(reviewScreen.contains("Safety Gate"))
+        assertTrue(summaryScreen.contains("Confirmed local data only"))
+        assertTrue(summaryScreen.contains("Local Supervisor Brief"))
     }
 
     @Test

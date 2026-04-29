@@ -15,15 +15,13 @@ class OfflineProofStatusTest {
         assertEquals(
             listOf(
                 "Network required" to "No",
-                "Protocol source" to "Local asset JSON; country-aware retrieval",
+                "Patient data" to "Local Room/SQLite",
+                "Protocol source" to "Local JSON; country-aware retrieval",
                 "Active reasoning mode" to "MockGemmaAgent",
-                "LiteRT-LM dependency" to "Present",
+                "Mode guard" to "MockGemmaAgent by default; RealGemmaAgent only in developer mode",
                 "Real Gemma model" to "Not found",
-                "EngineConfig" to "Ready when model found; Engine manual-only",
-                "RealGemma readiness" to "Mock active",
-                "RealGemma dev gate" to "Build gate: disabled; local gate: disabled",
                 "Inference" to "Disabled by default; manual-only",
-                "Backend" to "CPU when developer text inference is enabled"
+                "Direct Gemma audio" to "Blocked by current public LiteRT-LM Android/Kotlin path; using offline speech/transcript fallback"
             ),
             status.lines
         )

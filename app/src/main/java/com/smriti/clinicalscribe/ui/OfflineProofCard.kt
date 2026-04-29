@@ -24,15 +24,13 @@ data class OfflineProofStatus(
     val lines: List<Pair<String, String>>
         get() = listOf(
             "Network required" to "No",
-            "Protocol source" to "Local asset JSON; country-aware retrieval",
+            "Patient data" to "Local Room/SQLite",
+            "Protocol source" to "Local JSON; country-aware retrieval",
             "Active reasoning mode" to reasoningModeLabel,
-            "LiteRT-LM dependency" to "Present",
+            "Mode guard" to "MockGemmaAgent by default; RealGemmaAgent only in developer mode",
             "Real Gemma model" to realGemmaModelStatusLabel,
-            "EngineConfig" to "Ready when model found; Engine manual-only",
-            "RealGemma readiness" to realGemmaReadinessLabel,
-            "RealGemma dev gate" to realGemmaGateLabel,
             "Inference" to realGemmaInferenceLabel,
-            "Backend" to "CPU when developer text inference is enabled"
+            "Direct Gemma audio" to "Blocked by current public LiteRT-LM Android/Kotlin path; using offline speech/transcript fallback"
         ) + realGemmaDeveloperWarning?.let { warning ->
             listOf("Developer warning" to warning)
         }.orEmpty()

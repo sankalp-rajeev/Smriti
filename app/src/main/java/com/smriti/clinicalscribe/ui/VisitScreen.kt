@@ -175,7 +175,7 @@ fun VisitScreen(
                 ) {
                     Column {
                         Text(patient.displayLabel(), style = MaterialTheme.typography.headlineSmall)
-                        Text("Offline demo mode", style = MaterialTheme.typography.labelLarge)
+                        Text("Local visit workspace", style = MaterialTheme.typography.labelLarge)
                         Text(
                             text = "${patient.pregnancyWeeks ?: "-"} weeks - ${patient.village}",
                             style = MaterialTheme.typography.bodyMedium
@@ -196,9 +196,11 @@ fun VisitScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text("Reasoning Mode", style = MaterialTheme.typography.titleMedium)
+                        Text("Local Reasoning and Protocol", style = MaterialTheme.typography.titleMedium)
                         Text("Active mode: $reasoningModeLabel")
                         Text("Protocol pack: $protocolContextLabel")
+                        Text("Local patient memory + local protocol pack.")
+                        Text("Protocol-grounded referral support, not diagnosis.")
                         Text("Real Gemma model: $realGemmaModelStatusLabel")
                         Text("Inference: $realGemmaInferenceLabel")
                         realGemmaDeveloperWarning?.let { warning ->
@@ -211,7 +213,7 @@ fun VisitScreen(
             item {
                 Text("Prior Visit History", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = "Review local history before entering the simulated voice observation.",
+                    text = "Confirmed local history is used as context before generating the next note.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -235,9 +237,9 @@ fun VisitScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text("Record Visit Note", style = MaterialTheme.typography.titleMedium)
+                        Text("Transcript Input", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            text = "MVP uses editable transcripts. Offline speech fallback is active; direct Gemma 4 audio remains blocked and documented.",
+                            text = "Use the sample, type the observation, or try Android offline speech. Direct Gemma 4 audio remains blocked and documented.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Button(
@@ -322,7 +324,7 @@ fun VisitScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 160.dp),
-                    label = { Text("Simulated transcript for demo") },
+                    label = { Text("Editable transcript") },
                     placeholder = { Text("Type the CHW's spoken observation here") },
                     minLines = 5
                 )

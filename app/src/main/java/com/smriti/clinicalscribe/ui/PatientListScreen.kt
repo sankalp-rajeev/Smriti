@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.VisitLog
@@ -48,8 +49,8 @@ fun PatientListScreen(
             ) {
                 Column {
                     Text("Smriti", style = MaterialTheme.typography.headlineMedium)
-                    Text("Offline demo mode", style = MaterialTheme.typography.labelLarge)
-                    Text("Local maternal-health visit copilot", style = MaterialTheme.typography.bodyMedium)
+                    Text("Offline CHW visit copilot", style = MaterialTheme.typography.labelLarge)
+                    Text("Local patient memory + local protocol pack.", style = MaterialTheme.typography.bodyMedium)
                 }
                 OutlinedButton(onClick = onShowSummary, enabled = !isLoading) {
                     Text("End-of-Day Summary")
@@ -63,6 +64,27 @@ fun PatientListScreen(
                     contentPadding = PaddingValues(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text("Works offline; no cloud API required for core runtime.", fontWeight = FontWeight.SemiBold)
+                                Text("Protocol-grounded referral support, not diagnosis.")
+                                Text("CHW reviews and confirms before saving.")
+                            }
+                        }
+                    }
+                    item {
+                        OfflineProofCard(status = offlineProofStatus)
+                    }
+                    item {
+                        Text("Patient List", style = MaterialTheme.typography.titleMedium)
+                    }
                     items(patients) { patient ->
                         val visitCount = visits.count { it.patientId == patient.id }
                         PatientRow(
@@ -70,9 +92,6 @@ fun PatientListScreen(
                             visitCount = visitCount,
                             onPatientSelected = onPatientSelected
                         )
-                    }
-                    item {
-                        OfflineProofCard(status = offlineProofStatus)
                     }
                 }
             }

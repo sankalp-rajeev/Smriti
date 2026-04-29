@@ -38,6 +38,7 @@ Phase 3 has started with two controlled additions:
 - Developer-only RealGemma text UI mode, guarded by both a build-time gate and an app-private local gate. This is not the default demo path and is not CHW-facing.
 - Global Protocol Pack v1, a local 46-chunk maternal/ANC corpus with country/region-aware keyword retrieval for `GLOBAL_CORE`, `INDIA`, `BANGLADESH`, `ETHIOPIA`, `AFRICA_REGION`, and `SOUTH_AMERICA_REGION`.
 - A 10-case synthetic global benchmark suite for protocol retrieval, grounding, referral behavior, uncertainty handling, and country/region/global fallback through the mock local pipeline.
+- Judge-ready normal demo copy now emphasizes offline CHW workflow, local patient memory, local protocol pack, protocol-grounded referral support, CHW confirm/save, and concise Offline Proof.
 
 Recommended order:
 
@@ -54,6 +55,7 @@ Recommended order:
 - Local patient roster, local visit history, local referral flags.
 - Local JSON protocol corpus and country/region-aware keyword retrieval.
 - Synthetic global benchmark cases that run locally through `ProtocolRetriever + VisitReasoningPipeline + MockGemmaAgent`.
+- Judge-facing normal app flow: Patient Roster -> Meena -> sample transcript/offline speech fallback -> local note generation -> Review confirm/save -> Supervisor Summary.
 - Review/edit/confirm save gate.
 - Supervisor summary from confirmed local records.
 - Reset Demo Data.
@@ -76,6 +78,7 @@ Recommended order:
 - Android offline speech recognition depends on device/emulator recognizer support and installed offline language packs.
 - Global Protocol Pack v1 is not clinically complete and needs expert/country-program review before broader use.
 - Synthetic global benchmark cases are protocol-scaffold tests, not clinical validation.
+- Judge/demo copy must not claim autonomous diagnosis, treatment, direct Gemma audio, or clinical validation.
 
 ## Manual-Only
 

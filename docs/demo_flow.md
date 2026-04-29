@@ -11,12 +11,15 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
 ## Script
 
 1. **Show Patient Roster**
+   - Start on the purpose line: `Offline CHW visit copilot`.
+   - Point out `Local patient memory + local protocol pack.`
    - Point out the `Offline Proof` card.
-   - Key lines: `Network required: No`, `Protocol source: Local asset JSON; country-aware retrieval`, `Active reasoning mode: MockGemmaAgent`, `Inference: Disabled`.
+   - Key lines: `Network required: No`, `Patient data: Local Room/SQLite`, `Protocol source: Local JSON; country-aware retrieval`, `Active reasoning mode: MockGemmaAgent`, `Inference: Disabled by default`.
 
 2. **Select Meena**
    - Tap `Meena, 28F`.
    - Show prior visit history: borderline blood pressure and routine ANC follow-ups are already stored locally.
+   - Point out `Protocol pack: India / Global fallback`.
 
 3. **Create Visit Observation**
    - Use `Use sample danger-sign transcript`.
@@ -28,9 +31,10 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
 
 5. **Review Referral Support**
    - Show the structured note.
-   - Show referral suggestion.
+   - Show `Referral Support`.
    - Show protocol citation.
-   - Keep wording clear: this is protocol-grounded referral support, not a diagnosis.
+   - Read the safety line: `Protocol-grounded referral support, not diagnosis.`
+   - Point out `CHW reviews and confirms before saving.`
 
 6. **Confirm And Save**
    - Edit fields only if useful for the demo.
@@ -44,7 +48,7 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
 
 8. **Show Offline Proof Again**
    - Confirm the same proof appears on Summary.
-   - Emphasize no network, local protocol JSON, mock active, LiteRT-LM present, inference disabled.
+   - Emphasize no network, local Room/SQLite data, local JSON protocol retrieval, mock active by default, RealGemma developer-only, and direct Gemma audio blocked with offline speech/transcript fallback.
 
 9. **Optional Export**
    - Tap `Export Summary JSON`.
@@ -57,3 +61,10 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
 ## Closing Line
 
 One phone, no signal, local patient memory, local protocols, CHW confirmation, and a judge-readable supervisor brief.
+
+## Do Not Claim
+
+- Do not claim clinical validation.
+- Do not claim direct Gemma 4 audio works.
+- Do not imply autonomous diagnosis or treatment.
+- Do not present RealGemma text mode as the default demo path; it remains developer-only and gated.

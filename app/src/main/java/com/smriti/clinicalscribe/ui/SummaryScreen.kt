@@ -45,8 +45,8 @@ fun SummaryScreen(
                 ) {
                     Column {
                         Text("End-of-Day Supervisor Summary", style = MaterialTheme.typography.headlineSmall)
-                        Text("Offline demo mode", style = MaterialTheme.typography.labelLarge)
-                        Text("Local brief from confirmed visits", style = MaterialTheme.typography.bodyMedium)
+                        Text("Confirmed local data only", style = MaterialTheme.typography.labelLarge)
+                        Text("Works offline; no cloud API required for core runtime.", style = MaterialTheme.typography.bodyMedium)
                     }
                     OutlinedButton(
                         onClick = onBack,
@@ -67,9 +67,11 @@ fun SummaryScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Text("Local Supervisor Brief", fontWeight = FontWeight.SemiBold)
                         Text(summary.narrative)
                         Text("Total visits: ${summary.totalVisits}", fontWeight = FontWeight.SemiBold)
                         Text("Referral flags: ${summary.referralsFlagged}", fontWeight = FontWeight.SemiBold)
+                        Text("Urgent cases are drawn from confirmed saved referrals.")
                     }
                 }
             }

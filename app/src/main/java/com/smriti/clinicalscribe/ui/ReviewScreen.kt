@@ -60,7 +60,7 @@ fun ReviewScreen(
                 ) {
                     Column {
                         Text("Review and Confirm Visit Note", style = MaterialTheme.typography.headlineSmall)
-                        Text("Offline demo mode", style = MaterialTheme.typography.labelLarge)
+                        Text("CHW reviews and confirms before saving.", style = MaterialTheme.typography.labelLarge)
                         Text(patient.displayLabel(), style = MaterialTheme.typography.bodyMedium)
                     }
                     OutlinedButton(
@@ -69,6 +69,22 @@ fun ReviewScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Edit Observation")
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Safety Gate", fontWeight = FontWeight.SemiBold)
+                        Text("Protocol-grounded referral support, not diagnosis.")
+                        Text("CHW reviews and confirms before saving.")
                     }
                 }
             }
@@ -94,11 +110,12 @@ fun ReviewScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text("Protocol-Grounded Referral Suggestion", fontWeight = FontWeight.SemiBold)
-                            Text("This is not a diagnosis. CHW confirmation and clinical referral judgment are required.")
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                            Text("Referral Support", fontWeight = FontWeight.SemiBold)
+                            Text("Protocol-grounded referral support, not diagnosis.")
+                            Text("CHW confirmation and clinical referral judgment are required.")
                             Text("Urgency: ${flag.urgency}")
                             Text(flag.reason)
                             Text("Danger signs: ${flag.dangerSigns}")
