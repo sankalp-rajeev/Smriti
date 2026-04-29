@@ -1,5 +1,6 @@
 package com.smriti.clinicalscribe.transcript
 
+import android.speech.SpeechRecognizer
 import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -58,7 +59,42 @@ class SpeechToTextClientTest {
 
         assertTrue(sourceText.contains("RecognizerIntent.EXTRA_PREFER_OFFLINE"))
         assertTrue(sourceText.contains("putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)"))
+        assertTrue(sourceText.contains("transcribeLiveSpeech"))
         assertFalse(sourceText.contains("ACTION_WEB_SEARCH"))
+        assertFalse(sourceText.contains("upload"))
+    }
+
+    @Test
+    fun storedAudioFileTranscriptionRemainsManualFallbackOnly() {
+        val sourceText = transcriptSourceFiles()
+            .first { it.name == "AndroidOfflineSpeechRecognizerClient.kt" }
+            .readText()
+
+        assertTrue(sourceText.contains("stored audio-file transcription"))
+        assertTrue(sourceText.contains("requires a local ASR engine"))
+        assertTrue(sourceText.contains("Please provide or edit the manual transcript"))
+    }
+
+    @Test
+    fun androidNetworkAndServerRecognitionErrorsAreUnavailable() {
+        val network = AndroidOfflineSpeechRecognizerClient.resultForRecognitionError(SpeechRecognizer.ERROR_NETWORK)
+        val timeout = AndroidOfflineSpeechRecognizerClient.resultForRecognitionError(SpeechRecognizer.ERROR_NETWORK_TIMEOUT)
+        val server = AndroidOfflineSpeechRecognizerClient.resultForRecognitionError(SpeechRecognizer.ERROR_SERVER)
+
+        assertTrue(network is TranscriptResult.Unavailable)
+        assertTrue(timeout is TranscriptResult.Unavailable)
+        assertTrue(server is TranscriptResult.Unavailable)
+        assertTrue((network as TranscriptResult.Unavailable).reason.contains("manual transcript"))
+    }
+
+    @Test
+    fun androidNoMatchAndSpeechTimeoutAskForManualTranscript() {
+        val noMatch = AndroidOfflineSpeechRecognizerClient.resultForRecognitionError(SpeechRecognizer.ERROR_NO_MATCH)
+        val timeout = AndroidOfflineSpeechRecognizerClient.resultForRecognitionError(SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
+
+        assertTrue(noMatch is TranscriptResult.Unavailable)
+        assertTrue(timeout is TranscriptResult.Unavailable)
+        assertTrue((noMatch as TranscriptResult.Unavailable).reason.contains("manual transcript"))
     }
 
     private fun transcriptSourceFiles(): List<File> {

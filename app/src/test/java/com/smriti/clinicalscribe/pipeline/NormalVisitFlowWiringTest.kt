@@ -29,6 +29,42 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
+    fun visitScreenKeepsSampleManualAndOfflineSpeechTranscriptPaths() {
+        val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
+
+        assertTrue(visitScreen.contains("Use sample danger-sign transcript"))
+        assertTrue(visitScreen.contains("onValueChange = { observationText = it }"))
+        assertTrue(visitScreen.contains("Try Offline Speech"))
+        assertTrue(visitScreen.contains("offlineSpeechClient.transcribeLiveSpeech()"))
+        assertTrue(visitScreen.contains("observationText = speechResult.transcript"))
+        assertTrue(visitScreen.contains("Review and edit before generating"))
+        assertTrue(visitScreen.contains("Offline speech unavailable"))
+    }
+
+    @Test
+    fun offlineSpeechHookDoesNotGenerateOrSaveVisit() {
+        val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
+        val speechBlockStart = visitScreen.indexOf("fun tryOfflineSpeech()")
+        val speechBlockEnd = visitScreen.indexOf("LaunchedEffect", startIndex = speechBlockStart)
+        val speechBlock = visitScreen.substring(speechBlockStart, speechBlockEnd)
+
+        assertTrue(speechBlockStart >= 0)
+        assertTrue(speechBlockEnd > speechBlockStart)
+        assertFalse(speechBlock.contains("onGenerate("))
+        assertFalse(speechBlock.contains("saveConfirmedVisit"))
+        assertFalse(speechBlock.contains("visitLogDao"))
+        assertFalse(speechBlock.contains("referralFlagDao"))
+    }
+
+    @Test
+    fun generateStillUsesEditableTranscriptText() {
+        val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
+
+        assertTrue(visitScreen.contains("onGenerate(observationText, savedVoiceNote)"))
+        assertTrue(visitScreen.contains("enabled = observationText.isNotBlank() && !isGenerating"))
+    }
+
+    @Test
     fun pipelinePackageDoesNotWriteToRoom() {
         val pipelineRoot = appSourceFile("pipeline")
         val combinedPipelineSource = pipelineRoot

@@ -2,6 +2,10 @@ package com.smriti.clinicalscribe.transcript
 
 interface SpeechToTextClient {
     suspend fun transcribeAudioFile(audioPath: String): TranscriptResult
+
+    suspend fun transcribeLiveSpeech(): TranscriptResult {
+        return TranscriptResult.Unavailable("Live offline speech recognition is unavailable for this client.")
+    }
 }
 
 sealed interface TranscriptResult {

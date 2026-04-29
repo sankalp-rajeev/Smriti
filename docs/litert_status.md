@@ -93,11 +93,12 @@ The new Phase 2 core keeps audio capture local and modular:
 
 - `SpeechToTextClient` defines a sealed transcript result: success, unavailable, or error.
 - `SimulatedTranscriptClient` keeps the demo/sample transcript path local and deterministic.
-- `AndroidOfflineSpeechRecognizerClient` is a skeleton wrapper that requests `RecognizerIntent.EXTRA_PREFER_OFFLINE=true`, never adds network ASR, and returns unavailable for stored audio-file transcription until a local ASR engine or reliable OS offline pack path is wired.
+- `AndroidOfflineSpeechRecognizerClient` now supports a live Android `SpeechRecognizer` path for future UI use. It requests `RecognizerIntent.EXTRA_PREFER_OFFLINE=true`, uses a configurable language tag (`en-IN` by default), returns offline speech metadata on success, treats network/server/no-match recognizer errors as unavailable/manual-transcript-needed, and never uploads audio or adds cloud ASR.
+- Android `SpeechRecognizer` still does not provide a reliable direct transcription route for the app-private recorded `.m4a` files in this implementation. Stored audio-file transcription therefore returns unavailable until a local file ASR engine or a verified OS offline-pack file path is wired.
 - `VisitReasoningPipeline` is UI-independent and coordinates transcript text or local audio path, local `ProtocolRetriever`, injected `GemmaAgent`, and structured `VisitReasoningResult`.
 - The pipeline does not write to Room. CHW review/confirm remains the only save path.
 
-No audio file is committed, and no audio/Gemma path is wired into the normal app flow.
+No audio file is committed, and no audio/Gemma path is wired into the normal app flow. The normal visible flow still uses the editable manual/sample transcript path before `VisitReasoningPipeline`.
 
 The instrumentation harness uses the debug application ID `com.smriti.clinicalscribe`, the app-private path `filesDir/models/gemma-4-E2B-it-int4.litertlm`, and the non-clinical prompt `Reply with exactly: SMRITI_LITERT_OK`. It must be run explicitly with:
 
