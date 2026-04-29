@@ -4,6 +4,8 @@ Smriti is an offline maternal-health visit copilot for community health workers.
 
 The current hackathon demo is intentionally demo-safe: `MockGemmaAgent` is the default reasoning path, LiteRT-LM readiness is visible, and real model loading/inference is disabled until controlled device testing is complete.
 
+Developer-only RealGemma text mode exists for local validation behind two gates, but it is not the default demo path and has no public CHW-facing toggle.
+
 ## Problem
 
 Community health workers often work from paper records, memory, and limited connectivity. That makes it easy to miss longitudinal context, such as a prior high blood pressure note during a later pregnancy danger-sign visit. Existing hospital scribes and cloud chatbots assume stable internet, EHR access, or clinician workflows. Smriti targets the field setting: one Android phone, local patient memory, local protocols, and no required network.
@@ -27,6 +29,16 @@ The core runtime must work in airplane mode. Smriti stores patient data locally,
 11. Show urgent case, follow-ups, Offline Proof, and optional JSON export.
 
 See [docs/demo_flow.md](docs/demo_flow.md) for the step-by-step judge script.
+
+## Project Status Docs
+
+For the concise current state, start with [docs/current_status.md](docs/current_status.md).
+
+- [Phase 1 stack validation](docs/phase_1_stack_validation.md)
+- [Phase 2 core pipeline](docs/phase_2_core_pipeline.md)
+- [Architecture](docs/architecture.md)
+- [Known limitations](docs/known_limitations.md)
+- [LiteRT-LM status](docs/litert_status.md)
 
 ## What Works Now
 

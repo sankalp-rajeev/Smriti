@@ -60,6 +60,9 @@ class SpeechToTextClientTest {
         assertTrue(sourceText.contains("RecognizerIntent.EXTRA_PREFER_OFFLINE"))
         assertTrue(sourceText.contains("putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)"))
         assertTrue(sourceText.contains("transcribeLiveSpeech"))
+        assertTrue(sourceText.contains("isRecognitionAvailable"))
+        assertTrue(sourceText.contains("isOnDeviceRecognitionAvailable"))
+        assertTrue(sourceText.contains("createOnDeviceSpeechRecognizer"))
         assertFalse(sourceText.contains("ACTION_WEB_SEARCH"))
         assertFalse(sourceText.contains("upload"))
     }
@@ -84,7 +87,14 @@ class SpeechToTextClientTest {
         assertTrue(network is TranscriptResult.Unavailable)
         assertTrue(timeout is TranscriptResult.Unavailable)
         assertTrue(server is TranscriptResult.Unavailable)
-        assertTrue((network as TranscriptResult.Unavailable).reason.contains("manual transcript"))
+        assertEquals(
+            "Offline speech recognizer unavailable. Please type or use sample transcript.",
+            (network as TranscriptResult.Unavailable).reason
+        )
+        assertEquals(
+            SpeechRecognizer.ERROR_NETWORK.toString(),
+            network.debugMetadata["errorCode"]
+        )
     }
 
     @Test
@@ -94,7 +104,81 @@ class SpeechToTextClientTest {
 
         assertTrue(noMatch is TranscriptResult.Unavailable)
         assertTrue(timeout is TranscriptResult.Unavailable)
-        assertTrue((noMatch as TranscriptResult.Unavailable).reason.contains("manual transcript"))
+        assertEquals(
+            "No speech recognized. Try again or type the transcript.",
+            (noMatch as TranscriptResult.Unavailable).reason
+        )
+    }
+
+    @Test
+    fun androidLanguageUnavailableMapsToFriendlyMessageWithDebugCode() {
+        val result = AndroidOfflineSpeechRecognizerClient.resultForRecognitionError(
+            SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE
+        )
+
+        assertTrue(result is TranscriptResult.Unavailable)
+        val unavailable = result as TranscriptResult.Unavailable
+        assertEquals(
+            "Offline speech language pack unavailable on this device. Please type or use sample transcript.",
+            unavailable.reason
+        )
+        assertEquals(
+            SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE.toString(),
+            unavailable.debugMetadata["errorCode"]
+        )
+    }
+
+    @Test
+    fun androidLanguageNotSupportedMapsToFriendlyMessage() {
+        val result = AndroidOfflineSpeechRecognizerClient.resultForRecognitionError(
+            SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED
+        )
+
+        assertTrue(result is TranscriptResult.Unavailable)
+        assertEquals(
+            "This language is not supported by the device recognizer.",
+            (result as TranscriptResult.Unavailable).reason
+        )
+    }
+
+    @Test
+    fun defaultLanguageFallbackSequenceIsDemoSafe() {
+        assertEquals(
+            listOf("en-IN", "en-US", "en"),
+            AndroidOfflineSpeechRecognizerClient.DEFAULT_LANGUAGE_FALLBACK_ORDER
+        )
+    }
+
+    @Test
+    fun languagePackErrorsRetryUntilFallbackSequenceIsExhausted() {
+        assertTrue(
+            AndroidOfflineSpeechRecognizerClient.shouldTryNextLanguage(
+                errorCode = SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE,
+                languageIndex = 0,
+                languageCount = AndroidOfflineSpeechRecognizerClient.DEFAULT_LANGUAGE_FALLBACK_ORDER.size
+            )
+        )
+        assertTrue(
+            AndroidOfflineSpeechRecognizerClient.shouldTryNextLanguage(
+                errorCode = SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED,
+                languageIndex = 1,
+                languageCount = AndroidOfflineSpeechRecognizerClient.DEFAULT_LANGUAGE_FALLBACK_ORDER.size
+            )
+        )
+        assertFalse(
+            AndroidOfflineSpeechRecognizerClient.shouldTryNextLanguage(
+                errorCode = SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE,
+                languageIndex = 2,
+                languageCount = AndroidOfflineSpeechRecognizerClient.DEFAULT_LANGUAGE_FALLBACK_ORDER.size
+            )
+        )
+        assertFalse(
+            AndroidOfflineSpeechRecognizerClient.shouldTryNextLanguage(
+                errorCode = SpeechRecognizer.ERROR_NO_MATCH,
+                languageIndex = 0,
+                languageCount = AndroidOfflineSpeechRecognizerClient.DEFAULT_LANGUAGE_FALLBACK_ORDER.size
+            )
+        )
     }
 
     private fun transcriptSourceFiles(): List<File> {

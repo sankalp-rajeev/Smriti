@@ -5,6 +5,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val realGemmaDevModeBuildGate = providers
+    .gradleProperty("smriti.realGemmaDevMode")
+    .map { it.toBoolean() }
+    .getOrElse(false)
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
@@ -23,6 +28,7 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("boolean", "REAL_GEMMA_DEV_BUILD_GATE", realGemmaDevModeBuildGate.toString())
     }
 
     buildTypes {
@@ -42,6 +48,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
 }

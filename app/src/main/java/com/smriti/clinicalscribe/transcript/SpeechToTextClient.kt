@@ -15,9 +15,15 @@ sealed interface TranscriptResult {
         val confidence: Float? = null
     ) : TranscriptResult
 
-    data class Unavailable(val reason: String) : TranscriptResult
+    data class Unavailable(
+        val reason: String,
+        val debugMetadata: Map<String, String> = emptyMap()
+    ) : TranscriptResult
 
-    data class Error(val reason: String) : TranscriptResult
+    data class Error(
+        val reason: String,
+        val debugMetadata: Map<String, String> = emptyMap()
+    ) : TranscriptResult
 }
 
 data class TranscriptMetadata(

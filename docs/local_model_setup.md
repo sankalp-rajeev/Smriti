@@ -42,7 +42,33 @@ There is currently no debug `applicationIdSuffix`, so `run-as com.smriti.clinica
 - Normal app startup and UI screens do not create a conversation.
 - Normal app startup and UI screens do not run inference.
 - Manual text inference requires `allowManualTextInference=true`.
+- Developer-only RealGemma text UI mode requires both `-Psmriti.realGemmaDevMode=true` at build time and an app-private sentinel file at `files/dev/enable_real_gemma_text_mode`.
 - `MockGemmaAgent` remains the safe default.
+
+## Developer-Only RealGemma Text UI Mode
+
+This mode is for local developer validation only. It is not the default demo mode and has no public CHW-facing toggle.
+
+Build with the disabled-by-default build gate enabled:
+
+```powershell
+.\gradlew.bat assembleDebug -Psmriti.realGemmaDevMode=true
+```
+
+Create the app-private local gate after installing the debug build:
+
+```powershell
+adb shell run-as com.smriti.clinicalscribe mkdir -p files/dev
+adb shell run-as com.smriti.clinicalscribe touch files/dev/enable_real_gemma_text_mode
+```
+
+With both gates enabled and the app-private model present, VisitScreen generation uses `RealGemmaAgent` through `VisitReasoningPipeline`. The output still appears on ReviewScreen and must be confirmed before saving. If the model is missing or inference fails, the generated result is safe/uncertain and nothing is saved automatically.
+
+Remove the local gate to return that install to mock mode:
+
+```powershell
+adb shell run-as com.smriti.clinicalscribe rm files/dev/enable_real_gemma_text_mode
+```
 
 ## Manual Text Inference Test
 

@@ -11,6 +11,7 @@ import org.junit.Test
 
 class SupervisorSummaryFormatterTest {
     private val patient = DemoSeedData.patients.first { it.id == "patient-meena" }
+    private val asha = DemoSeedData.patients.first { it.id == "patient-asha" }
 
     @Test
     fun urgentCasesUseLatestReferralPerPatient() {
@@ -120,13 +121,55 @@ class SupervisorSummaryFormatterTest {
         assertEquals(3, summary.followUpsDue.size)
     }
 
+    @Test
+    fun urgentCasesKeepOnlyLatestReferralForEachPatient() {
+        val meenaOlder = referral(
+            patientId = patient.id,
+            dangerSigns = "headache",
+            createdAtMillis = 100L
+        )
+        val meenaLatest = referral(
+            patientId = patient.id,
+            dangerSigns = "headache, blurred vision",
+            createdAtMillis = 300L
+        )
+        val ashaOlder = referral(
+            patientId = asha.id,
+            dangerSigns = "bleeding",
+            createdAtMillis = 200L
+        )
+        val ashaLatest = referral(
+            patientId = asha.id,
+            dangerSigns = "bleeding, convulsions",
+            createdAtMillis = 400L
+        )
+
+        val urgentCases = SupervisorSummaryFormatter.urgentCases(
+            patients = DemoSeedData.patients,
+            referrals = listOf(meenaOlder, meenaLatest, ashaOlder, ashaLatest)
+        )
+
+        assertEquals(2, urgentCases.size)
+        assertEquals(
+            "Asha - SAME_DAY - convulsions, bleeding. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            urgentCases.first()
+        )
+        assertEquals(
+            "Meena - SAME_DAY - headache, blurred vision. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            urgentCases.last()
+        )
+        assertFalse(urgentCases.joinToString().contains("Asha - SAME_DAY - bleeding."))
+        assertFalse(urgentCases.joinToString().contains("Meena - SAME_DAY - headache."))
+    }
+
     private fun referral(
+        patientId: String = patient.id,
         dangerSigns: String = "headache, blurred vision, high blood pressure",
         createdAtMillis: Long = 100L,
         protocolBasis: String = "Smriti Demo Maternal Health Protocol - Danger Signs"
     ): ReferralFlag {
         return ReferralFlag(
-            patientId = patient.id,
+            patientId = patientId,
             urgency = "SAME_DAY",
             reason = "Protocol-grounded referral suggestion only, not a diagnosis: long protocol explanation.",
             protocolBasis = protocolBasis,

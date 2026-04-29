@@ -39,6 +39,11 @@ class NormalVisitFlowWiringTest {
         assertTrue(visitScreen.contains("observationText = speechResult.transcript"))
         assertTrue(visitScreen.contains("Review and edit before generating"))
         assertTrue(visitScreen.contains("Offline speech unavailable"))
+        assertTrue(visitScreen.contains("Offline speech fallback is active"))
+        assertTrue(visitScreen.contains("direct Gemma 4 audio remains blocked and documented"))
+        assertFalse(visitScreen.contains("Real Gemma 4 audio integration comes next"))
+        assertTrue(visitScreen.contains("Reasoning Mode"))
+        assertTrue(visitScreen.contains("Active mode: \$reasoningModeLabel"))
     }
 
     @Test
@@ -57,11 +62,73 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
+    fun offlineSpeechFailureDoesNotClearEditableTranscript() {
+        val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
+        val unavailableStart = visitScreen.indexOf("is TranscriptResult.Unavailable ->")
+        val errorStart = visitScreen.indexOf("is TranscriptResult.Error ->")
+        val successStart = visitScreen.indexOf("is TranscriptResult.Success ->")
+        val unavailableBlock = visitScreen.substring(unavailableStart, errorStart)
+        val errorBlock = visitScreen.substring(errorStart, visitScreen.indexOf("}", startIndex = errorStart))
+
+        assertTrue(successStart >= 0)
+        assertTrue(unavailableStart > successStart)
+        assertTrue(errorStart > unavailableStart)
+        assertFalse(unavailableBlock.contains("observationText ="))
+        assertFalse(errorBlock.contains("observationText ="))
+        assertFalse(unavailableBlock.contains("code 13"))
+        assertFalse(errorBlock.contains("code 13"))
+    }
+
+    @Test
+    fun sampleTranscriptButtonStillFillsEditableTranscript() {
+        val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
+        val sampleButtonStart = visitScreen.indexOf("Text(\"Use sample danger-sign transcript\")")
+        assertTrue(sampleButtonStart >= 0)
+        val outlinedButtonStart = visitScreen.lastIndexOf("OutlinedButton(", startIndex = sampleButtonStart)
+        assertTrue(outlinedButtonStart >= 0)
+        val sampleButtonBlock = visitScreen.substring(
+            outlinedButtonStart,
+            sampleButtonStart
+        )
+
+        assertTrue(sampleButtonBlock.contains("observationText = SampleDangerSignTranscript"))
+        assertTrue(sampleButtonBlock.contains("offlineSpeechStatus = null"))
+    }
+
+    @Test
     fun generateStillUsesEditableTranscriptText() {
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
 
         assertTrue(visitScreen.contains("onGenerate(observationText, savedVoiceNote)"))
         assertTrue(visitScreen.contains("enabled = observationText.isNotBlank() && !isGenerating"))
+    }
+
+    @Test
+    fun realGemmaIsNotWiredIntoNormalUi() {
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+        val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
+        val patientListScreen = appSourceFile("ui/PatientListScreen.kt").readText()
+        val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
+
+        assertTrue(mainActivity.contains("realGemmaDevBuildGate: Boolean = BuildConfig.DEBUG && BuildConfig.REAL_GEMMA_DEV_BUILD_GATE"))
+        assertTrue(mainActivity.contains("RealGemmaDeveloperMode.isLocalGateEnabled(context.filesDir)"))
+        assertTrue(mainActivity.contains("RealGemmaDeveloperAgentFactory.createVisitAgent"))
+        assertTrue(mainActivity.contains("summaryAgent = remember { GemmaAgentFactory.create(AgentConfig.DEFAULT_MODE) }"))
+        assertFalse(visitScreen.contains("REAL_GEMMA_EXPERIMENTAL"))
+        assertFalse(patientListScreen.contains("REAL_GEMMA_EXPERIMENTAL"))
+        assertFalse(summaryScreen.contains("REAL_GEMMA_EXPERIMENTAL"))
+        assertFalse(visitScreen.contains("RealGemmaAgent("))
+        assertFalse(patientListScreen.contains("RealGemmaAgent("))
+        assertFalse(summaryScreen.contains("RealGemmaAgent("))
+    }
+
+    @Test
+    fun realGemmaDeveloperModeStillUsesVisitReasoningPipeline() {
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+
+        assertTrue(mainActivity.contains("visitAgent = remember(realGemmaDeveloperModeStatus, modelStatus)"))
+        assertTrue(mainActivity.contains("gemmaAgent = visitAgent"))
+        assertTrue(mainActivity.contains("visitReasoningPipeline.process("))
     }
 
     @Test

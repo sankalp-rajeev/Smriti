@@ -16,7 +16,10 @@ import androidx.compose.ui.unit.dp
 data class OfflineProofStatus(
     val reasoningModeLabel: String,
     val realGemmaModelStatusLabel: String,
-    val realGemmaReadinessLabel: String
+    val realGemmaReadinessLabel: String,
+    val realGemmaInferenceLabel: String = "Disabled by default; manual-only",
+    val realGemmaGateLabel: String = "Build gate: disabled; local gate: disabled",
+    val realGemmaDeveloperWarning: String? = null
 ) {
     val lines: List<Pair<String, String>>
         get() = listOf(
@@ -27,8 +30,12 @@ data class OfflineProofStatus(
             "Real Gemma model" to realGemmaModelStatusLabel,
             "EngineConfig" to "Ready when model found; Engine manual-only",
             "RealGemma readiness" to realGemmaReadinessLabel,
-            "Inference" to "Disabled by default; manual-only"
-        )
+            "RealGemma dev gate" to realGemmaGateLabel,
+            "Inference" to realGemmaInferenceLabel,
+            "Backend" to "CPU when developer text inference is enabled"
+        ) + realGemmaDeveloperWarning?.let { warning ->
+            listOf("Developer warning" to warning)
+        }.orEmpty()
 }
 
 @Composable

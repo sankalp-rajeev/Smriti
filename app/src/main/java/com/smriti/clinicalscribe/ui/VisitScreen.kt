@@ -49,6 +49,10 @@ fun VisitScreen(
     isGenerating: Boolean,
     audioPermissionGranted: Boolean,
     errorMessage: String?,
+    reasoningModeLabel: String,
+    realGemmaModelStatusLabel: String,
+    realGemmaInferenceLabel: String,
+    realGemmaDeveloperWarning: String?,
     onRequestAudioPermission: () -> Unit,
     onGenerate: (String, VoiceNoteMetadata?) -> Unit,
     onBack: () -> Unit
@@ -183,6 +187,26 @@ fun VisitScreen(
             }
 
             item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Reasoning Mode", style = MaterialTheme.typography.titleMedium)
+                        Text("Active mode: $reasoningModeLabel")
+                        Text("Real Gemma model: $realGemmaModelStatusLabel")
+                        Text("Inference: $realGemmaInferenceLabel")
+                        realGemmaDeveloperWarning?.let { warning ->
+                            Text(warning, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            }
+
+            item {
                 Text("Prior Visit History", style = MaterialTheme.typography.titleMedium)
                 Text(
                     text = "Review local history before entering the simulated voice observation.",
@@ -211,7 +235,7 @@ fun VisitScreen(
                     ) {
                         Text("Record Visit Note", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            text = "MVP uses simulated transcript. Real Gemma 4 audio integration comes next.",
+                            text = "MVP uses editable transcripts. Offline speech fallback is active; direct Gemma 4 audio remains blocked and documented.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Button(

@@ -3,6 +3,7 @@ package com.smriti.clinicalscribe
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import com.smriti.clinicalscribe.BuildConfig
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
@@ -35,12 +36,12 @@ import com.smriti.clinicalscribe.pipeline.VisitPipelineInput
 import com.smriti.clinicalscribe.pipeline.VisitReasoningPipeline
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import com.smriti.clinicalscribe.reasoning.AgentConfig
-import com.smriti.clinicalscribe.reasoning.AgentMode
-import com.smriti.clinicalscribe.reasoning.GemmaAgent
 import com.smriti.clinicalscribe.reasoning.GemmaAgentFactory
 import com.smriti.clinicalscribe.reasoning.LiteRtEngineConfigFactory
 import com.smriti.clinicalscribe.reasoning.ModelAvailability
 import com.smriti.clinicalscribe.reasoning.RealGemmaReadinessEvaluator
+import com.smriti.clinicalscribe.reasoning.RealGemmaDeveloperAgentFactory
+import com.smriti.clinicalscribe.reasoning.RealGemmaDeveloperMode
 import com.smriti.clinicalscribe.reasoning.SupervisorSummary
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import com.smriti.clinicalscribe.transcript.SimulatedTranscriptClient
@@ -78,38 +79,58 @@ private sealed interface SmritiScreen {
 @Composable
 private fun SmritiApp(
     database: AppDatabase,
-    agentMode: AgentMode = AgentConfig.DEFAULT_MODE,
-    agent: GemmaAgent = GemmaAgentFactory.create(agentMode)
+    realGemmaDevBuildGate: Boolean = BuildConfig.DEBUG && BuildConfig.REAL_GEMMA_DEV_BUILD_GATE,
+    realGemmaLocalGateOverride: Boolean? = null
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val retriever = remember { ProtocolRetriever.fromAsset(context) }
     val visitMemoryStore = remember(database) { LocalVisitMemoryStore(database) }
-    val visitReasoningPipeline = remember(agent, retriever) {
-        VisitReasoningPipeline(
-            protocolRetriever = retriever,
-            gemmaAgent = agent,
-            speechToTextClient = SimulatedTranscriptClient()
-        )
-    }
     val jsonExporter = remember { JsonExporter.appPrivate(context) }
     val voiceOutput = remember { AndroidVoiceOutput(context) }
     val modelAvailability = remember { ModelAvailability.fromFilesDir(context.filesDir) }
     val modelStatus = remember { modelAvailability.check() }
+    val detectedRealGemmaLocalGate = remember { RealGemmaDeveloperMode.isLocalGateEnabled(context.filesDir) }
+    val realGemmaLocalGate = realGemmaLocalGateOverride ?: detectedRealGemmaLocalGate
+    val realGemmaDeveloperModeStatus = remember(realGemmaDevBuildGate, realGemmaLocalGate, modelStatus) {
+        RealGemmaDeveloperMode.evaluate(
+            buildTimeGateEnabled = realGemmaDevBuildGate,
+            localGateEnabled = realGemmaLocalGate,
+            modelStatus = modelStatus
+        )
+    }
+    val visitAgent = remember(realGemmaDeveloperModeStatus, modelStatus) {
+        RealGemmaDeveloperAgentFactory.createVisitAgent(realGemmaDeveloperModeStatus, modelStatus)
+    }
+    val summaryAgent = remember { GemmaAgentFactory.create(AgentConfig.DEFAULT_MODE) }
+    val visitReasoningPipeline = remember(visitAgent, retriever) {
+        VisitReasoningPipeline(
+            protocolRetriever = retriever,
+            gemmaAgent = visitAgent,
+            speechToTextClient = SimulatedTranscriptClient()
+        )
+    }
     val engineConfigFactory = remember { LiteRtEngineConfigFactory() }
     val readinessEvaluator = remember { RealGemmaReadinessEvaluator() }
-    val realGemmaReadiness = remember(agentMode, modelStatus) {
+    val realGemmaReadiness = remember(realGemmaDeveloperModeStatus.activeAgentMode, modelStatus) {
         readinessEvaluator.evaluate(
-            agentMode = agentMode,
+            agentMode = realGemmaDeveloperModeStatus.activeAgentMode,
             modelStatus = modelStatus,
             engineConfigPreparation = engineConfigFactory.prepare(modelStatus)
         )
     }
-    val offlineProofStatus = remember(agentMode, modelStatus, realGemmaReadiness) {
+    val offlineProofStatus = remember(realGemmaDeveloperModeStatus, modelStatus, realGemmaReadiness) {
         OfflineProofStatus(
-            reasoningModeLabel = agentMode.displayName,
+            reasoningModeLabel = realGemmaDeveloperModeStatus.reasoningModeLabel,
             realGemmaModelStatusLabel = modelStatus.proofLabel,
-            realGemmaReadinessLabel = realGemmaReadiness.judgeLabel
+            realGemmaReadinessLabel = if (realGemmaDeveloperModeStatus.inferenceEnabled) {
+                "Developer text inference enabled"
+            } else {
+                realGemmaReadiness.judgeLabel
+            },
+            realGemmaInferenceLabel = realGemmaDeveloperModeStatus.inferenceStatusLabel,
+            realGemmaGateLabel = realGemmaDeveloperModeStatus.gateStatusLabel,
+            realGemmaDeveloperWarning = realGemmaDeveloperModeStatus.developerWarning
         )
     }
     var audioPermissionGranted by remember {
@@ -184,7 +205,7 @@ private fun SmritiApp(
                         },
                         onShowSummary = {
                             scope.launch {
-                                val summary = agent.generateSupervisorSummary(patients, visits, referrals)
+                                val summary = summaryAgent.generateSupervisorSummary(patients, visits, referrals)
                                 currentScreen = SmritiScreen.Summary(summary)
                             }
                         }
@@ -199,6 +220,10 @@ private fun SmritiApp(
                         isGenerating = isGenerating,
                         audioPermissionGranted = audioPermissionGranted,
                         errorMessage = errorMessage,
+                        reasoningModeLabel = realGemmaDeveloperModeStatus.reasoningModeLabel,
+                        realGemmaModelStatusLabel = modelStatus.proofLabel,
+                        realGemmaInferenceLabel = realGemmaDeveloperModeStatus.inferenceStatusLabel,
+                        realGemmaDeveloperWarning = realGemmaDeveloperModeStatus.developerWarning,
                         onRequestAudioPermission = {
                             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         },
@@ -276,7 +301,7 @@ private fun SmritiApp(
                                         voiceNote = screen.voiceNote
                                     )
                                     applySnapshot(snapshot)
-                                    agent.generateSupervisorSummary(snapshot.patients, snapshot.visits, snapshot.referrals)
+                                    summaryAgent.generateSupervisorSummary(snapshot.patients, snapshot.visits, snapshot.referrals)
                                 }.onSuccess { summary ->
                                     currentScreen = SmritiScreen.Summary(summary)
                                 }.onFailure { error ->
@@ -316,7 +341,7 @@ private fun SmritiApp(
                                 runCatching {
                                     val snapshot = visitMemoryStore.resetDemoData(retriever.allChunks())
                                     applySnapshot(snapshot)
-                                    agent.generateSupervisorSummary(snapshot.patients, snapshot.visits, snapshot.referrals)
+                                    summaryAgent.generateSupervisorSummary(snapshot.patients, snapshot.visits, snapshot.referrals)
                                 }.onSuccess { summary ->
                                     currentScreen = SmritiScreen.Summary(summary)
                                 }.onFailure { error ->
