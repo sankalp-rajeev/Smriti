@@ -28,7 +28,7 @@ Voiceover: "Every generated record is reviewed by the CHW before saving. The wor
 
 ## 1:45-2:20 Technical Depth
 
-"Smriti is Android native: Kotlin, Jetpack Compose, Room/SQLite, local protocol JSON, app-private voice notes, local JSON export, and Android TTS. Reasoning is behind a `GemmaAgent` interface. Today the demo-safe default is `MockGemmaAgent`; LiteRT-LM is pinned and readiness is visible, but real model loading and inference are disabled until controlled device testing."
+"Smriti is Android native: Kotlin, Jetpack Compose, Room/SQLite, local protocol JSON, app-private voice notes, local JSON export, and Android TTS. Reasoning is behind a `GemmaAgent` interface. Today the demo-safe default is `MockGemmaAgent`; LiteRT-LM is pinned and readiness is visible, while RealGemma text remains developer-only and gated."
 
 Show: Offline Proof lines and maybe a quick architecture slide.
 

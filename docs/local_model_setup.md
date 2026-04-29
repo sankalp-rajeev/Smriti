@@ -268,7 +268,7 @@ Normal validation should continue to use:
 
 It does not create a Conversation and does not call `sendMessage`.
 
-`LiteRtGemmaTextClient.generateTextManual(...)` is the separate manual text-inference helper. It requires a found model, prepared `EngineConfig`, and `allowManualTextInference=true`. It creates one Conversation, sends one text prompt, extracts text, and closes Conversation and Engine. This is not exposed in the app UI.
+`LiteRtGemmaTextClient.generateTextManual(...)` is the separate text-inference helper. It requires a found model, prepared `EngineConfig`, and `allowManualTextInference=true`. It creates one Conversation, sends one text prompt, extracts text, and closes Conversation and Engine. It is used by manual instrumentation tests and by the developer-only RealGemma text UI mode only when both local gates and the app-private model are present. It is not part of the default demo path.
 
 ## Development Note
 

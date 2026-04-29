@@ -27,6 +27,7 @@ Smriti is designed so the core demo can run in airplane mode.
 - LiteRT-LM dependency and readiness checks are present.
 - Normal app startup does not load or run a model.
 - Developer-only RealGemma text mode requires both the build-time gate and app-private local gate.
+- A sideloaded app-private model is also required before developer-only text inference can run.
 - Direct Gemma 4 audio remains blocked by the public LiteRT-LM Android/Kotlin preprocessing path.
 
 ## Data Boundary

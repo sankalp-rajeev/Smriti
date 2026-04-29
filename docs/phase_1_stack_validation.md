@@ -1,6 +1,6 @@
 # Phase 1 Stack Validation
 
-Phase 1 validated the Gemma 4 LiteRT-LM stack and RealGemma scaffolding without changing the normal app flow. All RealGemma/LiteRT-LM execution remains manual-only.
+Phase 1 validated the Gemma 4 LiteRT-LM stack and RealGemma scaffolding without changing the normal app flow. RealGemma/LiteRT-LM execution is disabled by default; later Phase 3 work added a developer-only gated text UI mode.
 
 ## LiteRT Text Inference
 
@@ -259,6 +259,6 @@ Phase 1 does not change normal app behavior:
 - No model file is committed.
 - No model download code is present.
 - No Hugging Face runtime code is present.
-- No RealGemma UI toggle exists.
+- No public CHW-facing RealGemma toggle exists.
 - `MockGemmaAgent` remains default.
-- RealGemma/LiteRT-LM inference remains manual-only.
+- RealGemma/LiteRT-LM inference remains disabled by default and is limited to manual instrumentation or developer-only gated text mode.

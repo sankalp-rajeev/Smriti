@@ -6,7 +6,7 @@ Smriti addresses a real last-mile health workflow: community health workers docu
 
 ## LiteRT Track Fit
 
-The app is structured for local Gemma 4 through LiteRT-LM behind a replaceable `GemmaAgent` interface. The LiteRT-LM dependency is pinned and readiness is visible in-app. Real model loading and inference are intentionally disabled until controlled device testing, so the demo remains safe and fully offline.
+The app is structured for local Gemma 4 through LiteRT-LM behind a replaceable `GemmaAgent` interface. The LiteRT-LM dependency is pinned and readiness is visible in-app. Real model loading and inference are disabled by default; developer-only text mode requires explicit local gates and a sideloaded app-private model. The normal judge demo remains safe, mock-backed, and fully offline.
 
 ## Impact And Vision
 
@@ -48,7 +48,7 @@ Gemini Live can answer general questions when online. Smriti is designed for off
 
 ## What Remains Experimental
 
-- Real Gemma `.litertlm` model loading.
+- Real Gemma `.litertlm` model loading in the default demo path.
 - LiteRT-LM `Engine` creation and initialization.
 - Conversation creation and inference.
 - Native Gemma audio/ASR.

@@ -155,7 +155,7 @@ Covered behavior:
 - supervisor summary uses latest-per-patient urgent cases,
 - reset restores clean seeded state,
 - `AgentConfig.DEFAULT_MODE` remains `MOCK`,
-- RealGemma is not wired into normal UI,
+- RealGemma is not wired into the default normal UI path,
 - no cloud/model/download/audio artifact runtime path is added.
 
 ## Validation Commands

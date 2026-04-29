@@ -33,19 +33,20 @@ Phase 2 is complete for the local core visit flow:
 
 ## Phase 3 Status
 
-Phase 3 has started with two controlled additions:
+Phase 3 has completed the current judge-ready pass with four controlled additions:
 
 - Developer-only RealGemma text UI mode, guarded by both a build-time gate and an app-private local gate. This is not the default demo path and is not CHW-facing.
 - Global Protocol Pack v1, a local 46-chunk maternal/ANC corpus with country/region-aware keyword retrieval for `GLOBAL_CORE`, `INDIA`, `BANGLADESH`, `ETHIOPIA`, `AFRICA_REGION`, and `SOUTH_AMERICA_REGION`.
 - A 10-case synthetic global benchmark suite for protocol retrieval, grounding, referral behavior, uncertainty handling, and country/region/global fallback through the mock local pipeline.
 - Judge-ready normal demo copy now emphasizes offline CHW workflow, local patient memory, local protocol pack, protocol-grounded referral support, CHW confirm/save, and concise Offline Proof.
+- A consolidated judge evidence ledger is available at `docs/judge_evidence.md`.
 
 Recommended order:
 
-1. Review and refine the new protocol pack and synthetic cases against official country program materials.
-2. Improve offline speech setup guidance and device diagnostics.
-3. Capture more developer-mode RealGemma runs and failure cases.
-4. Add stronger structured-output telemetry for manual RealGemma runs.
+1. Review and refine the protocol pack and synthetic cases against official country program materials.
+2. Run a final emulator demo smoke test in airplane mode.
+3. Improve offline speech setup guidance and device diagnostics.
+4. Capture more developer-mode RealGemma runs and failure cases.
 5. Revisit direct Gemma 4 audio only if LiteRT-LM exposes or documents a usable preprocessing and prompt-template path.
 
 ## What Is Real
@@ -91,7 +92,7 @@ Recommended order:
 - `ManualLiteRtAudioCapabilityInstrumentedTest`
 - `ManualLiteRtAudioInferenceInstrumentedTest`
 
-These tests require explicit instrumentation arguments and, for inference, a sideloaded app-private model. They are not wired into Patient Roster, Visit, Review, Summary, startup, or visible toggles.
+These tests require explicit instrumentation arguments and, for inference, a sideloaded app-private model. They are separate from the developer-only UI mode and are not wired into startup or public CHW-facing toggles.
 
 ## Next Recommended Work
 

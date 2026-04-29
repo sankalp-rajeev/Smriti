@@ -59,7 +59,7 @@ debug build with -Psmriti.realGemmaDevMode=true
 -> CHW confirm/save gate
 ```
 
-If either gate is missing, the normal `MockGemmaAgent` visit path is used. If the model is missing or inference fails, RealGemma returns a safe uncertain result and does not save.
+If either gate is missing, the normal `MockGemmaAgent` visit path is used. If both gates are enabled but the model is missing or inference fails, RealGemma returns a safe uncertain result and does not save.
 
 ## Transcript And Audio Fallback Flow
 

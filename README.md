@@ -38,6 +38,7 @@ See [docs/demo_flow.md](docs/demo_flow.md) for the step-by-step judge script.
 
 For the concise current state, start with [docs/current_status.md](docs/current_status.md).
 
+- [Judge evidence](docs/judge_evidence.md)
 - [Phase 1 stack validation](docs/phase_1_stack_validation.md)
 - [Phase 2 core pipeline](docs/phase_2_core_pipeline.md)
 - [Phase 3 protocol pack](docs/phase_3_protocol_pack.md)
@@ -45,6 +46,16 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 - [Architecture](docs/architecture.md)
 - [Known limitations](docs/known_limitations.md)
 - [LiteRT-LM status](docs/litert_status.md)
+
+## Current Evidence
+
+- Normal demo: local roster/history, local protocol JSON, `MockGemmaAgent`, review/confirm/save, supervisor summary, and Offline Proof.
+- Protocol pack: 46 local chunks across global, country, and regional tags.
+- Synthetic benchmark: 10 global cases through `ProtocolRetriever -> VisitReasoningPipeline -> MockGemmaAgent`.
+- RealGemma: manual text inference validated and developer-only UI mode gated; not default.
+- Audio: direct Gemma 4 audio is blocked; Smriti uses offline speech/editable transcript fallback.
+
+See [docs/judge_evidence.md](docs/judge_evidence.md).
 
 ## What Works Now
 
@@ -73,7 +84,7 @@ Real now:
 Mocked now:
 
 - Reasoning is deterministic through `MockGemmaAgent`.
-- The sample danger-sign transcript stands in for real ASR.
+- The sample danger-sign transcript is the reliable demo transcript when offline speech is unavailable.
 
 Experimental and disabled:
 
@@ -90,8 +101,8 @@ Experimental and disabled:
 - The app detects whether that file exists, but does not load it.
 - EngineConfig is constructed with `Backend.CPU()` only when that model file exists.
 - Direct LiteRT-LM API types compile after the Room KSP migration.
-- Runtime Engine initialization and text inference are disabled by default and manual-only.
-- `RealGemmaReadinessEvaluator` keeps model loading and inference disabled.
+- Runtime Engine initialization and text inference are disabled by default.
+- Developer-only RealGemma text mode can run only when the build gate, app-private local gate, and app-private model are present.
 - No model files are committed.
 
 See [docs/litert_status.md](docs/litert_status.md).
