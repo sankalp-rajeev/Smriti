@@ -31,6 +31,8 @@ import com.smriti.clinicalscribe.data.ReferralFlag
 import com.smriti.clinicalscribe.data.TranscriptSource
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.export.JsonExporter
+import com.smriti.clinicalscribe.pipeline.VisitPipelineInput
+import com.smriti.clinicalscribe.pipeline.VisitReasoningPipeline
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import com.smriti.clinicalscribe.reasoning.AgentConfig
 import com.smriti.clinicalscribe.reasoning.AgentMode
@@ -41,6 +43,7 @@ import com.smriti.clinicalscribe.reasoning.ModelAvailability
 import com.smriti.clinicalscribe.reasoning.RealGemmaReadinessEvaluator
 import com.smriti.clinicalscribe.reasoning.SupervisorSummary
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
+import com.smriti.clinicalscribe.transcript.SimulatedTranscriptClient
 import com.smriti.clinicalscribe.tts.AndroidVoiceOutput
 import com.smriti.clinicalscribe.tts.VoiceOutputResult
 import com.smriti.clinicalscribe.ui.OfflineProofStatus
@@ -81,6 +84,13 @@ private fun SmritiApp(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val retriever = remember { ProtocolRetriever.fromAsset(context) }
+    val visitReasoningPipeline = remember(agent, retriever) {
+        VisitReasoningPipeline(
+            protocolRetriever = retriever,
+            gemmaAgent = agent,
+            speechToTextClient = SimulatedTranscriptClient()
+        )
+    }
     val jsonExporter = remember { JsonExporter.appPrivate(context) }
     val voiceOutput = remember { AndroidVoiceOutput(context) }
     val modelAvailability = remember { ModelAvailability.fromFilesDir(context.filesDir) }
@@ -213,12 +223,16 @@ private fun SmritiApp(
                                 exportVisitPath = null
                                 ttsStatusMessage = null
                                 runCatching {
-                                    val protocolChunks = retriever.retrieve(observation)
-                                    agent.generateVisitNote(
-                                        patient = screen.patient,
-                                        visitHistory = visits.filter { it.patientId == screen.patient.id },
-                                        observationText = observation,
-                                        protocolChunks = protocolChunks
+                                    val pipelineResult = visitReasoningPipeline.process(
+                                        VisitPipelineInput(
+                                            patient = screen.patient,
+                                            priorVisits = visits.filter { it.patientId == screen.patient.id },
+                                            transcriptText = observation
+                                        )
+                                    )
+                                    pipelineResult.reasoningResult ?: error(
+                                        pipelineResult.unavailableReason
+                                            ?: "Transcript text is required before visit reasoning."
                                     )
                                 }.onSuccess { result ->
                                     currentScreen = SmritiScreen.Review(screen.patient, result, voiceNote)

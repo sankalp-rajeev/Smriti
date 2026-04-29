@@ -81,7 +81,23 @@ LiteRtLmJniException: Failed to generate content: INTERNAL: Audio must be prepro
 
 `ManualLiteRtAudioInferenceInstrumentedTest` is the separate real-audio manual harness. It requires `allowManualAudioInference=true`, `manualAudioFilePath=/data/local/tmp/manual-smriti-audio.wav`, and the sideloaded app-private Gemma model. It now tries the `Conversation.sendMessage(Contents.of(Content.Text(...), Content.AudioFile(...)))` route first, then the raw `Session.generateContent(InputData.Text(...), InputData.Audio(...))` route. If both routes hit the preprocessing requirement, the test logs and skips as blocked instead of claiming transcription works.
 
-Current audio status: API surface available, real raw-audio runtime blocked until a public/wired LiteRT-LM audio preprocessing path is identified. Phase 2 fallback remains the existing Android `MediaRecorder` capture plus manual/simulated transcript for demo, or future external/offline ASR preprocessing if LiteRT-LM requires it. No audio file is committed, and no audio/Gemma path is wired into the normal app flow.
+Current audio status: API surface available, real raw-audio runtime blocked until a public/wired LiteRT-LM audio preprocessing path is identified. Direct Gemma 4 audio transcription is therefore blocked by the current public Gemma 4 LiteRT-LM artifact/API limitations, not enabled in the normal app flow, and not claimed as working.
+
+Phase 2 starts the fallback architecture for voice visits:
+
+```text
+local voice/audio source -> offline ASR or manual transcript -> transcript text -> local protocol retrieval -> Gemma 4 text reasoning -> structured visit result -> CHW review/confirm save
+```
+
+The new Phase 2 core keeps audio capture local and modular:
+
+- `SpeechToTextClient` defines a sealed transcript result: success, unavailable, or error.
+- `SimulatedTranscriptClient` keeps the demo/sample transcript path local and deterministic.
+- `AndroidOfflineSpeechRecognizerClient` is a skeleton wrapper that requests `RecognizerIntent.EXTRA_PREFER_OFFLINE=true`, never adds network ASR, and returns unavailable for stored audio-file transcription until a local ASR engine or reliable OS offline pack path is wired.
+- `VisitReasoningPipeline` is UI-independent and coordinates transcript text or local audio path, local `ProtocolRetriever`, injected `GemmaAgent`, and structured `VisitReasoningResult`.
+- The pipeline does not write to Room. CHW review/confirm remains the only save path.
+
+No audio file is committed, and no audio/Gemma path is wired into the normal app flow.
 
 The instrumentation harness uses the debug application ID `com.smriti.clinicalscribe`, the app-private path `filesDir/models/gemma-4-E2B-it-int4.litertlm`, and the non-clinical prompt `Reply with exactly: SMRITI_LITERT_OK`. It must be run explicitly with:
 
