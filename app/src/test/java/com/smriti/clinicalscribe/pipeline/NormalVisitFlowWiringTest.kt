@@ -17,16 +17,15 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
-    fun reviewConfirmationStillOwnsVisitRoomWrites() {
+    fun reviewConfirmationStillOwnsVisitMemorySave() {
         val mainActivity = appSourceFile("MainActivity.kt").readText()
 
         val confirmIndex = mainActivity.indexOf("onConfirmSave")
         val confirmationBlock = mainActivity.substring(confirmIndex)
 
         assertTrue(confirmIndex >= 0)
-        assertTrue(confirmationBlock.contains("database.visitLogDao().insert"))
-        assertTrue(confirmationBlock.contains("database.referralFlagDao()"))
-        assertTrue(confirmationBlock.contains(".insert(flag.copy"))
+        assertTrue(confirmationBlock.contains("visitMemoryStore.saveConfirmedVisit"))
+        assertTrue(confirmationBlock.contains("applySnapshot(snapshot)"))
     }
 
     @Test
@@ -41,6 +40,26 @@ class NormalVisitFlowWiringTest {
         assertFalse(combinedPipelineSource.contains("Room"))
         assertFalse(combinedPipelineSource.contains("Dao"))
         assertFalse(combinedPipelineSource.contains(".insert("))
+    }
+
+    @Test
+    fun mainSourceDoesNotAddCloudOrDownloadRuntimeCode() {
+        val appRoot = appSourceFile("")
+        val combinedMainSource = appRoot
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .joinToString(separator = "\n") { it.readText() }
+            .lowercase()
+
+        assertFalse(combinedMainSource.contains("http://"))
+        assertFalse(combinedMainSource.contains("https://"))
+        assertFalse(combinedMainSource.contains("openai"))
+        assertFalse(combinedMainSource.contains("gemini api"))
+        assertFalse(combinedMainSource.contains("firebase"))
+        assertFalse(combinedMainSource.contains("supabase"))
+        assertFalse(combinedMainSource.contains("hugging face"))
+        assertFalse(combinedMainSource.contains("downloadmodel"))
+        assertFalse(combinedMainSource.contains("cloud asr"))
     }
 
     private fun appSourceFile(relativePath: String): File {

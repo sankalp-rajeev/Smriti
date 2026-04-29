@@ -25,11 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.data.AppDatabase
-import com.smriti.clinicalscribe.data.DemoSeedData
+import com.smriti.clinicalscribe.data.LocalVisitMemoryStore
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.ReferralFlag
-import com.smriti.clinicalscribe.data.TranscriptSource
 import com.smriti.clinicalscribe.data.VisitLog
+import com.smriti.clinicalscribe.data.VisitMemorySnapshot
 import com.smriti.clinicalscribe.export.JsonExporter
 import com.smriti.clinicalscribe.pipeline.VisitPipelineInput
 import com.smriti.clinicalscribe.pipeline.VisitReasoningPipeline
@@ -84,6 +84,7 @@ private fun SmritiApp(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val retriever = remember { ProtocolRetriever.fromAsset(context) }
+    val visitMemoryStore = remember(database) { LocalVisitMemoryStore(database) }
     val visitReasoningPipeline = remember(agent, retriever) {
         VisitReasoningPipeline(
             protocolRetriever = retriever,
@@ -142,40 +143,22 @@ private fun SmritiApp(
         }
     }
 
+    fun applySnapshot(snapshot: VisitMemorySnapshot) {
+        patients = snapshot.patients
+        visits = snapshot.visits
+        referrals = snapshot.referrals
+    }
+
     DisposableEffect(voiceOutput) {
         onDispose {
             voiceOutput.release()
         }
     }
 
-    suspend fun refreshLocalState() {
-        patients = database.patientDao().getAll()
-        visits = database.visitLogDao().getAll()
-        referrals = database.referralFlagDao().getAll()
-    }
-
-    suspend fun resetDemoData() {
-        database.referralFlagDao().deleteAll()
-        database.visitLogDao().deleteAll()
-        database.patientDao().upsertAll(DemoSeedData.patients)
-        database.protocolChunkDao().upsertAll(retriever.allChunks())
-        DemoSeedData.initialVisitLogs().forEach { database.visitLogDao().insert(it) }
-        refreshLocalState()
-    }
-
     LaunchedEffect(Unit) {
         isLoading = true
         runCatching {
-            if (database.patientDao().getAll().isEmpty()) {
-                database.patientDao().upsertAll(DemoSeedData.patients)
-            }
-            if (database.protocolChunkDao().getAll().isEmpty()) {
-                database.protocolChunkDao().upsertAll(retriever.allChunks())
-            }
-            if (database.visitLogDao().getAll().isEmpty()) {
-                DemoSeedData.initialVisitLogs().forEach { database.visitLogDao().insert(it) }
-            }
-            refreshLocalState()
+            applySnapshot(visitMemoryStore.seedDemoIfNeeded(retriever.allChunks()))
         }.onFailure { error ->
             errorMessage = "Could not load local demo data: ${error.message}"
         }
@@ -209,7 +192,10 @@ private fun SmritiApp(
 
                     is SmritiScreen.Visit -> VisitScreen(
                         patient = screen.patient,
-                        history = visits.filter { it.patientId == screen.patient.id },
+                        history = visitMemoryStore.historyForPatient(
+                            VisitMemorySnapshot(patients, visits, referrals),
+                            screen.patient.id
+                        ),
                         isGenerating = isGenerating,
                         audioPermissionGranted = audioPermissionGranted,
                         errorMessage = errorMessage,
@@ -223,10 +209,14 @@ private fun SmritiApp(
                                 exportVisitPath = null
                                 ttsStatusMessage = null
                                 runCatching {
+                                    val history = visitMemoryStore.historyForPatient(
+                                        VisitMemorySnapshot(patients, visits, referrals),
+                                        screen.patient.id
+                                    )
                                     val pipelineResult = visitReasoningPipeline.process(
                                         VisitPipelineInput(
                                             patient = screen.patient,
-                                            priorVisits = visits.filter { it.patientId == screen.patient.id },
+                                            priorVisits = history,
                                             transcriptText = observation
                                         )
                                     )
@@ -279,29 +269,14 @@ private fun SmritiApp(
                                 isSaving = true
                                 errorMessage = null
                                 runCatching {
-                                    val visitId = database.visitLogDao().insert(
-                                        VisitLog(
-                                            patientId = screen.patient.id,
-                                            visitDateMillis = System.currentTimeMillis(),
-                                            observationText = screen.result.observationText,
-                                            structuredNote = editedNote,
-                                            protocolCitation = screen.result.protocolCitation,
-                                            suggestedFollowUp = editedFollowUp,
-                                            confirmed = true,
-                                            audioFilePath = screen.voiceNote?.audioFilePath,
-                                            audioDurationSeconds = screen.voiceNote?.audioDurationSeconds,
-                                            transcriptSource = if (screen.voiceNote == null) {
-                                                TranscriptSource.SIMULATED
-                                            } else {
-                                                TranscriptSource.REAL_ASR_PENDING
-                                            }
-                                        )
+                                    val snapshot = visitMemoryStore.saveConfirmedVisit(
+                                        result = screen.result,
+                                        editedNote = editedNote,
+                                        editedFollowUp = editedFollowUp,
+                                        voiceNote = screen.voiceNote
                                     )
-                                    screen.result.referralFlag?.let { flag ->
-                                        database.referralFlagDao().insert(flag.copy(visitLogId = visitId))
-                                    }
-                                    refreshLocalState()
-                                    agent.generateSupervisorSummary(patients, visits, referrals)
+                                    applySnapshot(snapshot)
+                                    agent.generateSupervisorSummary(snapshot.patients, snapshot.visits, snapshot.referrals)
                                 }.onSuccess { summary ->
                                     currentScreen = SmritiScreen.Summary(summary)
                                 }.onFailure { error ->
@@ -339,12 +314,9 @@ private fun SmritiApp(
                                 errorMessage = null
                                 exportSummaryPath = null
                                 runCatching {
-                                    resetDemoData()
-                                    agent.generateSupervisorSummary(
-                                        database.patientDao().getAll(),
-                                        database.visitLogDao().getAll(),
-                                        database.referralFlagDao().getAll()
-                                    )
+                                    val snapshot = visitMemoryStore.resetDemoData(retriever.allChunks())
+                                    applySnapshot(snapshot)
+                                    agent.generateSupervisorSummary(snapshot.patients, snapshot.visits, snapshot.referrals)
                                 }.onSuccess { summary ->
                                     currentScreen = SmritiScreen.Summary(summary)
                                 }.onFailure { error ->
