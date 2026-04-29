@@ -39,6 +39,7 @@ See [docs/demo_flow.md](docs/demo_flow.md) for the step-by-step judge script.
 For the concise current state, start with [docs/current_status.md](docs/current_status.md).
 
 - [Judge evidence](docs/judge_evidence.md)
+- [Final demo checklist](docs/final_demo_checklist.md)
 - [Phase 1 stack validation](docs/phase_1_stack_validation.md)
 - [Phase 2 core pipeline](docs/phase_2_core_pipeline.md)
 - [Phase 3 protocol pack](docs/phase_3_protocol_pack.md)

@@ -2,6 +2,8 @@
 
 This page is the concise evidence ledger for Smriti's current hackathon state. It separates what works in the normal judge demo, what is developer-only, what is blocked, and what is not claimed.
 
+For the filmed/live runbook, use `docs/final_demo_checklist.md`.
+
 ## Normal Demo
 
 The normal demo path is offline and mock-backed by default:
