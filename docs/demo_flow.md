@@ -15,11 +15,13 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
    - Point out `Local patient memory + local protocol pack.`
    - Point out the `Offline Proof` card.
    - Key lines: `Network required: No`, `Patient data: Local Room/SQLite`, `Protocol source: Local JSON; country-aware retrieval`, `Active reasoning mode: MockGemmaAgent`, `Inference: Disabled by default`.
+   - Show the six synthetic patients and, if useful, tap `Load Demo Supervisor Register` to demonstrate local asset import.
+   - Optional: tap `Add Patient` to show offline speech registration prompts and manual fallback, then return to the roster.
 
 2. **Select Meena**
-   - Tap `Meena, 28F`.
+   - Tap `Meena Sharma, 28F`.
    - Show prior visit history: borderline blood pressure and routine ANC follow-ups are already stored locally.
-   - Point out `Protocol pack: India / Global fallback`.
+   - Point out Meena's India/INDIA protocol context with GLOBAL_CORE fallback.
 
 3. **Create Visit Observation**
    - Use `Use sample danger-sign transcript`.
@@ -56,7 +58,7 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
 
 10. **Optional Reset**
     - Tap `Reset Demo Data`.
-    - Confirm it clears saved mock visits/referrals and restores original Meena history.
+    - Confirm it clears saved mock visits/referrals and restores the clean six-patient synthetic roster.
 
 ## Closing Line
 
@@ -68,3 +70,4 @@ One phone, no signal, local patient memory, local protocols, CHW confirmation, a
 - Do not claim direct Gemma 4 audio works.
 - Do not imply autonomous diagnosis or treatment.
 - Do not present RealGemma text mode as the default demo path; it remains developer-only and gated.
+- Do not present the Phase A language/country metadata as validated multilingual clinical output.

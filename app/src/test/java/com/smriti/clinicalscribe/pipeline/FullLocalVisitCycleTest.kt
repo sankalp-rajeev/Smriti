@@ -44,7 +44,7 @@ class FullLocalVisitCycleTest {
         assertSafetyWording(reasoning)
 
         val beforeConfirmation = store.refresh()
-        assertEquals(2, beforeConfirmation.visits.size)
+        assertEquals(seededVisitCount(), beforeConfirmation.visits.size)
         assertEquals(0, beforeConfirmation.referrals.size)
     }
 
@@ -65,7 +65,7 @@ class FullLocalVisitCycleTest {
         assertSafetyWording(reasoning)
 
         val beforeConfirmation = store.refresh()
-        assertEquals(2, beforeConfirmation.visits.size)
+        assertEquals(seededVisitCount(), beforeConfirmation.visits.size)
         assertEquals(0, beforeConfirmation.referrals.size)
     }
 
@@ -74,7 +74,7 @@ class FullLocalVisitCycleTest {
         val store = fakeStore()
         val seeded = store.seedDemoIfNeeded(retriever.allChunks(), nowMillis = SEED_TIME)
         val initialHistory = store.historyForPatient(seeded, patient.id)
-        assertEquals(2, initialHistory.size)
+        assertEquals(3, initialHistory.size)
 
         val asr = UnavailableSpeechClient()
         val pipeline = VisitReasoningPipeline(
@@ -100,7 +100,7 @@ class FullLocalVisitCycleTest {
         assertSafetyWording(reasoning)
 
         val beforeConfirmation = store.refresh()
-        assertEquals(2, beforeConfirmation.visits.size)
+        assertEquals(seededVisitCount(), beforeConfirmation.visits.size)
         assertEquals(0, beforeConfirmation.referrals.size)
 
         val confirmed = store.saveConfirmedVisit(
@@ -113,7 +113,7 @@ class FullLocalVisitCycleTest {
             nowMillis = FIRST_SAVE_TIME
         )
         val returnHistory = store.historyForPatient(confirmed, patient.id)
-        assertEquals(3, returnHistory.size)
+        assertEquals(4, returnHistory.size)
         assertEquals(reasoning.observationText, returnHistory.first().observationText)
         assertTrue(returnHistory.first().confirmed)
         assertEquals(1, confirmed.referrals.size)
@@ -124,10 +124,10 @@ class FullLocalVisitCycleTest {
             visits = confirmed.visits,
             referrals = confirmed.referrals
         )
-        assertEquals(3, summary.totalVisits)
+        assertEquals(seededVisitCount() + 1, summary.totalVisits)
         assertEquals(1, summary.referralsFlagged)
         assertEquals(1, summary.urgentCases.size)
-        assertTrue(summary.urgentCases.single().startsWith("Meena - SAME_DAY"))
+        assertTrue(summary.urgentCases.single().startsWith("Meena Sharma - SAME_DAY"))
         assertFalse(summary.urgentCases.single().contains("Protocol-grounded referral suggestion"))
         assertFalse(summary.urgentCases.single().contains("not a diagnosis"))
 
@@ -145,14 +145,14 @@ class FullLocalVisitCycleTest {
             visits = repeatedSave.visits,
             referrals = repeatedSave.referrals
         )
-        assertEquals(4, repeatedSummary.totalVisits)
+        assertEquals(seededVisitCount() + 2, repeatedSummary.totalVisits)
         assertEquals(2, repeatedSummary.referralsFlagged)
         assertEquals(1, repeatedSummary.urgentCases.size)
-        assertTrue(repeatedSummary.urgentCases.single().startsWith("Meena - SAME_DAY"))
+        assertTrue(repeatedSummary.urgentCases.single().startsWith("Meena Sharma - SAME_DAY"))
         assertFalse(repeatedSummary.urgentCases.single().contains("Severe or persistent headache during pregnancy"))
 
         val reset = store.resetDemoData(retriever.allChunks(), nowMillis = SEED_TIME)
-        assertEquals(2, store.historyForPatient(reset, patient.id).size)
+        assertEquals(3, store.historyForPatient(reset, patient.id).size)
         assertEquals(0, reset.referrals.size)
     }
 
@@ -178,7 +178,7 @@ class FullLocalVisitCycleTest {
         assertEquals(1, asr.callCount)
         assertEquals(null, result.reasoningResult)
         assertTrue(result.warnings.joinToString().contains("manual transcript"))
-        assertEquals(2, store.refresh().visits.size)
+        assertEquals(seededVisitCount(), store.refresh().visits.size)
         assertEquals(0, store.refresh().referrals.size)
     }
 
@@ -220,6 +220,8 @@ class FullLocalVisitCycleTest {
         )
     }
 
+    private fun seededVisitCount(): Int = DemoSeedData.initialVisitLogs(SEED_TIME).size
+
     private fun assetCorpusJson(): String {
         val modulePath = File("src/main/assets/${ProtocolRetriever.ASSET_PATH}")
         val rootPath = File("app/src/main/assets/${ProtocolRetriever.ASSET_PATH}")
@@ -250,6 +252,10 @@ class FullLocalVisitCycleTest {
                 this.patients.add(patient)
             }
         }
+
+        override suspend fun deleteAll() {
+            patients.clear()
+        }
     }
 
     private class FakeVisitLogDao : VisitLogDao {
@@ -271,8 +277,16 @@ class FullLocalVisitCycleTest {
             return id
         }
 
+        override suspend fun upsertAll(visitLogs: List<VisitLog>) {
+            visitLogs.forEach { insert(it) }
+        }
+
         override suspend fun deleteAll() {
             visits.clear()
+        }
+
+        override suspend fun deleteForPatients(patientIds: List<String>) {
+            visits.removeAll { it.patientId in patientIds }
         }
     }
 

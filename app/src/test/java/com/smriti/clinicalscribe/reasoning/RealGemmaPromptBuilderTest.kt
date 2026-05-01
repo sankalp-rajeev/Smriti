@@ -20,7 +20,7 @@ class RealGemmaPromptBuilderTest {
         )
 
         assertTrue(prompt.contains("patient-meena"))
-        assertTrue(prompt.contains("Meena, 28F"))
+        assertTrue(prompt.contains("Meena Sharma, 28F"))
         assertTrue(prompt.contains("Prior visit history"))
         assertTrue(prompt.contains(history.first().structuredNote.take(40)))
         assertTrue(prompt.contains("Meena reports severe headache and blurred vision."))

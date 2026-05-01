@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.data.AppDatabase
+import com.smriti.clinicalscribe.data.DemoSupervisorRegisterImporter
 import com.smriti.clinicalscribe.data.LocalVisitMemoryStore
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.ReferralFlag
@@ -34,7 +35,6 @@ import com.smriti.clinicalscribe.data.VisitMemorySnapshot
 import com.smriti.clinicalscribe.export.JsonExporter
 import com.smriti.clinicalscribe.pipeline.VisitPipelineInput
 import com.smriti.clinicalscribe.pipeline.VisitReasoningPipeline
-import com.smriti.clinicalscribe.rag.ProtocolRetrievalContext
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import com.smriti.clinicalscribe.reasoning.AgentConfig
 import com.smriti.clinicalscribe.reasoning.GemmaAgentFactory
@@ -48,6 +48,7 @@ import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import com.smriti.clinicalscribe.transcript.SimulatedTranscriptClient
 import com.smriti.clinicalscribe.tts.AndroidVoiceOutput
 import com.smriti.clinicalscribe.tts.VoiceOutputResult
+import com.smriti.clinicalscribe.ui.AddPatientScreen
 import com.smriti.clinicalscribe.ui.OfflineProofStatus
 import com.smriti.clinicalscribe.ui.PatientListScreen
 import com.smriti.clinicalscribe.ui.ReviewScreen
@@ -68,6 +69,7 @@ class MainActivity : ComponentActivity() {
 
 private sealed interface SmritiScreen {
     data object PatientRoster : SmritiScreen
+    data object AddPatient : SmritiScreen
     data class Visit(val patient: Patient) : SmritiScreen
     data class Review(
         val patient: Patient,
@@ -86,9 +88,6 @@ private fun SmritiApp(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val retriever = remember { ProtocolRetriever.fromAsset(context) }
-    val demoProtocolContext = remember {
-        ProtocolRetrievalContext(countryCode = "IN", region = "INDIA")
-    }
     val visitMemoryStore = remember(database) { LocalVisitMemoryStore(database) }
     val jsonExporter = remember { JsonExporter.appPrivate(context) }
     val voiceOutput = remember { AndroidVoiceOutput(context) }
@@ -156,6 +155,8 @@ private fun SmritiApp(
     var isGenerating by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     var isResettingDemoData by remember { mutableStateOf(false) }
+    var isImportingSupervisorRegister by remember { mutableStateOf(false) }
+    var importStatusMessage by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var ttsStatusMessage by remember { mutableStateOf<String?>(null) }
     var exportVisitPath by remember { mutableStateOf<String?>(null) }
@@ -203,9 +204,33 @@ private fun SmritiApp(
                         visits = visits,
                         isLoading = isLoading,
                         offlineProofStatus = offlineProofStatus,
+                        importStatusMessage = importStatusMessage,
+                        isImportingSupervisorRegister = isImportingSupervisorRegister,
                         onPatientSelected = { patient ->
                             errorMessage = null
                             currentScreen = SmritiScreen.Visit(patient)
+                        },
+                        onAddPatient = {
+                            errorMessage = null
+                            currentScreen = SmritiScreen.AddPatient
+                        },
+                        onImportSupervisorRegister = {
+                            scope.launch {
+                                isImportingSupervisorRegister = true
+                                errorMessage = null
+                                importStatusMessage = null
+                                runCatching {
+                                    val register = DemoSupervisorRegisterImporter.fromAsset(context)
+                                    visitMemoryStore.importSupervisorRegister(register)
+                                }.onSuccess { result ->
+                                    applySnapshot(result.snapshot)
+                                    importStatusMessage =
+                                        "${result.patientCount} synthetic patients imported from local supervisor register."
+                                }.onFailure { error ->
+                                    errorMessage = "Could not import local supervisor register: ${error.message}"
+                                }
+                                isImportingSupervisorRegister = false
+                            }
                         },
                         onShowSummary = {
                             scope.launch {
@@ -213,6 +238,28 @@ private fun SmritiApp(
                                 currentScreen = SmritiScreen.Summary(summary)
                             }
                         }
+                    )
+
+                    SmritiScreen.AddPatient -> AddPatientScreen(
+                        audioPermissionGranted = audioPermissionGranted,
+                        onRequestAudioPermission = {
+                            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        },
+                        onSavePatient = { patient ->
+                            scope.launch {
+                                errorMessage = null
+                                runCatching {
+                                    visitMemoryStore.addPatient(patient)
+                                }.onSuccess { snapshot ->
+                                    applySnapshot(snapshot)
+                                    importStatusMessage = "Patient added locally. Review before using in a visit."
+                                    currentScreen = SmritiScreen.PatientRoster
+                                }.onFailure { error ->
+                                    errorMessage = "Could not save patient locally: ${error.message}"
+                                }
+                            }
+                        },
+                        onBack = { currentScreen = SmritiScreen.PatientRoster }
                     )
 
                     is SmritiScreen.Visit -> VisitScreen(
@@ -228,7 +275,7 @@ private fun SmritiApp(
                         realGemmaModelStatusLabel = modelStatus.proofLabel,
                         realGemmaInferenceLabel = realGemmaDeveloperModeStatus.inferenceStatusLabel,
                         realGemmaDeveloperWarning = realGemmaDeveloperModeStatus.developerWarning,
-                        protocolContextLabel = "India / Global fallback",
+                        protocolContextLabel = screen.patient.protocolContextLabel(),
                         onRequestAudioPermission = {
                             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         },
@@ -248,7 +295,7 @@ private fun SmritiApp(
                                             patient = screen.patient,
                                             priorVisits = history,
                                             transcriptText = observation,
-                                            protocolContext = demoProtocolContext
+                                            protocolContext = screen.patient.protocolContext()
                                         )
                                     )
                                     pipelineResult.reasoningResult ?: error(
@@ -347,6 +394,7 @@ private fun SmritiApp(
                                 runCatching {
                                     val snapshot = visitMemoryStore.resetDemoData(retriever.allChunks())
                                     applySnapshot(snapshot)
+                                    importStatusMessage = "Reset Demo Data restored the six-patient synthetic roster."
                                     summaryAgent.generateSupervisorSummary(snapshot.patients, snapshot.visits, snapshot.referrals)
                                 }.onSuccess { summary ->
                                     currentScreen = SmritiScreen.Summary(summary)
@@ -361,7 +409,7 @@ private fun SmritiApp(
                 }
 
                 errorMessage?.let { message ->
-                    if (currentScreen is SmritiScreen.PatientRoster) {
+                    if (currentScreen is SmritiScreen.PatientRoster || currentScreen is SmritiScreen.AddPatient) {
                         Text(
                             text = message,
                             color = MaterialTheme.colorScheme.error

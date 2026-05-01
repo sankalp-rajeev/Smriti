@@ -1,6 +1,6 @@
 # Phase 1 Stack Validation
 
-Phase 1 validated the Gemma 4 LiteRT-LM stack and RealGemma scaffolding without changing the normal app flow. RealGemma/LiteRT-LM execution is disabled by default; later Phase 3 work added a developer-only gated text UI mode.
+Phase 1 validated the Gemma 4 LiteRT-LM stack and RealGemma manual text path without changing the normal app flow. RealGemma/LiteRT-LM execution is disabled by default; later Phase 3 work added a developer-only gated text UI mode.
 
 ## LiteRT Text Inference
 

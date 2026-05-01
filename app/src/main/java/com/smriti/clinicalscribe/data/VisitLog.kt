@@ -19,5 +19,7 @@ data class VisitLog(
     val confirmed: Boolean,
     val audioFilePath: String? = null,
     val audioDurationSeconds: Int? = null,
-    val transcriptSource: String = TranscriptSource.SIMULATED
+    val transcriptSource: String = TranscriptSource.SIMULATED,
+    val followUpDueDateMillis: Long? = null,
+    val followUpCompleted: Boolean? = null
 )

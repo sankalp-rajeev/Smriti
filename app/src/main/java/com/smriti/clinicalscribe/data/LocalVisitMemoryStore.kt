@@ -21,16 +21,43 @@ class LocalVisitMemoryStore(
         protocolChunks: List<ProtocolChunk>,
         nowMillis: Long = System.currentTimeMillis()
     ): VisitMemorySnapshot {
-        if (patientDao.getAll().isEmpty()) {
-            patientDao.upsertAll(DemoSeedData.patients)
+        val existingPatientIds = patientDao.getAll().map { it.id }.toSet()
+        val missingDemoPatients = DemoSeedData.patients.filter { it.id !in existingPatientIds }
+        if (missingDemoPatients.isNotEmpty()) {
+            patientDao.upsertAll(missingDemoPatients)
         }
         if (protocolChunkDao.getAll().isEmpty()) {
             protocolChunkDao.upsertAll(protocolChunks)
         }
-        if (visitLogDao.getAll().isEmpty()) {
-            DemoSeedData.initialVisitLogs(nowMillis).forEach { visitLogDao.insert(it) }
+        val existingVisitIds = visitLogDao.getAll().map { it.id }.toSet()
+        val missingDemoVisits = DemoSeedData.initialVisitLogs(nowMillis)
+            .filter { it.id !in existingVisitIds }
+        if (missingDemoVisits.isNotEmpty()) {
+            visitLogDao.upsertAll(missingDemoVisits)
         }
         return refresh()
+    }
+
+    suspend fun addPatient(patient: Patient): VisitMemorySnapshot {
+        patientDao.upsertAll(listOf(patient))
+        return refresh()
+    }
+
+    suspend fun importSupervisorRegister(
+        register: SupervisorRegister
+    ): SupervisorRegisterImportResult {
+        val patientIds = register.patients.map { it.id }
+        patientDao.upsertAll(register.patients)
+        if (patientIds.isNotEmpty()) {
+            visitLogDao.deleteForPatients(patientIds)
+        }
+        visitLogDao.upsertAll(register.priorVisits)
+        val snapshot = refresh()
+        return SupervisorRegisterImportResult(
+            patientCount = register.patients.size,
+            visitCount = register.priorVisits.size,
+            snapshot = snapshot
+        )
     }
 
     suspend fun saveConfirmedVisit(
@@ -70,9 +97,10 @@ class LocalVisitMemoryStore(
     ): VisitMemorySnapshot {
         referralFlagDao.deleteAll()
         visitLogDao.deleteAll()
+        patientDao.deleteAll()
         patientDao.upsertAll(DemoSeedData.patients)
         protocolChunkDao.upsertAll(protocolChunks)
-        DemoSeedData.initialVisitLogs(nowMillis).forEach { visitLogDao.insert(it) }
+        visitLogDao.upsertAll(DemoSeedData.initialVisitLogs(nowMillis))
         return refresh()
     }
 
@@ -93,4 +121,15 @@ data class VisitMemorySnapshot(
     val patients: List<Patient>,
     val visits: List<VisitLog>,
     val referrals: List<ReferralFlag>
+)
+
+data class SupervisorRegister(
+    val patients: List<Patient>,
+    val priorVisits: List<VisitLog>
+)
+
+data class SupervisorRegisterImportResult(
+    val patientCount: Int,
+    val visitCount: Int,
+    val snapshot: VisitMemorySnapshot
 )

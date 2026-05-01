@@ -127,7 +127,7 @@ class MockGemmaAgentTest {
         )
 
         assertEquals(1, summary.urgentCases.size)
-        assertTrue(summary.urgentCases.single().contains("Meena - SAME_DAY"))
+        assertTrue(summary.urgentCases.single().contains("Meena Sharma - SAME_DAY"))
         assertTrue(summary.urgentCases.single().contains("reduced fetal movement"))
         assertFalse(summary.urgentCases.single().contains("Protocol-grounded referral suggestion"))
     }

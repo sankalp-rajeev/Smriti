@@ -95,6 +95,8 @@ Accepted manual RealGemma benchmark:
 - `averageLatencyMs=15812`
 - `maxLatencyMs=26272`
 
+The 15.8s average latency reflects real on-device Gemma 4 E2B text inference on CPU backend; in the CHW field workflow, this is positioned as protocol-grounded reasoning support replacing manual paper/protocol lookup, not instant chat.
+
 Manual memory stress:
 
 - Context sizes: 10, 20, and 40 compact prior visits.
@@ -106,6 +108,11 @@ Manual function calling:
 - Tool arguments included `patientId`, `observationText`, `protocolCitation`, and `referralRequired`.
 - The tool returned `savedToRoom=false`.
 - Native function calling is not wired into the normal UI.
+
+GPU backend probe:
+
+- Not attempted for the final video pass because the stable manual RealGemma path is CPU-backed and adding GPU would require a new isolated backend path.
+- CPU backend is retained for the stable demo; GPU backend benchmarking remains future work.
 
 ## Audio Status
 

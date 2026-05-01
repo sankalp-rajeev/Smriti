@@ -27,9 +27,58 @@ class LocalVisitMemoryStoreTest {
 
         val snapshot = store.seedDemoIfNeeded(listOf(protocolChunk), nowMillis = SEED_TIME)
 
-        assertEquals(DemoSeedData.patients.size, snapshot.patients.size)
-        assertEquals(2, store.historyForPatient(snapshot, patient.id).size)
+        assertEquals(6, snapshot.patients.size)
+        assertEquals(3, store.historyForPatient(snapshot, patient.id).size)
         assertEquals(0, snapshot.referrals.size)
+    }
+
+    @Test
+    fun sixSyntheticDemoPatientsIncludeRequiredCountryLanguageAndHistorySignals() = runBlocking {
+        val store = fakeStore()
+
+        val snapshot = store.seedDemoIfNeeded(listOf(protocolChunk), nowMillis = SEED_TIME)
+
+        val patientsById = snapshot.patients.associateBy { it.id }
+        assertEquals("hi", patientsById.getValue("patient-meena").preferredLanguage)
+        assertEquals("IN", patientsById.getValue("patient-meena").countryCode)
+
+        val fatimaHistory = store.historyForPatient(snapshot, "patient-fatima")
+            .sortedBy { it.visitDateMillis }
+            .joinToString(separator = "\n") { it.structuredNote }
+        listOf("118/76", "125/80", "132/84", "138/88").forEach { bp ->
+            assertTrue("Fatima history should include BP $bp", fatimaHistory.contains(bp))
+        }
+
+        val amaraOverdue = store.historyForPatient(snapshot, "patient-amara")
+            .first { it.followUpDueDateMillis != null }
+        assertTrue(amaraOverdue.followUpDueDateMillis!! < SEED_TIME)
+        assertEquals(false, amaraOverdue.followUpCompleted)
+
+        val graceHistory = store.historyForPatient(snapshot, "patient-grace")
+        assertTrue(graceHistory.all { it.structuredNote.contains("referral flags", ignoreCase = true) })
+
+        val lucia = patientsById.getValue("patient-lucia")
+        assertEquals("Peru", lucia.country)
+        assertEquals("PE", lucia.countryCode)
+        assertEquals("es", lucia.preferredLanguage)
+        assertEquals("SOUTH_AMERICA_REGION", lucia.protocolRegion)
+    }
+
+    @Test
+    fun localSupervisorRegisterImportIsIdempotent() = runBlocking {
+        val store = fakeStore()
+        val register = SupervisorRegister(
+            patients = DemoSeedData.patients,
+            priorVisits = DemoSeedData.initialVisitLogs(SEED_TIME)
+        )
+
+        val first = store.importSupervisorRegister(register)
+        val second = store.importSupervisorRegister(register)
+
+        assertEquals(6, first.patientCount)
+        assertEquals(6, second.snapshot.patients.size)
+        assertEquals(register.priorVisits.size, second.snapshot.visits.size)
+        assertEquals(1, second.snapshot.visits.count { it.id == 2_004L })
     }
 
     @Test
@@ -67,7 +116,7 @@ class LocalVisitMemoryStoreTest {
         )
 
         val history = store.historyForPatient(snapshot, patient.id)
-        assertEquals(3, history.size)
+        assertEquals(4, history.size)
         assertEquals("Latest confirmed danger-sign visit. This is not a diagnosis.", history.first().structuredNote)
         assertEquals(RETURN_VISIT_TIME, history.first().visitDateMillis)
     }
@@ -101,7 +150,7 @@ class LocalVisitMemoryStoreTest {
 
         val snapshot = store.refresh()
 
-        assertEquals(2, store.historyForPatient(snapshot, patient.id).size)
+        assertEquals(3, store.historyForPatient(snapshot, patient.id).size)
         assertEquals(emptyList<ReferralFlag>(), snapshot.referrals)
     }
 
@@ -116,13 +165,13 @@ class LocalVisitMemoryStoreTest {
             voiceNote = null,
             nowMillis = RETURN_VISIT_TIME
         )
-        assertEquals(3, store.historyForPatient(afterSave, patient.id).size)
+        assertEquals(4, store.historyForPatient(afterSave, patient.id).size)
         assertEquals(1, afterSave.referrals.size)
 
         val resetSnapshot = store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)
 
         val resetHistory = store.historyForPatient(resetSnapshot, patient.id)
-        assertEquals(2, resetHistory.size)
+        assertEquals(3, resetHistory.size)
         assertEquals(emptyList<ReferralFlag>(), resetSnapshot.referrals)
         assertTrue(resetHistory.none { it.structuredNote.contains("Temporary saved test visit") })
 
@@ -131,7 +180,7 @@ class LocalVisitMemoryStoreTest {
             visits = resetSnapshot.visits,
             referrals = resetSnapshot.referrals
         )
-        assertEquals(2, summary.totalVisits)
+        assertEquals(DemoSeedData.initialVisitLogs(SEED_TIME).size, summary.totalVisits)
         assertEquals(0, summary.referralsFlagged)
     }
 
@@ -180,6 +229,10 @@ class LocalVisitMemoryStoreTest {
                 this.patients.add(patient)
             }
         }
+
+        override suspend fun deleteAll() {
+            patients.clear()
+        }
     }
 
     private class FakeVisitLogDao : VisitLogDao {
@@ -201,8 +254,16 @@ class LocalVisitMemoryStoreTest {
             return id
         }
 
+        override suspend fun upsertAll(visitLogs: List<VisitLog>) {
+            visitLogs.forEach { insert(it) }
+        }
+
         override suspend fun deleteAll() {
             visits.clear()
+        }
+
+        override suspend fun deleteForPatients(patientIds: List<String>) {
+            visits.removeAll { it.patientId in patientIds }
         }
     }
 

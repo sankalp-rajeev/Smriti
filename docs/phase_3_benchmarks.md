@@ -69,4 +69,6 @@ The accepted manual RealGemma text benchmark remains separate from the normal sy
 - `averageLatencyMs=15812`
 - `maxLatencyMs=26272`
 
+The 15.8s average latency reflects real on-device Gemma 4 E2B text inference on CPU backend; in the CHW field workflow, this is positioned as protocol-grounded reasoning support replacing manual paper/protocol lookup, not instant chat.
+
 RealGemma benchmarks require explicit developer/manual setup and a sideloaded app-private model. The normal synthetic suite remains mock-backed and deterministic.

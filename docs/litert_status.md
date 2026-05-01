@@ -162,4 +162,6 @@ JDK 21 is required for direct LiteRT-LM API compile work.
 
 ## Demo Position
 
-The current hackathon demo proves the offline product flow and safety model. Real LiteRT-LM inference is not the default runtime path; it is available only through explicit manual instrumentation or developer-only gated text mode.
+The current hackathon demo proves the offline product flow and safety model. EngineConfig is constructed when the app-private model is present. Runtime Engine initialization and inference remain manual-only or developer-gated. The normal submission demo still uses MockGemmaAgent.
+
+GPU backend probing has not been added for the final video pass because the existing stable manual path is CPU-oriented and adding a new backend path would expand the pre-video test surface. CPU backend is retained for the stable demo; GPU backend benchmarking remains future work.

@@ -29,7 +29,7 @@ Phase 2 is complete for the local core visit flow:
 - Confirmed visits and referral flags persist locally.
 - Later Meena visits show the latest confirmed visit first in history.
 - Supervisor Summary reads fresh confirmed local data and keeps urgent cases concise.
-- Reset Demo Data clears saved visits/referrals and restores seeded Meena history.
+- Reset Demo Data clears saved visits/referrals and restores the six-patient synthetic roster.
 
 ## Phase 3 Status
 
@@ -40,6 +40,18 @@ Phase 3 has completed the current judge-ready pass with four controlled addition
 - A 10-case synthetic global benchmark suite for protocol retrieval, grounding, referral behavior, uncertainty handling, and country/region/global fallback through the mock local pipeline.
 - Judge-ready normal demo copy now emphasizes offline CHW workflow, local patient memory, local protocol pack, protocol-grounded referral support, CHW confirm/save, and concise Offline Proof.
 - A consolidated judge evidence ledger is available at `docs/judge_evidence.md`.
+
+## Phase A Patient Infrastructure
+
+Phase A for the final recorded demo is implemented:
+
+- Seeded six synthetic demo patients: Meena Sharma, Fatima Begum, Amara Tesfaye, Grace Achieng, Priya Devi, and Lucia Fernandez.
+- Patient records now include country, country code, preferred language, protocol region, scenario preview, and optional notes for localization/protocol context.
+- Prior visit history includes Meena's danger-sign setup, Fatima's rising BP trend, Amara's overdue/uncompleted follow-up data for Phase B, Grace's routine/no-referral history, Priya's sparse early ANC history, and Lucia's Peru/South America fallback context.
+- Local supervisor-register import loads `app/src/main/assets/demo/smriti_patients.json` offline and re-imports without duplicate patient histories.
+- Patient Roster includes Add Patient and Load Demo Supervisor Register actions.
+- Add Patient supports EN/HI/ES/SW offline speech prompts for name, age, pregnancy weeks, and village, while preserving editable manual fallback.
+- Phase B intelligence UI is intentionally not included yet: no missed follow-up alert UI, no history signal card, no RealGemma submission-mode changes, and no supervisor priority queue.
 
 Recommended order:
 
@@ -54,6 +66,8 @@ Recommended order:
 - Android Kotlin + Jetpack Compose app.
 - Room/SQLite local storage.
 - Local patient roster, local visit history, local referral flags.
+- Local six-patient synthetic caseload and local supervisor-register import from app assets.
+- Manual add-patient path plus Android offline-speech registration fallback.
 - Local JSON protocol corpus and country/region-aware keyword retrieval.
 - Synthetic global benchmark cases that run locally through `ProtocolRetriever + VisitReasoningPipeline + MockGemmaAgent`.
 - Judge-facing normal app flow: Patient Roster -> Meena -> sample transcript/offline speech fallback -> local note generation -> Review confirm/save -> Supervisor Summary.
@@ -96,7 +110,7 @@ These tests require explicit instrumentation arguments and, for inference, a sid
 
 ## Next Recommended Work
 
-- Run one full emulator smoke test of the Phase 2 judge loop in airplane mode.
+- Run one full emulator smoke test of the Phase A roster/import/add-patient loop in airplane mode.
 - Keep `MockGemmaAgent` as default for submission.
 - Capture fresh manual RealGemma benchmark Logcat metrics only if a sideloaded model is available.
 - Harden the Global Protocol Pack v1 with reviewed country-specific sources and more coverage.

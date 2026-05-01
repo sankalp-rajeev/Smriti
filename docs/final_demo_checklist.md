@@ -15,7 +15,7 @@ Use this checklist for the final filmed or live judge demo. Keep the main demo o
 | Check | Exact steps | Expected result | Problem signal |
 | --- | --- | --- | --- |
 | Hide sensitive material | Close logs, terminal windows, and file explorers with local paths or secrets. | Recording shows only the app and safe docs/slides. | Logcat, shell history, secrets, or local model paths are visible. |
-| Use synthetic data only | Confirm the app shows seeded demo patients, especially Meena. | No real patient names, phone numbers, locations, or PHI are visible. | Any real patient/PHI data appears. |
+| Use synthetic data only | Confirm the app shows the six seeded demo patients, especially Meena Sharma. | No real patient names, phone numbers, locations, or PHI are visible. | Any real patient/PHI data appears. |
 | Turn airplane mode on | Open Android quick settings and enable airplane mode before app flow. | Airplane mode icon/status is visible before the demo. | Wi-Fi/cellular appears active during the core flow. |
 | Set claim boundary | Prepare the spoken line: `Protocol-grounded referral support, not diagnosis.` | Narration matches the product safety framing. | Narration implies diagnosis, treatment, or clinical validation. |
 
@@ -24,12 +24,14 @@ Use this checklist for the final filmed or live judge demo. Keep the main demo o
 | Check | Exact steps | Expected result | Problem signal |
 | --- | --- | --- | --- |
 | Launch app | Open Smriti after airplane mode is on. | Patient Roster loads locally. | App crashes, requires network, or roster does not load. |
-| Reset demo data | Open End-of-Day Summary if needed, tap `Reset Demo Data`, then return to Patient Roster. | Saved demo visits/referrals are cleared and seeded Meena history is restored. | Old saved referrals remain or reset fails. |
+| Reset demo data | Open End-of-Day Summary if needed, tap `Reset Demo Data`, then return to Patient Roster. | Saved demo visits/referrals are cleared and the six-patient synthetic roster is restored. | Old saved referrals remain or reset fails. |
+| Optional register import | Tap `Load Demo Supervisor Register`, confirm import. | `6 synthetic patients imported from local supervisor register.` appears and no duplicate histories are created after repeat import. | Import asks for network/storage permission or duplicates patients endlessly. |
+| Optional add patient | Tap `Add Patient`; try one offline speech prompt or type manually, then `Confirm and Add`. | Speech unavailable states keep fields editable; manual save creates a local Room patient. | Speech failure blocks manual entry or auto-saves before confirmation. |
 | Show roster purpose | On Patient Roster, show `Smriti`, `Offline CHW visit copilot`, and patient list. | Purpose, offline status, and patient list are clear. | Screen looks empty, misleading, or lacks patient list. |
 | Show Offline Proof | Point to `Offline Proof`. | It shows `Network required: No`, local Room/SQLite patient data, local JSON country-aware protocol retrieval, default mock reasoning, RealGemma model status, inference status, and direct Gemma audio blocked with offline speech/transcript fallback. | It implies cloud runtime, default RealGemma, or direct Gemma audio working. |
-| Select Meena | Tap `Meena, 28F` / `Select Patient and View History`. | Visit screen opens for Meena. | Wrong patient opens or navigation fails. |
+| Select Meena | Tap `Meena Sharma, 28F` / `Select Patient and View History`. | Visit screen opens for Meena. | Wrong patient opens or navigation fails. |
 | Show prior history | Scroll or point to Prior Visit History. | Confirmed local history is visible before new transcript entry. | History missing after reset or latest confirmed order looks wrong. |
-| Show protocol context | Point to `Protocol pack: India / Global fallback`. | The visit context is clear and non-intrusive. | Protocol context missing or claims cloud/vector retrieval. |
+| Show protocol context | Point to Meena's India/INDIA protocol context with GLOBAL_CORE fallback. | The visit context is clear and non-intrusive. | Protocol context missing or claims cloud/vector retrieval. |
 | Use sample transcript | Tap `Use sample danger-sign transcript`. | Editable transcript fills with severe headache, blurred vision, BP 150/95, and reduced fetal movement. | Transcript stays blank or sample button fails. |
 | Optional offline speech | If shown, tap `Try Offline Speech` only if you want to demonstrate fallback. | If unavailable, friendly message appears and existing transcript remains. | Raw error code appears, transcript clears, or app saves/generates automatically. |
 | Generate note | Tap `Generate Local Visit Note`. | Review screen opens quickly with a structured local note. | Generation fails, hangs, auto-saves, or leaves the Visit screen blank. |

@@ -1,0 +1,230 @@
+{
+  "source": "Smriti local synthetic supervisor register",
+  "synthetic": true,
+  "patients": [
+    {
+      "id": "patient-meena",
+      "name": "Meena Sharma",
+      "age": 28,
+      "sex": "F",
+      "pregnancyWeeks": 32,
+      "village": "Rampur",
+      "country": "India",
+      "countryCode": "IN",
+      "preferredLanguage": "hi",
+      "protocolRegion": "INDIA",
+      "scenarioPreview": "Danger-sign referral demo",
+      "riskSummary": "Third trimester ANC follow-up. Prior visit noted borderline BP and mild ankle swelling.",
+      "priorVisits": [
+        {
+          "id": 1001,
+          "daysAgo": 21,
+          "observationText": "Routine ANC visit. BP 128/82. Mild ankle swelling. No headache or blurred vision.",
+          "structuredNote": "Prior ANC visit documented borderline blood pressure around 128/82 and mild ankle swelling. No danger signs reported at that visit.",
+          "protocolCitation": "WHO ANC Contact schedule",
+          "suggestedFollowUp": "Repeat BP check at next ANC visit.",
+          "confirmed": true
+        },
+        {
+          "id": 1002,
+          "daysAgo": 45,
+          "observationText": "Routine ANC visit. BP 125/80. Fetal movement present. Counseled on nutrition and iron tablets.",
+          "structuredNote": "Routine ANC contact. BP 125/80, fetal movement present, nutrition and iron tablet adherence discussed.",
+          "protocolCitation": "WHO ANC Contact schedule",
+          "suggestedFollowUp": "Continue routine ANC follow-up.",
+          "confirmed": true
+        },
+        {
+          "id": 1003,
+          "daysAgo": 70,
+          "observationText": "Counseled on nutrition and iron tablets. Fetal movement present.",
+          "structuredNote": "Early ANC contact completed. BP 122/78, nutrition counseling completed, fetal movement not a concern.",
+          "protocolCitation": "WHO ANC Contact schedule",
+          "suggestedFollowUp": "Continue routine ANC follow-up.",
+          "confirmed": true
+        }
+      ]
+    },
+    {
+      "id": "patient-fatima",
+      "name": "Fatima Begum",
+      "age": 24,
+      "sex": "F",
+      "pregnancyWeeks": 20,
+      "village": "Kushtia",
+      "country": "Bangladesh",
+      "countryCode": "BD",
+      "preferredLanguage": "en",
+      "protocolRegion": "BANGLADESH",
+      "scenarioPreview": "Rising BP trend",
+      "riskSummary": "Rising blood pressure trend across prior ANC visits.",
+      "priorVisits": [
+        {
+          "id": 2001,
+          "daysAgo": 84,
+          "observationText": "Bangladesh ANC visit. BP 118/76. No danger signs.",
+          "structuredNote": "Routine ANC visit. BP 118/76, no danger signs reported.",
+          "protocolCitation": "Bangladesh CHW maternal danger signs",
+          "suggestedFollowUp": "Continue routine ANC follow-up.",
+          "confirmed": true
+        },
+        {
+          "id": 2002,
+          "daysAgo": 56,
+          "observationText": "Bangladesh ANC visit. BP 125/80. No headache or blurred vision.",
+          "structuredNote": "Routine ANC visit. BP 125/80, no danger signs reported.",
+          "protocolCitation": "Bangladesh CHW maternal danger signs",
+          "suggestedFollowUp": "Recheck blood pressure at next ANC visit.",
+          "confirmed": true
+        },
+        {
+          "id": 2003,
+          "daysAgo": 28,
+          "observationText": "Bangladesh ANC visit. BP 132/84. Mild fatigue, no danger signs.",
+          "structuredNote": "ANC visit documented BP 132/84 with mild fatigue and no danger signs.",
+          "protocolCitation": "Bangladesh CHW maternal danger signs",
+          "suggestedFollowUp": "Repeat BP check and confirm symptoms at next visit.",
+          "confirmed": true
+        },
+        {
+          "id": 2004,
+          "daysAgo": 7,
+          "observationText": "Bangladesh ANC visit. BP 138/88. No headache, blurred vision, or bleeding.",
+          "structuredNote": "ANC visit documented BP 138/88. Rising BP trend noted for CHW review; no danger signs reported.",
+          "protocolCitation": "Bangladesh CHW maternal danger signs",
+          "suggestedFollowUp": "Recheck BP soon and confirm danger signs with supervisor if symptoms appear.",
+          "confirmed": true
+        }
+      ]
+    },
+    {
+      "id": "patient-amara",
+      "name": "Amara Tesfaye",
+      "age": 30,
+      "sex": "F",
+      "pregnancyWeeks": 36,
+      "village": "Adama",
+      "country": "Ethiopia",
+      "countryCode": "ET",
+      "preferredLanguage": "en",
+      "protocolRegion": "ETHIOPIA",
+      "scenarioPreview": "Missed follow-up data for Phase B",
+      "riskSummary": "Elevated-risk ANC follow-up was recommended; completion unknown.",
+      "priorVisits": [
+        {
+          "id": 3001,
+          "daysAgo": 21,
+          "observationText": "Ethiopia ANC visit. Fatigue and possible anemia risk. Follow-up recommended.",
+          "structuredNote": "ANC follow-up documented fatigue and anemia risk. Follow-up was recommended for elevated-risk ANC review.",
+          "protocolCitation": "Ethiopia HEW maternal danger signs",
+          "suggestedFollowUp": "Follow-up was due within 14 days; outcome unknown.",
+          "confirmed": true,
+          "followUpDueDaysAgo": 7,
+          "followUpCompleted": false
+        },
+        {
+          "id": 3002,
+          "daysAgo": 49,
+          "observationText": "Routine Ethiopia ANC visit. BP 118/74. Nutrition and iron counseling.",
+          "structuredNote": "Routine ANC visit. BP 118/74, nutrition and iron counseling completed.",
+          "protocolCitation": "Ethiopia HEW maternal danger signs",
+          "suggestedFollowUp": "Continue ANC contacts and iron counseling.",
+          "confirmed": true
+        }
+      ]
+    },
+    {
+      "id": "patient-grace",
+      "name": "Grace Achieng",
+      "age": 26,
+      "sex": "F",
+      "pregnancyWeeks": 28,
+      "village": "Kisumu",
+      "country": "Kenya",
+      "countryCode": "KE",
+      "preferredLanguage": "sw",
+      "protocolRegion": "AFRICA_REGION",
+      "scenarioPreview": "Routine visit, no false alarm",
+      "riskSummary": "Routine ANC history with normal vitals and no referral flags.",
+      "priorVisits": [
+        {
+          "id": 4001,
+          "daysAgo": 35,
+          "observationText": "Kenya ANC visit. BP 112/72. Fetal movement present. No danger signs.",
+          "structuredNote": "Routine ANC visit with normal vitals: BP 112/72, fetal movement present, no referral flags.",
+          "protocolCitation": "Regional CHW maternal danger signs",
+          "suggestedFollowUp": "Continue routine ANC follow-up.",
+          "confirmed": true
+        },
+        {
+          "id": 4002,
+          "daysAgo": 14,
+          "observationText": "Kenya ANC visit. BP 116/74. Eating well. No bleeding, headache, or blurred vision.",
+          "structuredNote": "Routine ANC visit with normal vitals: BP 116/74. No danger signs or referral flags.",
+          "protocolCitation": "Regional CHW maternal danger signs",
+          "suggestedFollowUp": "Continue routine ANC follow-up.",
+          "confirmed": true
+        }
+      ]
+    },
+    {
+      "id": "patient-priya",
+      "name": "Priya Devi",
+      "age": 19,
+      "sex": "F",
+      "pregnancyWeeks": 16,
+      "village": "Sitapur",
+      "country": "India",
+      "countryCode": "IN",
+      "preferredLanguage": "hi",
+      "protocolRegion": "INDIA",
+      "scenarioPreview": "Incomplete observation / clarification",
+      "riskSummary": "Early first pregnancy with minimal prior ANC data.",
+      "priorVisits": [
+        {
+          "id": 5001,
+          "daysAgo": 10,
+          "observationText": "First pregnancy early ANC registration. Minimal prior data recorded.",
+          "structuredNote": "Early ANC registration for first pregnancy. No vitals trend available yet.",
+          "protocolCitation": "India ASHA ANC danger signs",
+          "suggestedFollowUp": "Ask for complete symptoms, vitals, and next visit date at follow-up.",
+          "confirmed": true
+        }
+      ]
+    },
+    {
+      "id": "patient-lucia",
+      "name": "Lucia Fernandez",
+      "age": 22,
+      "sex": "F",
+      "pregnancyWeeks": 24,
+      "village": "Cusco",
+      "country": "Peru",
+      "countryCode": "PE",
+      "preferredLanguage": "es",
+      "protocolRegion": "SOUTH_AMERICA_REGION",
+      "scenarioPreview": "South America/global protocol fallback",
+      "riskSummary": "Routine ANC history for South America regional/global fallback demo.",
+      "priorVisits": [
+        {
+          "id": 6001,
+          "daysAgo": 42,
+          "observationText": "Peru ANC visit. BP 110/70. Routine counseling. No danger signs.",
+          "structuredNote": "Routine ANC visit in Peru. BP 110/70, no danger signs, counseling completed.",
+          "protocolCitation": "Regional CHW maternal danger signs",
+          "suggestedFollowUp": "Continue routine ANC follow-up.",
+          "confirmed": true
+        },
+        {
+          "id": 6002,
+          "daysAgo": 18,
+          "observationText": "Peru ANC visit. BP 114/72. Fetal movement present. No danger signs.",
+          "structuredNote": "Routine ANC visit in Peru. BP 114/72, fetal movement present, no country-specific protocol chunk required.",
+          "protocolCitation": "Regional CHW maternal danger signs",
+          "suggestedFollowUp": "Continue routine ANC follow-up with regional/global protocol fallback if needed.",
+          "confirmed": true
+        }
+      ]
+    }
+  ]
+}

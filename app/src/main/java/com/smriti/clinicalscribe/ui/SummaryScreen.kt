@@ -116,7 +116,7 @@ fun SummaryScreen(
                     Text(if (isResettingDemoData) "Resetting Demo Data..." else "Reset Demo Data")
                 }
                 Text(
-                    text = "Demo mode only: clears saved mock visits and referral flags, then restores the original Meena history.",
+                    text = "Demo mode only: clears saved mock visits and referral flags, then restores the six-patient synthetic roster.",
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 6.dp)
                 )

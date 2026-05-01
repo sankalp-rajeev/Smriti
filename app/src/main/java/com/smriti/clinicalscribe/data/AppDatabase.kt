@@ -17,7 +17,7 @@ import com.smriti.clinicalscribe.rag.ProtocolChunk
         ReferralFlag::class,
         ProtocolChunk::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -50,6 +50,9 @@ interface PatientDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(patients: List<Patient>)
+
+    @Query("DELETE FROM patients")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -63,8 +66,14 @@ interface VisitLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(visitLog: VisitLog): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(visitLogs: List<VisitLog>)
+
     @Query("DELETE FROM visit_logs")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM visit_logs WHERE patientId IN (:patientIds)")
+    suspend fun deleteForPatients(patientIds: List<String>)
 }
 
 @Dao

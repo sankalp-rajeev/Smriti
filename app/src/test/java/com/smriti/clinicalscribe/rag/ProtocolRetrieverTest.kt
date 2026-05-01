@@ -1,5 +1,6 @@
 package com.smriti.clinicalscribe.rag
 
+import com.smriti.clinicalscribe.data.DemoSeedData
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -85,6 +86,23 @@ class ProtocolRetrieverTest {
         assertTrue(results.isNotEmpty())
         assertEquals(ProtocolRegion.GLOBAL_CORE.name, results.first().region)
         assertEquals("global_core_postpartum_bleeding", results.first().id)
+    }
+
+    @Test
+    fun luciaUsesSpanishPeruContextWithSouthAmericaFallbackNotBrazil() {
+        val lucia = DemoSeedData.patients.first { it.id == "patient-lucia" }
+
+        val results = retriever.retrieve(
+            query = "South America high BP regional blood pressure concern with BP 150 over 95 and headache.",
+            context = lucia.protocolContext()
+        )
+
+        assertEquals("Peru", lucia.country)
+        assertEquals("PE", lucia.countryCode)
+        assertEquals("es", lucia.preferredLanguage)
+        assertTrue(lucia.country != "Brazil")
+        assertTrue(results.isNotEmpty())
+        assertEquals(ProtocolRegion.SOUTH_AMERICA_REGION.name, results.first().region)
     }
 
     @Test

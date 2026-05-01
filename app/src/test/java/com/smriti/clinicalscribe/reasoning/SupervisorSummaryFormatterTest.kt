@@ -11,7 +11,7 @@ import org.junit.Test
 
 class SupervisorSummaryFormatterTest {
     private val patient = DemoSeedData.patients.first { it.id == "patient-meena" }
-    private val asha = DemoSeedData.patients.first { it.id == "patient-asha" }
+    private val grace = DemoSeedData.patients.first { it.id == "patient-grace" }
 
     @Test
     fun urgentCasesUseLatestReferralPerPatient() {
@@ -31,7 +31,7 @@ class SupervisorSummaryFormatterTest {
 
         assertEquals(1, urgentCases.size)
         assertEquals(
-            "Meena - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Meena Sharma - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
             urgentCases.single()
         )
     }
@@ -43,7 +43,7 @@ class SupervisorSummaryFormatterTest {
             referrals = listOf(referral())
         ).single()
 
-        assertTrue(urgentCase.contains("Meena - SAME_DAY"))
+        assertTrue(urgentCase.contains("Meena Sharma - SAME_DAY"))
         assertTrue(urgentCase.contains("Citation: Smriti Demo Maternal Health Protocol"))
         assertFalse(urgentCase.contains("Protocol-grounded referral suggestion"))
         assertFalse(urgentCase.contains("not a diagnosis"))
@@ -62,7 +62,7 @@ class SupervisorSummaryFormatterTest {
         ).single()
 
         assertEquals(
-            "Meena - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement, convulsions, bleeding. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Meena Sharma - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement, convulsions, bleeding. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
             urgentCase
         )
         assertFalse(urgentCase.contains("Protocol-grounded referral suggestion"))
@@ -83,7 +83,7 @@ class SupervisorSummaryFormatterTest {
         ).single()
 
         assertEquals(
-            "Meena - SAME_DAY - headache. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Meena Sharma - SAME_DAY - headache. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
             urgentCase
         )
     }
@@ -114,7 +114,7 @@ class SupervisorSummaryFormatterTest {
         assertEquals(2, summary.referralsFlagged)
         assertEquals(1, summary.urgentCases.size)
         assertEquals(
-            "Meena - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Meena Sharma - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
             summary.urgentCases.single()
         )
         assertFalse(summary.urgentCases.single().contains("long protocol explanation"))
@@ -133,33 +133,33 @@ class SupervisorSummaryFormatterTest {
             dangerSigns = "headache, blurred vision",
             createdAtMillis = 300L
         )
-        val ashaOlder = referral(
-            patientId = asha.id,
+        val graceOlder = referral(
+            patientId = grace.id,
             dangerSigns = "bleeding",
             createdAtMillis = 200L
         )
-        val ashaLatest = referral(
-            patientId = asha.id,
+        val graceLatest = referral(
+            patientId = grace.id,
             dangerSigns = "bleeding, convulsions",
             createdAtMillis = 400L
         )
 
         val urgentCases = SupervisorSummaryFormatter.urgentCases(
             patients = DemoSeedData.patients,
-            referrals = listOf(meenaOlder, meenaLatest, ashaOlder, ashaLatest)
+            referrals = listOf(meenaOlder, meenaLatest, graceOlder, graceLatest)
         )
 
         assertEquals(2, urgentCases.size)
         assertEquals(
-            "Asha - SAME_DAY - convulsions, bleeding. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Grace Achieng - SAME_DAY - convulsions, bleeding. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
             urgentCases.first()
         )
         assertEquals(
-            "Meena - SAME_DAY - headache, blurred vision. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Meena Sharma - SAME_DAY - headache, blurred vision. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
             urgentCases.last()
         )
-        assertFalse(urgentCases.joinToString().contains("Asha - SAME_DAY - bleeding."))
-        assertFalse(urgentCases.joinToString().contains("Meena - SAME_DAY - headache."))
+        assertFalse(urgentCases.joinToString().contains("Grace Achieng - SAME_DAY - bleeding."))
+        assertFalse(urgentCases.joinToString().contains("Meena Sharma - SAME_DAY - headache."))
     }
 
     private fun referral(

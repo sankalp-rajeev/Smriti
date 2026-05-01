@@ -21,7 +21,7 @@ The core runtime must work in airplane mode. Smriti stores patient data locally,
 1. Turn on airplane mode.
 2. Open Smriti.
 3. Show Offline Proof on the Patient Roster.
-4. Select `Meena, 28F`.
+4. Select `Meena Sharma, 28F`.
 5. Review prior visit history.
 6. Use the sample danger-sign transcript or enter an observation.
 7. Generate a local structured visit note.
@@ -39,6 +39,7 @@ See [docs/demo_flow.md](docs/demo_flow.md) for the step-by-step judge script.
 For the concise current state, start with [docs/current_status.md](docs/current_status.md).
 
 - [Judge evidence](docs/judge_evidence.md)
+- [Technical project summary](docs/technical_project_summary.md)
 - [Final demo checklist](docs/final_demo_checklist.md)
 - [Phase 1 stack validation](docs/phase_1_stack_validation.md)
 - [Phase 2 core pipeline](docs/phase_2_core_pipeline.md)
@@ -51,24 +52,29 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 ## Current Evidence
 
 - Normal demo: local roster/history, local protocol JSON, `MockGemmaAgent`, review/confirm/save, supervisor summary, and Offline Proof.
+- Patient infrastructure: six synthetic demo patients with prior histories, local supervisor-register import from app assets, and add-patient registration with offline speech/manual fallback.
 - Protocol pack: 46 local chunks across global, country, and regional tags.
 - Synthetic benchmark: 10 global cases through `ProtocolRetriever -> VisitReasoningPipeline -> MockGemmaAgent`.
 - RealGemma: manual text inference validated and developer-only UI mode gated; not default.
 - Audio: direct Gemma 4 audio is blocked; Smriti uses offline speech/editable transcript fallback.
+
+The 15.8s average RealGemma latency reflects real on-device Gemma 4 E2B text inference on CPU backend; in the CHW field workflow, this is positioned as protocol-grounded reasoning support replacing manual paper/protocol lookup, not instant chat.
 
 See [docs/judge_evidence.md](docs/judge_evidence.md).
 
 ## What Works Now
 
 - Android native app in Kotlin and Jetpack Compose.
-- Local patient roster with Meena and prior visit history.
+- Local six-patient synthetic roster with Meena Sharma, Fatima Begum, Amara Tesfaye, Grace Achieng, Priya Devi, and Lucia Fernandez.
+- Local supervisor-register import from `app/src/main/assets/demo/smriti_patients.json`; repeated imports upsert without duplicate histories.
+- Add Patient flow with voice-first registration prompts and manual fallback fields.
 - Room/SQLite local storage for patients, visits, referrals, and protocols.
 - Local country/region-aware protocol retrieval from `app/src/main/assets/protocols/maternal_health_demo_protocols.json`.
 - Mock visit-note generation through `MockGemmaAgent`.
 - Referral flag generation for pregnancy danger-sign keywords.
 - CHW review/edit/confirm before saving.
 - End-of-day supervisor summary with concise urgent cases.
-- Reset Demo Data restores original Meena history and clears saved mock referrals.
+- Reset Demo Data restores the clean six-patient synthetic roster and clears saved mock referrals.
 - Local JSON export for visit and summary data.
 - Local app-private voice note recording metadata.
 - Android TTS buttons for offline voice output when device language data is available.
@@ -89,7 +95,7 @@ Mocked now:
 
 Experimental and disabled:
 
-- `RealGemmaAgent` is scaffolded behind an interface.
+- `RealGemmaAgent` is implemented behind an interface and has been manually validated with sideloaded local LiteRT-LM text inference.
 - LiteRT-LM dependency is present, and `EngineConfig` construction is available when a sideloaded model is found.
 - Real `.litertlm` inference is not the default normal app flow.
 - Developer-only RealGemma text mode requires both a debug/build-time gate and an app-private local gate.
@@ -99,10 +105,10 @@ Experimental and disabled:
 
 - Dependency pinned: `com.google.ai.edge.litertlm:litertlm-android:0.10.2`.
 - Expected future model path: `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
-- The app detects whether that file exists, but does not load it.
+- The normal default app path detects whether that file exists but does not load it; manual/developer-gated paths can initialize it explicitly.
 - EngineConfig is constructed with `Backend.CPU()` only when that model file exists.
 - Direct LiteRT-LM API types compile after the Room KSP migration.
-- Runtime Engine initialization and text inference are disabled by default.
+- Runtime Engine initialization and text inference are disabled by default, but manual/developer-gated RealGemma text inference has been validated.
 - Developer-only RealGemma text mode can run only when the build gate, app-private local gate, and app-private model are present.
 - No model files are committed.
 
@@ -143,7 +149,7 @@ Run:
 .\gradlew.bat testDebugUnitTest
 ```
 
-The test suite covers mock reasoning, protocol retrieval, concise supervisor summary formatting, LiteRT readiness guards, disabled LiteRT client behavior, repo model-artifact safety, JSON export, and default mock mode.
+The test suite covers mock reasoning, protocol retrieval, six-patient seed/import behavior, add-patient registration helpers, concise supervisor summary formatting, LiteRT readiness guards, disabled LiteRT client behavior, repo model-artifact safety, JSON export, and default mock mode.
 
 ## Judge Notes
 
