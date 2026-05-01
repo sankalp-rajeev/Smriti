@@ -1,6 +1,6 @@
 # Final Demo Checklist
 
-Use this checklist for the final filmed or live judge demo. Keep the main demo on the default `MockGemmaAgent` path for reliability.
+Use this checklist for the final filmed or live judge demo. The normal build stays on the default `MockGemmaAgent` path for reliability; the recorded RealGemma submission path is optional and must be explicitly gated.
 
 ## Build And Install
 
@@ -9,6 +9,16 @@ Use this checklist for the final filmed or live judge demo. Keep the main demo o
 | Build debug APK | Run `.\gradlew.bat assembleDebug`. | Build passes and creates `app/build/outputs/apk/debug/app-debug.apk`. | Build fails, APK missing, or Gradle cannot compile. |
 | Install APK if needed | Install from Android Studio or `adb install -r app/build/outputs/apk/debug/app-debug.apk`. | App installs as Smriti on the emulator/device. | Install fails, app missing, or stale build opens. |
 | Protect repo contents | Check that no `.litertlm`, `.wav`, `.mp3`, `.m4a`, `.flac`, `.tflite`, `.task`, or `.onnx` artifacts are staged. | Only source/docs/test files are staged. | Model/audio artifacts appear in git status. |
+| Optional RealGemma submission build | Run `.\gradlew.bat assembleDebug -Psmriti.realGemmaSubmissionMode=true`, then create the app-private sentinel and confirm the app-private model exists. | Offline Proof shows submission mode active, RealGemma text mode active, model found, inference enabled. | Offline Proof shows mock mode, disabled text mode, missing model, or inference disabled. |
+
+Optional RealGemma submission setup after sideloading the model outside git:
+
+```powershell
+.\gradlew.bat assembleDebug -Psmriti.realGemmaSubmissionMode=true
+adb shell run-as com.smriti.clinicalscribe mkdir -p files/dev
+adb shell run-as com.smriti.clinicalscribe touch files/dev/enable_real_gemma_text_mode
+adb shell run-as com.smriti.clinicalscribe ls -lh files/models/gemma-4-E2B-it-int4.litertlm
+```
 
 ## Filming Setup
 
@@ -27,6 +37,8 @@ Use this checklist for the final filmed or live judge demo. Keep the main demo o
 | Reset demo data | Open End-of-Day Summary if needed, tap `Reset Demo Data`, then return to Patient Roster. | Saved demo visits/referrals are cleared and the six-patient synthetic roster is restored. | Old saved referrals remain or reset fails. |
 | Optional register import | Tap `Load Demo Supervisor Register`, confirm import. | `6 synthetic patients imported from local supervisor register.` appears and no duplicate histories are created after repeat import. | Import asks for network/storage permission or duplicates patients endlessly. |
 | Optional add patient | Tap `Add Patient`; try one offline speech prompt or type manually, then `Confirm and Add`. | Speech unavailable states keep fields editable; manual save creates a local Room patient. | Speech failure blocks manual entry or auto-saves before confirmation. |
+| Show Amara alert | Select `Amara Tesfaye, 30F`. | Missed follow-up card appears above transcript input with `Mark Confirmed` and `Note as Ongoing`. | No alert appears after Reset Demo Data or action saves a generated visit automatically. |
+| Show Fatima history signal | Select `Fatima Begum, 24F`. | History signal card appears for rising BP trend with cautious ANC monitoring wording. | Card diagnoses disease, says preeclampsia, or appears for routine Grace. |
 | Show roster purpose | On Patient Roster, show `Smriti`, `Offline CHW visit copilot`, and patient list. | Purpose, offline status, and patient list are clear. | Screen looks empty, misleading, or lacks patient list. |
 | Show Offline Proof | Point to `Offline Proof`. | It shows `Network required: No`, local Room/SQLite patient data, local JSON country-aware protocol retrieval, default mock reasoning, RealGemma model status, inference status, and direct Gemma audio blocked with offline speech/transcript fallback. | It implies cloud runtime, default RealGemma, or direct Gemma audio working. |
 | Select Meena | Tap `Meena Sharma, 28F` / `Select Patient and View History`. | Visit screen opens for Meena. | Wrong patient opens or navigation fails. |
@@ -41,6 +53,7 @@ Use this checklist for the final filmed or live judge demo. Keep the main demo o
 | Show safety gate | Point to `Safety Gate`. | It says `Protocol-grounded referral support, not diagnosis.` and `CHW reviews and confirms before saving.` | Wording implies diagnosis, treatment, or autonomous action. |
 | Confirm/save | Tap `Confirm CHW Review and Save`. | Visit is saved and Summary screen opens. | Save happens before confirmation, button fails, or summary does not open. |
 | Show summary counts | On Summary screen, show Local Supervisor Brief, total visits, and referral flags. | Counts reflect confirmed local data after save. | Counts do not update after save. |
+| Optional RealGemma priority queue | In fully gated submission mode, show `RealGemma Priority Follow-Up Queue`. | Ranked list appears, or the deterministic fallback message appears with local summary below. | Mock output is presented as RealGemma or local summary disappears. |
 | Show urgent case | Point to `Urgent Cases`. | Meena urgent case appears with concise danger signs and citation. | Urgent case missing or contains long raw paragraphs. |
 | Show Offline Proof again | Point to Offline Proof on Summary. | Same offline evidence is visible after save. | Offline Proof missing on Summary. |
 | Optional export | Tap `Export Summary JSON`. | Local export path appears. | Export fails or implies remote sync/cloud upload. |

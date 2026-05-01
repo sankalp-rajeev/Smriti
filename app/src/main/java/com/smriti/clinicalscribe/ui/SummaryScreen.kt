@@ -19,10 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.smriti.clinicalscribe.reasoning.SupervisorSummary
+import com.smriti.clinicalscribe.reasoning.SupervisorPriorityQueue
 
 @Composable
 fun SummaryScreen(
     summary: SupervisorSummary,
+    priorityQueue: SupervisorPriorityQueue?,
+    priorityUnavailableMessage: String?,
     isResettingDemoData: Boolean,
     offlineProofStatus: OfflineProofStatus,
     ttsStatusMessage: String?,
@@ -72,6 +75,40 @@ fun SummaryScreen(
                         Text("Total visits: ${summary.totalVisits}", fontWeight = FontWeight.SemiBold)
                         Text("Referral flags: ${summary.referralsFlagged}", fontWeight = FontWeight.SemiBold)
                         Text("Urgent cases are drawn from confirmed saved referrals.")
+                    }
+                }
+            }
+
+            if (priorityQueue != null || priorityUnavailableMessage != null) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("RealGemma Priority Follow-Up Queue", fontWeight = FontWeight.SemiBold)
+                            priorityUnavailableMessage?.let { message ->
+                                Text(message, style = MaterialTheme.typography.bodyMedium)
+                            }
+                            priorityQueue?.items?.takeIf { it.isNotEmpty() }?.forEachIndexed { index, item ->
+                                Text(
+                                    text = "${index + 1}. ${item.patientName} - ${item.urgency}",
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(item.reason, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    text = "Protocol basis: ${item.protocolBasis.ifBlank { "Not supplied" }}",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                                Text(item.nonDiagnosticSafety, style = MaterialTheme.typography.labelMedium)
+                            }
+                            if (priorityQueue?.items?.isEmpty() == true) {
+                                Text("No RealGemma priority items returned.", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
                     }
                 }
             }

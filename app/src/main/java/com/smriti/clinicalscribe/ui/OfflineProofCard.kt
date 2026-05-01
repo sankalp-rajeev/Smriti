@@ -19,6 +19,8 @@ data class OfflineProofStatus(
     val realGemmaReadinessLabel: String,
     val realGemmaInferenceLabel: String = "Disabled by default; manual-only",
     val realGemmaGateLabel: String = "Build gate: disabled; local gate: disabled",
+    val realGemmaTextModeLabel: String = "Disabled",
+    val realGemmaSubmissionModeLabel: String = "Disabled",
     val realGemmaDeveloperWarning: String? = null
 ) {
     val lines: List<Pair<String, String>>
@@ -27,7 +29,9 @@ data class OfflineProofStatus(
             "Patient data" to "Local Room/SQLite",
             "Protocol source" to "Local JSON; country-aware retrieval",
             "Active reasoning mode" to reasoningModeLabel,
-            "Mode guard" to "MockGemmaAgent by default; RealGemmaAgent only in developer mode",
+            "Mode guard" to "MockGemmaAgent by default; RealGemmaAgent only when gated",
+            "RealGemma text mode" to realGemmaTextModeLabel,
+            "Submission mode" to realGemmaSubmissionModeLabel,
             "Real Gemma model" to realGemmaModelStatusLabel,
             "Inference" to realGemmaInferenceLabel,
             "Direct Gemma audio" to "Blocked by current public LiteRT-LM Android/Kotlin path; using offline speech/transcript fallback"

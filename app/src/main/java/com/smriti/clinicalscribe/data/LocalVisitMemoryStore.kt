@@ -43,6 +43,11 @@ class LocalVisitMemoryStore(
         return refresh()
     }
 
+    suspend fun markFollowUpConfirmed(visitId: Long): VisitMemorySnapshot {
+        visitLogDao.updateFollowUpCompleted(visitId = visitId, completed = true)
+        return refresh()
+    }
+
     suspend fun importSupervisorRegister(
         register: SupervisorRegister
     ): SupervisorRegisterImportResult {

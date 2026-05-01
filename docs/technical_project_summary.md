@@ -6,7 +6,7 @@ Smriti is an offline maternal-health visit copilot for community health workers 
 
 The central product idea is local patient memory plus a local protocol pack plus a structured documentation workflow. Smriti is not diagnostic AI. It provides protocol-grounded documentation and referral support only, and every generated record must be reviewed and confirmed by the CHW before it is persisted.
 
-The normal submission demo uses `MockGemmaAgent` by default for deterministic offline behavior. Real Gemma 4 LiteRT-LM text inference has been validated through manual/developer-gated paths, but it is not the default demo mode. Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin artifact/API path and is not claimed as working.
+The normal build uses `MockGemmaAgent` by default for deterministic offline behavior. Real Gemma 4 LiteRT-LM text inference has been validated through manual/developer-gated paths, and Phase B adds an optional recorded-demo submission mode that uses RealGemma only when all local gates and model readiness are satisfied. Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin artifact/API path and is not claimed as working.
 
 ## 2. Problem And Use Case
 
@@ -30,6 +30,8 @@ The demo includes:
 - Local supervisor-register JSON import from app assets.
 - Add-patient registration with voice-first offline speech prompts and manual fallback.
 - Patient detail flow with local prior visit history.
+- Missed follow-up alert on patient open for overdue incomplete follow-ups.
+- Cautious rising BP history signal card from prior visit readings.
 - Manual transcript entry and sample danger-sign transcript.
 - Android offline speech fallback through `SpeechRecognizer` when device support and language packs are available.
 - Local protocol retrieval from JSON assets.
@@ -40,6 +42,7 @@ The demo includes:
 - Local Room/SQLite persistence for confirmed visits and referral flags.
 - Return-visit history that shows newly confirmed visits.
 - End-of-day supervisor summary from confirmed local records.
+- Optional RealGemma priority follow-up queue in fully gated submission mode, with deterministic local summary retained as fallback evidence.
 - Reset Demo Data for repeatable filming/demo runs.
 - Local JSON export for visit and summary data.
 - Offline Proof display on the roster and summary screens.
@@ -53,6 +56,7 @@ Out of scope for the current submission:
 - Full clinical guideline validation.
 - Direct Gemma 4 audio through the current public LiteRT-LM Android/Kotlin path.
 - Making RealGemma the default normal demo agent.
+- Multilingual UI/output beyond the existing add-patient prompt support.
 
 ## 4. System Architecture
 
@@ -76,6 +80,7 @@ Key modules:
 - `PatientListScreen`: shows the local roster, Offline Proof, Add Patient, and local supervisor-register import.
 - `AddPatientScreen`: collects a new local patient through EN/HI/ES/SW offline speech prompts or manual fields.
 - `VisitScreen`: shows prior history, transcript controls, sample transcript, offline speech fallback, local reasoning context, and generate action.
+- `PatientMemoryInsights`: deterministic missed follow-up and rising BP history-signal logic.
 - `ReviewScreen`: displays editable generated output, referral support, protocol citation, safety gate, and confirm/save action.
 - `SummaryScreen`: shows the supervisor brief, urgent cases, follow-ups, export, reset, and Offline Proof.
 - `OfflineProofCard`: summarizes local/offline status, protocol source, active reasoning mode, RealGemma readiness, and direct-audio limitation.
@@ -91,6 +96,8 @@ Key modules:
 - `LiteRtGemmaTextClient`: manual/developer-gated LiteRT-LM text generation client.
 - `RealGemmaPromptBuilder`: builds structured RealGemma prompts with patient history and protocol chunks.
 - `RealGemmaOutputParser`: parses strict JSON output and rejects unsafe output.
+- `RealGemmaSubmissionMode`: recorded-demo RealGemma gate evaluator requiring the build flag, local sentinel, and app-private model.
+- `SupervisorPriorityPromptBuilder` / `SupervisorPriorityParser`: strict JSON RealGemma priority queue prompt and parser for supervisor follow-up ranking.
 - `RealGemmaSafetyPostProcessor`: enforces non-diagnostic and CHW-confirmation wording.
 - `ProtocolCitationValidator`: ensures RealGemma output uses supplied protocol citations or marks uncertainty.
 
@@ -162,7 +169,13 @@ Developer-only RealGemma text UI mode is gated by all of:
 - app-private sentinel file: `files/dev/enable_real_gemma_text_mode`,
 - app-private model presence at the expected `.litertlm` path.
 
-If the gates are closed, the app uses `MockGemmaAgent`. If the gates are open but inference fails, times out, produces invalid JSON, or violates citation/safety rules, the result is safe/uncertain and still requires CHW review before any save.
+Recorded-demo RealGemma submission mode is gated by all of:
+
+- build flag: `-Psmriti.realGemmaSubmissionMode=true`,
+- app-private sentinel file: `files/dev/enable_real_gemma_text_mode`,
+- app-private model presence at `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
+
+If submission gates are closed, the app uses `MockGemmaAgent`. If RealGemma is active but inference fails, times out, produces invalid JSON, or violates citation/safety rules, the app shows an unavailable/retry state, preserves the transcript, and does not save or silently show mock output as RealGemma.
 
 ## 8. Direct Audio Limitation
 
@@ -369,6 +382,7 @@ Avoid claiming:
 - RealGemma text mode is developer-only/gated and not the submission default.
 - GPU backend benchmarking is future work.
 - Clinical review is required before any real deployment.
+- RealGemma submission mode depends on a locally sideloaded model and should be smoke-tested before filming.
 - Sync, supervisor dashboarding, and multi-device workflows are future work.
 - Country-specific protocol content needs expert review and expansion before pilot use.
 

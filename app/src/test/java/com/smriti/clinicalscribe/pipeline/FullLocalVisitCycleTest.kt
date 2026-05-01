@@ -288,6 +288,13 @@ class FullLocalVisitCycleTest {
         override suspend fun deleteForPatients(patientIds: List<String>) {
             visits.removeAll { it.patientId in patientIds }
         }
+
+        override suspend fun updateFollowUpCompleted(visitId: Long, completed: Boolean) {
+            val index = visits.indexOfFirst { it.id == visitId }
+            if (index >= 0) {
+                visits[index] = visits[index].copy(followUpCompleted = completed)
+            }
+        }
     }
 
     private class FakeReferralFlagDao : ReferralFlagDao {

@@ -121,14 +121,17 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
-    fun realGemmaIsNotWiredIntoNormalUi() {
+    fun realGemmaNormalUiRequiresExplicitGates() {
         val mainActivity = appSourceFile("MainActivity.kt").readText()
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
         val patientListScreen = appSourceFile("ui/PatientListScreen.kt").readText()
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
 
         assertTrue(mainActivity.contains("realGemmaDevBuildGate: Boolean = BuildConfig.DEBUG && BuildConfig.REAL_GEMMA_DEV_BUILD_GATE"))
+        assertTrue(mainActivity.contains("realGemmaSubmissionBuildGate: Boolean = BuildConfig.REAL_GEMMA_SUBMISSION_MODE"))
         assertTrue(mainActivity.contains("RealGemmaDeveloperMode.isLocalGateEnabled(context.filesDir)"))
+        assertTrue(mainActivity.contains("RealGemmaSubmissionMode.evaluate"))
+        assertTrue(mainActivity.contains("realGemmaSubmissionModeStatus.usesRealGemmaVisitAgent"))
         assertTrue(mainActivity.contains("RealGemmaDeveloperAgentFactory.createVisitAgent"))
         assertTrue(mainActivity.contains("summaryAgent = remember { GemmaAgentFactory.create(AgentConfig.DEFAULT_MODE) }"))
         assertFalse(visitScreen.contains("REAL_GEMMA_EXPERIMENTAL"))
@@ -143,9 +146,19 @@ class NormalVisitFlowWiringTest {
     fun realGemmaDeveloperModeStillUsesVisitReasoningPipeline() {
         val mainActivity = appSourceFile("MainActivity.kt").readText()
 
-        assertTrue(mainActivity.contains("visitAgent = remember(realGemmaDeveloperModeStatus, modelStatus)"))
+        assertTrue(mainActivity.contains("visitAgent = remember(realGemmaSubmissionModeStatus, realGemmaDeveloperModeStatus, modelStatus)"))
         assertTrue(mainActivity.contains("gemmaAgent = visitAgent"))
         assertTrue(mainActivity.contains("visitReasoningPipeline.process("))
+    }
+
+    @Test
+    fun summaryScreenCanDisplayRealGemmaPriorityQueueAndFallbackMessage() {
+        val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
+
+        assertTrue(summaryScreen.contains("RealGemma Priority Follow-Up Queue"))
+        assertTrue(summaryScreen.contains("priorityUnavailableMessage"))
+        assertTrue(summaryScreen.contains("priorityQueue"))
+        assertTrue(summaryScreen.contains("Local Supervisor Brief"))
     }
 
     @Test

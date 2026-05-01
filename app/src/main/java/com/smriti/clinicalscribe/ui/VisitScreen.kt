@@ -32,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.smriti.clinicalscribe.audio.AudioRecorder
 import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
+import com.smriti.clinicalscribe.data.HistorySignal
+import com.smriti.clinicalscribe.data.MissedFollowUpAlert
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.transcript.AndroidOfflineSpeechRecognizerClient
@@ -54,7 +56,10 @@ fun VisitScreen(
     realGemmaInferenceLabel: String,
     realGemmaDeveloperWarning: String?,
     protocolContextLabel: String,
+    missedFollowUpAlerts: List<MissedFollowUpAlert>,
+    historySignal: HistorySignal?,
     onRequestAudioPermission: () -> Unit,
+    onMarkFollowUpConfirmed: (Long) -> Unit,
     onGenerate: (String, VoiceNoteMetadata?) -> Unit,
     onBack: () -> Unit
 ) {
@@ -69,6 +74,7 @@ fun VisitScreen(
     var isRecordingVoiceNote by remember { mutableStateOf(false) }
     var elapsedSeconds by remember { mutableStateOf(0) }
     var savedVoiceNote by remember { mutableStateOf<VoiceNoteMetadata?>(null) }
+    var dismissedOngoingFollowUpIds by remember(patient.id) { mutableStateOf<Set<Long>>(emptySet()) }
     var observationText by remember {
         mutableStateOf(
             SampleDangerSignTranscript
@@ -228,6 +234,27 @@ fun VisitScreen(
                 }
             }
 
+            val visibleFollowUpAlerts = missedFollowUpAlerts
+                .filter { it.visitId !in dismissedOngoingFollowUpIds }
+            if (visibleFollowUpAlerts.isNotEmpty() || historySignal != null) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        visibleFollowUpAlerts.forEach { alert ->
+                            MissedFollowUpCard(
+                                alert = alert,
+                                onMarkConfirmed = { onMarkFollowUpConfirmed(alert.visitId) },
+                                onNoteOngoing = {
+                                    dismissedOngoingFollowUpIds = dismissedOngoingFollowUpIds + alert.visitId
+                                }
+                            )
+                        }
+                        historySignal?.let { signal ->
+                            HistorySignalCard(signal = signal)
+                        }
+                    }
+                }
+            }
+
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -345,6 +372,55 @@ fun VisitScreen(
                     Text(if (isGenerating) "Generating Local Visit Note..." else "Generate Local Visit Note")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MissedFollowUpCard(
+    alert: MissedFollowUpAlert,
+    onMarkConfirmed: () -> Unit,
+    onNoteOngoing: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Missed Follow-Up", fontWeight = FontWeight.SemiBold)
+            Text(alert.message, style = MaterialTheme.typography.bodyMedium)
+            Text("Protocol basis: ${alert.protocolCitation}", style = MaterialTheme.typography.labelMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onMarkConfirmed, modifier = Modifier.weight(1f)) {
+                    Text("Mark Confirmed")
+                }
+                OutlinedButton(onClick = onNoteOngoing, modifier = Modifier.weight(1f)) {
+                    Text("Note as Ongoing")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistorySignalCard(signal: HistorySignal) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(signal.title, fontWeight = FontWeight.SemiBold)
+            Text(signal.message, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "Recent BP readings: ${signal.readings.joinToString(" -> ") { it.label }}",
+                style = MaterialTheme.typography.labelMedium
+            )
         }
     }
 }

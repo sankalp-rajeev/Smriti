@@ -1,6 +1,6 @@
 # Current Status
 
-Smriti is an offline Android maternal-health visit copilot prototype for community health workers. The normal demo is complete through Phase 2 and remains demo-safe: `MockGemmaAgent` is the default, RealGemma/LiteRT-LM inference is developer-gated, and the core app path does not require internet.
+Smriti is an offline Android maternal-health visit copilot prototype for community health workers. The normal demo remains demo-safe: `MockGemmaAgent` is the default, RealGemma/LiteRT-LM inference is gated, and the core app path does not require internet.
 
 ## Phase 1 Status
 
@@ -51,14 +51,24 @@ Phase A for the final recorded demo is implemented:
 - Local supervisor-register import loads `app/src/main/assets/demo/smriti_patients.json` offline and re-imports without duplicate patient histories.
 - Patient Roster includes Add Patient and Load Demo Supervisor Register actions.
 - Add Patient supports EN/HI/ES/SW offline speech prompts for name, age, pregnancy weeks, and village, while preserving editable manual fallback.
-- Phase B intelligence UI is intentionally not included yet: no missed follow-up alert UI, no history signal card, no RealGemma submission-mode changes, and no supervisor priority queue.
+## Phase B Intelligence Features
+
+Phase B is implemented for the final recorded demo while preserving the safe normal default:
+
+- VisitScreen shows a deterministic missed follow-up alert when a prior visit has `followUpDueDateMillis` before today and `followUpCompleted == false`. Amara triggers this from seeded data.
+- The missed follow-up card supports `Mark Confirmed`, which persists `followUpCompleted=true`, and `Note as Ongoing`, which dismisses only for the current screen session when no notes schema is available.
+- VisitScreen shows a cautious history signal for rising BP when recent prior readings clearly increase. Fatima triggers from `118/76 -> 125/80 -> 132/84 -> 138/88`; Grace does not trigger.
+- RealGemma submission mode is gated by all of: `-Psmriti.realGemmaSubmissionMode=true`, app-private `files/dev/enable_real_gemma_text_mode`, and app-private `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
+- Fully active submission mode sends visit generation through `VisitReasoningPipeline` with `RealGemmaAgent`; failures show `On-device reasoning unavailable — please retry.` and do not save or silently display mock output as RealGemma.
+- SummaryScreen keeps the deterministic local supervisor brief and adds a RealGemma priority queue only when submission mode is fully active. RealGemma summary failure shows `On-device summary unavailable — deterministic local summary shown below.`
+- Offline Proof reports active reasoning mode, RealGemma text mode, submission mode, inference, model found/missing, and direct Gemma audio blocked with offline speech/transcript fallback.
 
 Recommended order:
 
 1. Review and refine the protocol pack and synthetic cases against official country program materials.
 2. Run a final emulator demo smoke test in airplane mode.
-3. Improve offline speech setup guidance and device diagnostics.
-4. Capture more developer-mode RealGemma runs and failure cases.
+3. If filming RealGemma, sideload the model outside git and verify Offline Proof shows submission mode active before recording.
+4. Improve offline speech setup guidance and device diagnostics.
 5. Revisit direct Gemma 4 audio only if LiteRT-LM exposes or documents a usable preprocessing and prompt-template path.
 
 ## What Is Real
@@ -78,12 +88,13 @@ Recommended order:
 - Android `SpeechRecognizer` offline-preferred live speech fallback.
 - LiteRT-LM dependency, EngineConfig preparation, and manual instrumentation harnesses.
 - Developer-only RealGemma text UI mode when both gates are enabled locally and the app-private model is present.
+- RealGemma submission mode for filmed demos only when all submission gates and model readiness are satisfied.
 
 ## What Is Mock Or Default
 
 - `MockGemmaAgent` is the default reasoning agent.
 - The sample danger-sign transcript is the reliable demo transcript.
-- The normal app UI does not run RealGemma unless the developer-only build gate and local sentinel-file gate are both enabled.
+- The normal app UI does not run RealGemma unless the developer-only gates or the stricter recorded-demo submission gates are enabled.
 - Offline Proof reports RealGemma readiness without enabling inference.
 
 ## What Is Blocked

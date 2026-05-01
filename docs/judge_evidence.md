@@ -33,6 +33,16 @@ Evidence:
 - Offline Proof is visible in the app and reports local/offline status.
 - The core runtime does not require a cloud API.
 
+## Phase B Patient Memory Intelligence
+
+Phase B adds deterministic local intelligence without diagnosis:
+
+- Amara has an overdue incomplete follow-up in seeded local data, so opening her VisitScreen shows a missed follow-up alert before transcript input.
+- `Mark Confirmed` updates the prior visit's follow-up completion state; `Note as Ongoing` dismisses only for the current screen session when no notes field is available.
+- Fatima has a rising BP history signal from prior readings `118/76 -> 125/80 -> 132/84 -> 138/88`.
+- Grace's routine history does not trigger the rising BP signal.
+- These cards are local logic over Room visit history. Gemma is not required.
+
 ## Protocol Pack
 
 Global Protocol Pack v1 is local JSON:
@@ -83,6 +93,10 @@ Current RealGemma paths:
 - Output still appears on ReviewScreen.
 - CHW confirm/save remains required.
 - Missing model, timeout, failed inference, invalid JSON, or rejected citation returns a safe unavailable/uncertain result.
+- Recorded-demo submission mode is separate and requires all of: `-Psmriti.realGemmaSubmissionMode=true`, `files/dev/enable_real_gemma_text_mode`, and `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
+- When submission mode is fully active, visit generation uses `RealGemmaAgent` through `VisitReasoningPipeline`; if unavailable, the app shows `On-device reasoning unavailable — please retry.` and does not silently show mock output as RealGemma.
+- SummaryScreen can show a `RealGemma Priority Follow-Up Queue` from today's confirmed visits, referral flags, missed follow-ups, history signals, patient context, and supplied protocol citations.
+- If RealGemma priority generation fails, the deterministic local supervisor summary remains visible as the fallback evidence.
 
 Accepted manual RealGemma benchmark:
 

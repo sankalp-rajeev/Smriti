@@ -177,6 +177,41 @@ View the benchmark output:
 adb logcat -s SmritiRealGemmaBenchmark:I "*:S"
 ```
 
+## Recorded-Demo Submission Mode
+
+RealGemma submission mode is stricter than the normal default and is intended only for filmed validation with a sideloaded local model. All three gates must be present:
+
+- build flag: `-Psmriti.realGemmaSubmissionMode=true`,
+- app-private sentinel: `files/dev/enable_real_gemma_text_mode`,
+- app-private model: `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
+
+Setup commands after sideloading the model outside git:
+
+```powershell
+.\gradlew.bat assembleDebug -Psmriti.realGemmaSubmissionMode=true
+adb shell run-as com.smriti.clinicalscribe mkdir -p files/dev
+adb shell run-as com.smriti.clinicalscribe touch files/dev/enable_real_gemma_text_mode
+adb shell run-as com.smriti.clinicalscribe ls -lh files/models/gemma-4-E2B-it-int4.litertlm
+```
+
+If RealGemma fails, times out, returns invalid JSON, or fails citation/safety validation, the app preserves the transcript and shows `On-device reasoning unavailable — please retry.` It does not silently replace the recorded RealGemma path with mock output.
+
+## Manual Supervisor Priority Queue Test
+
+The supervisor priority harness sends today's confirmed local visits, referral flags, missed follow-ups, history signals, patient context, and supplied protocol citations through the RealGemma priority prompt/parser path. It is manual-only and does not run in standard validation.
+
+Run only the manual supervisor priority instrumentation test:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaSupervisorPriorityInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
+```
+
+View the priority output:
+
+```powershell
+adb logcat -s SmritiRealGemmaPriority:I "*:S"
+```
+
 ## Manual Function-Calling Probe
 
 LiteRT-LM Android `0.10.2` exposes native tool/function-calling classes such as `OpenApiTool`, `ToolCall`, `ToolProvider`, and `ConversationConfig(tools=..., automaticToolCalling=...)`. Smriti keeps JSON parsing as the safe fallback until a manual probe proves the model reliably executes a native tool call.

@@ -18,7 +18,9 @@ class OfflineProofStatusTest {
                 "Patient data" to "Local Room/SQLite",
                 "Protocol source" to "Local JSON; country-aware retrieval",
                 "Active reasoning mode" to "MockGemmaAgent",
-                "Mode guard" to "MockGemmaAgent by default; RealGemmaAgent only in developer mode",
+                "Mode guard" to "MockGemmaAgent by default; RealGemmaAgent only when gated",
+                "RealGemma text mode" to "Disabled",
+                "Submission mode" to "Disabled",
                 "Real Gemma model" to "Not found",
                 "Inference" to "Disabled by default; manual-only",
                 "Direct Gemma audio" to "Blocked by current public LiteRT-LM Android/Kotlin path; using offline speech/transcript fallback"

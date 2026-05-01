@@ -74,6 +74,9 @@ interface VisitLogDao {
 
     @Query("DELETE FROM visit_logs WHERE patientId IN (:patientIds)")
     suspend fun deleteForPatients(patientIds: List<String>)
+
+    @Query("UPDATE visit_logs SET followUpCompleted = :completed WHERE id = :visitId")
+    suspend fun updateFollowUpCompleted(visitId: Long, completed: Boolean)
 }
 
 @Dao

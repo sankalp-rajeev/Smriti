@@ -82,6 +82,29 @@ class LocalVisitMemoryStoreTest {
     }
 
     @Test
+    fun markFollowUpConfirmedCompletesAmaraAlert() = runBlocking {
+        val store = fakeStore()
+        val seeded = store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)
+        val amaraAlert = PatientMemoryInsights.missedFollowUpAlerts(
+            patientId = "patient-amara",
+            visits = seeded.visits,
+            nowMillis = SEED_TIME
+        ).single()
+
+        val updated = store.markFollowUpConfirmed(amaraAlert.visitId)
+
+        assertEquals(
+            emptyList<MissedFollowUpAlert>(),
+            PatientMemoryInsights.missedFollowUpAlerts(
+                patientId = "patient-amara",
+                visits = updated.visits,
+                nowMillis = SEED_TIME
+            )
+        )
+        assertEquals(true, updated.visits.first { it.id == amaraAlert.visitId }.followUpCompleted)
+    }
+
+    @Test
     fun confirmedVisitIsPersistedAfterReviewSave() = runBlocking {
         val store = fakeStore()
         val result = visitResultWithReferral()
@@ -264,6 +287,13 @@ class LocalVisitMemoryStoreTest {
 
         override suspend fun deleteForPatients(patientIds: List<String>) {
             visits.removeAll { it.patientId in patientIds }
+        }
+
+        override suspend fun updateFollowUpCompleted(visitId: Long, completed: Boolean) {
+            val index = visits.indexOfFirst { it.id == visitId }
+            if (index >= 0) {
+                visits[index] = visits[index].copy(followUpCompleted = completed)
+            }
         }
     }
 
