@@ -58,6 +58,7 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 - Protocol pack: 46 local chunks across global, country, and regional tags.
 - Synthetic benchmark: 10 global cases through `ProtocolRetriever -> VisitReasoningPipeline -> MockGemmaAgent`.
 - Phase B memory intelligence: missed follow-up alert for Amara and rising BP trend signal for Fatima are deterministic local logic.
+- Phase C multilingual demo support: selected patient-specific output languages are English, Hindi, Swahili, and Spanish; `preferredLanguage` controls RealGemma visit-note output in fully gated submission mode. The architecture can extend to more Gemma-supported languages as protocol packs and UI translations are added.
 - RealGemma: manual text inference validated, developer-only UI mode gated, and recorded-demo submission mode gated by build flag + app-private sentinel + app-private model; not default.
 - Supervisor priority: deterministic local summary always remains, with a RealGemma priority queue only when submission mode is fully active.
 - Audio: direct Gemma 4 audio is blocked; Smriti uses offline speech/editable transcript fallback.
@@ -84,6 +85,7 @@ See [docs/judge_evidence.md](docs/judge_evidence.md).
 - Local JSON export for visit and summary data.
 - Local app-private voice note recording metadata.
 - Android TTS buttons for offline voice output when device language data is available.
+- Patient language labels on the roster and Visit screen: EN / English, हिंदी / Hindi, Kiswahili / Swahili, and Español / Spanish.
 - Offline Proof visible on Patient Roster and Summary.
 - Repo safety checks against committed model artifacts.
 - Synthetic global benchmark cases for local protocol retrieval and mock visit reasoning.
@@ -102,6 +104,8 @@ Mocked now:
 Experimental and disabled:
 
 - `RealGemmaAgent` is implemented behind an interface and has been manually validated with sideloaded local LiteRT-LM text inference.
+- In recorded-demo submission mode, `RealGemmaPromptBuilder` asks for patient-specific local-language output from `preferredLanguage`; citation IDs remain stable in English.
+- Safety post-processing appends required wording in English, Hindi, Spanish, or Swahili when missing.
 - LiteRT-LM dependency is present, and `EngineConfig` construction is available when a sideloaded model is found.
 - Real `.litertlm` inference is not the default normal app flow.
 - Developer-only RealGemma text mode requires both a debug/build-time gate and an app-private local gate.
@@ -167,6 +171,14 @@ Run:
 ```
 
 The test suite covers mock reasoning, protocol retrieval, six-patient seed/import behavior, add-patient registration helpers, concise supervisor summary formatting, LiteRT readiness guards, disabled LiteRT client behavior, repo model-artifact safety, JSON export, and default mock mode.
+
+Manual multilingual RealGemma validation is optional and requires a sideloaded app-private model:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaMultilingualInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
+```
+
+Only claim a filmed RealGemma language after this manual harness passes for that language. No cloud translation API is used, and direct Gemma audio remains blocked.
 
 ## Judge Notes
 

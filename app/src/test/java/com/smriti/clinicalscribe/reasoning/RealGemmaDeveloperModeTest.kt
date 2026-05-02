@@ -2,6 +2,7 @@ package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.BuildConfig
 import com.smriti.clinicalscribe.data.DemoSeedData
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.pipeline.VisitPipelineInput
 import com.smriti.clinicalscribe.pipeline.VisitReasoningPipeline
 import com.smriti.clinicalscribe.rag.ProtocolChunk
@@ -75,8 +76,7 @@ class RealGemmaDeveloperModeTest {
         assertTrue(result.uncertain)
         assertEquals(null, result.referralFlag)
         assertTrue(result.structuredNote.contains("model not found"))
-        assertTrue(result.structuredNote.contains("No diagnosis generated"))
-        assertTrue(result.structuredNote.contains("CHW confirmation required"))
+        assertTrue(result.structuredNote.contains(PatientLanguages.Hindi.safetyWording))
     }
 
     @Test

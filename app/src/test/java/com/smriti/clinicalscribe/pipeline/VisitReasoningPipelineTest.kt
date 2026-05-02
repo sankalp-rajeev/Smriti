@@ -185,7 +185,7 @@ class VisitReasoningPipelineTest {
         assertTrue(referral.dangerSigns.contains("headache"))
         assertTrue(referral.dangerSigns.contains("blurred vision"))
         assertTrue(reasoning.protocolCitation.contains("Smriti Demo Maternal Health Protocol"))
-        assertTrue(reasoning.structuredNote.contains("CHW confirmation required"))
+        assertTrue(reasoning.structuredNote.contains("CHW confirmation is required"))
     }
 
     @Test

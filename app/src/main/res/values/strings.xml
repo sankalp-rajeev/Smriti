@@ -1,4 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Smriti</string>
+    <string name="speak_observation">Speak Observation</string>
+    <string name="generate_note">Generate Note</string>
+    <string name="review">Review</string>
+    <string name="confirm_and_save">Confirm and Save</string>
+    <string name="referral_support">Referral Support</string>
+    <string name="supervisor_summary">Supervisor Summary</string>
+    <string name="offline_proof">Offline Proof</string>
+    <string name="history_signal">History signal</string>
+    <string name="missed_follow_up">Missed follow-up</string>
+    <string name="protocol_grounded_support">Protocol-grounded support</string>
+    <string name="not_a_diagnosis">Not a diagnosis</string>
+    <string name="chw_confirmation_required">CHW confirmation required</string>
+    <string name="reasoning_unavailable_retry">On-device reasoning unavailable — please retry</string>
+    <string name="reading_local_patient_history">Reading local patient history</string>
+    <string name="retrieving_local_protocol_guidance">Retrieving local protocol guidance</string>
+    <string name="running_on_device_gemma_reasoning">Running on-device Gemma 4 reasoning</string>
+    <string name="preparing_chw_review_note">Preparing CHW review note</string>
+    <string name="add_patient">Add Patient</string>
+    <string name="import_supervisor_register">Import Supervisor Register</string>
+    <string name="mark_confirmed">Mark Confirmed</string>
+    <string name="note_as_ongoing">Note as Ongoing</string>
 </resources>

@@ -1,6 +1,7 @@
 package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.ReferralFlag
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.rag.ProtocolChunk
@@ -85,7 +86,10 @@ class RealGemmaAgent(
     ): VisitReasoningResult {
         return try {
             when (val parsed = outputParser.parseVisitReasoning(rawOutput, patient, observationText, protocolChunks)) {
-                is RealGemmaParseResult.Success -> safetyPostProcessor.enforce(parsed.result)
+                is RealGemmaParseResult.Success -> safetyPostProcessor.enforce(
+                    result = parsed.result,
+                    languageCode = patient.preferredLanguage
+                )
                 is RealGemmaParseResult.Rejected -> safeUncertainResult(
                     patient = patient,
                     visitHistory = visitHistory,
@@ -118,6 +122,8 @@ class RealGemmaAgent(
             protocolChunks.take(3).joinToString(separator = "; ") { it.citation }
         }
         val latestHistory = visitHistory.firstOrNull()?.structuredNote ?: "No prior visit history available."
+        val patientLanguage = PatientLanguages.forPatient(patient)
+        val safetyWording = patientLanguage.safetyWording
 
         return VisitReasoningResult(
             patientId = patient.id,
@@ -128,7 +134,7 @@ class RealGemmaAgent(
                 append(latestHistory)
                 append("\n\nProtocol-grounded support:\n")
                 append(status)
-                append(" No diagnosis generated. CHW confirmation required. ")
+                append(" $safetyWording ")
                 append("Protocol citation required before recommendation.")
             },
             referralFlag = null,

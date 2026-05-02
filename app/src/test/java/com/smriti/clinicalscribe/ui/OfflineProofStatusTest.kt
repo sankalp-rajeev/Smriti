@@ -30,6 +30,26 @@ class OfflineProofStatusTest {
     }
 
     @Test
+    fun compactProofLinesKeepRosterSafetyStatusShort() {
+        val status = OfflineProofStatus(
+            reasoningModeLabel = "MockGemmaAgent",
+            realGemmaModelStatusLabel = "Not found",
+            realGemmaReadinessLabel = "Mock active"
+        )
+
+        assertEquals(
+            listOf(
+                "Network" to "No",
+                "Patient data" to "Local Room/SQLite",
+                "Protocols" to "Local JSON, country-aware",
+                "Active mode" to "MockGemmaAgent",
+                "Direct Gemma audio" to "Blocked; transcript fallback"
+            ),
+            status.compactLines
+        )
+    }
+
+    @Test
     fun developerWarningAppearsOnlyWhenProvided() {
         val status = OfflineProofStatus(
             reasoningModeLabel = "RealGemmaAgent / Developer-only / Experimental",

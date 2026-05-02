@@ -29,11 +29,20 @@ class LocalVisitMemoryStore(
         if (protocolChunkDao.getAll().isEmpty()) {
             protocolChunkDao.upsertAll(protocolChunks)
         }
-        val existingVisitIds = visitLogDao.getAll().map { it.id }.toSet()
-        val missingDemoVisits = DemoSeedData.initialVisitLogs(nowMillis)
+        val existingVisits = visitLogDao.getAll()
+        val existingVisitIds = existingVisits.map { it.id }.toSet()
+        val demoVisits = DemoSeedData.initialVisitLogs(nowMillis)
+        val missingDemoVisits = demoVisits
             .filter { it.id !in existingVisitIds }
         if (missingDemoVisits.isNotEmpty()) {
             visitLogDao.upsertAll(missingDemoVisits)
+        }
+        val phaseBackfills = demoVisits.mapNotNull { demoVisit ->
+            val existing = existingVisits.firstOrNull { it.id == demoVisit.id } ?: return@mapNotNull null
+            existing.withMissingDemoFollowUpFieldsFrom(demoVisit)
+        }
+        if (phaseBackfills.isNotEmpty()) {
+            visitLogDao.upsertAll(phaseBackfills)
         }
         return refresh()
     }
@@ -119,6 +128,17 @@ class LocalVisitMemoryStore(
 
     fun historyForPatient(snapshot: VisitMemorySnapshot, patientId: String): List<VisitLog> {
         return snapshot.visits.filter { it.patientId == patientId }
+    }
+
+    private fun VisitLog.withMissingDemoFollowUpFieldsFrom(demoVisit: VisitLog): VisitLog? {
+        if (demoVisit.followUpDueDateMillis == null) return null
+        val needsDueDate = followUpDueDateMillis == null
+        val needsCompletion = followUpCompleted == null
+        if (!needsDueDate && !needsCompletion) return null
+        return copy(
+            followUpDueDateMillis = followUpDueDateMillis ?: demoVisit.followUpDueDateMillis,
+            followUpCompleted = followUpCompleted ?: demoVisit.followUpCompleted
+        )
     }
 }
 

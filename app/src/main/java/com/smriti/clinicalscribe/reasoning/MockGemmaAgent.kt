@@ -1,6 +1,7 @@
 package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.ReferralFlag
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.rag.ProtocolChunk
@@ -27,12 +28,14 @@ class MockGemmaAgent : GemmaAgent {
         val hasClinicalDetail = observationText.trim().length >= 12
         val latestHistory = visitHistory.firstOrNull()?.structuredNote ?: "No prior visit history available."
         val protocolCitation = protocolChunks.citationSummary()
+        val patientLanguage = PatientLanguages.forPatient(patient)
+        val safetyWording = patientLanguage.safetyWording
 
         if (!hasClinicalDetail) {
             return VisitReasoningResult(
                 patientId = patient.id,
                 observationText = observationText,
-                structuredNote = "Observation is too brief to create a safe structured record.",
+                structuredNote = "Observation is too brief to create a safe structured record. $safetyWording",
                 referralFlag = null,
                 protocolCitation = protocolCitation,
                 suggestedFollowUp = "Ask the CHW to repeat the observation with symptoms, vitals, and fetal movement if relevant. Protocol citation: $protocolCitation.",
@@ -49,7 +52,7 @@ class MockGemmaAgent : GemmaAgent {
                 structuredNote = buildString {
                     append("Observation:\n${observationText.trim()}")
                     append("\n\nRelevant history:\n$latestHistory")
-                    append("\n\nProtocol-grounded support:\nNo matching protocol citation was found in the offline corpus. This is not a diagnosis. CHW confirmation required before saving or acting.")
+                    append("\n\nProtocol-grounded support:\nNo matching protocol citation was found in the offline corpus. $safetyWording")
                 },
                 referralFlag = null,
                 protocolCitation = protocolCitation,
@@ -63,7 +66,7 @@ class MockGemmaAgent : GemmaAgent {
         val note = buildString {
             append("Observation:\n${observationText.trim()}")
             append("\n\nRelevant history:\n$latestHistory")
-            append("\n\nProtocol-grounded support:\nDocumentation support only; not a diagnosis. CHW confirmation required. ")
+            append("\n\nProtocol-grounded support:\nDocumentation support only. $safetyWording ")
             if (hasDangerSign) {
                 append("Danger signs are present in the observation and require CHW review for referral. Protocol citation: $protocolCitation.")
             } else {

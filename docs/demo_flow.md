@@ -15,7 +15,8 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
    - Point out `Local patient memory + local protocol pack.`
    - Point out the `Offline Proof` card.
    - Key lines: `Network required: No`, `Patient data: Local Room/SQLite`, `Protocol source: Local JSON; country-aware retrieval`, `Active reasoning mode: MockGemmaAgent` or `RealGemmaAgent` only when fully gated, `Inference: Disabled by default` or enabled only in submission mode.
-   - Show the six synthetic patients and, if useful, tap `Load Demo Supervisor Register` to demonstrate local asset import.
+   - Show the six synthetic patients and, if useful, tap `Import Supervisor Register` to demonstrate local asset import.
+   - Point out patient output language labels: Meena/Priya Hindi, Grace Swahili, Lucia Spanish, Fatima/Amara English.
    - Optional: tap `Add Patient` to show offline speech registration prompts and manual fallback, then return to the roster.
 
 2. **Optional Phase B Memory Shots**
@@ -35,6 +36,7 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
 5. **Generate Visit Note**
    - Tap the generate button.
    - Explain that normal builds use `MockGemmaAgent` for deterministic offline reasoning; the recorded submission build can use RealGemma only when all local gates and model readiness are satisfied.
+   - If filming the gated RealGemma multilingual path, mention that `preferredLanguage` controls selected patient-specific output language and protocol citation IDs stay in English.
 
 6. **Review Referral Support**
    - Show the structured note.
@@ -77,4 +79,6 @@ One phone, no signal, local patient memory, local protocols, CHW confirmation, a
 - Do not imply autonomous diagnosis or treatment.
 - Do not present RealGemma text mode as the default demo path; it remains developer-only and gated.
 - Do not present Mock output as RealGemma output.
-- Do not present the Phase A language/country metadata as validated multilingual clinical output.
+- Do not claim broad all-language support.
+- Do not claim Amharic, Oromo, or Bangla output; Amara/Ethiopia and Fatima/Bangladesh remain English.
+- Do not present multilingual RealGemma output as video-ready until the manual multilingual harness passes for the filmed language.

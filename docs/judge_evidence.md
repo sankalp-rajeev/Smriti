@@ -98,6 +98,23 @@ Current RealGemma paths:
 - SummaryScreen can show a `RealGemma Priority Follow-Up Queue` from today's confirmed visits, referral flags, missed follow-ups, history signals, patient context, and supplied protocol citations.
 - If RealGemma priority generation fails, the deterministic local supervisor summary remains visible as the fallback evidence.
 
+Phase C multilingual evidence:
+
+- Smriti demonstrates selected patient-specific local-language output: English, Hindi, Swahili, and Spanish.
+- `Patient.preferredLanguage` controls the RealGemma visit-note output language in fully gated submission mode.
+- Patient mapping is Meena/Priya -> Hindi, Grace -> Swahili, Lucia -> Spanish, and Fatima/Amara -> English.
+- Lucia is Peru/Spanish; Brazil is not used for her Spanish-language demo.
+- Protocol citation IDs remain stable in English and are not translated.
+- No cloud translation API is used.
+- Manual multilingual RealGemma validation is required before filming or claiming a language in the video.
+- The architecture can extend to more Gemma-supported languages as protocol packs and UI translations are added.
+
+Manual multilingual harness:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaMultilingualInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
+```
+
 Accepted manual RealGemma benchmark:
 
 - `totalScenarios=3`
@@ -171,3 +188,5 @@ Latest local validation commands:
 ```
 
 Latest status: all three passed on April 29, 2026. The sandboxed Gradle wrapper can hit a user-cache lock-file issue; normal-cache reruns pass.
+
+Phase C status: multilingual code/tests were added for English, Hindi, Swahili, and Spanish. Manual multilingual RealGemma results must be collected on the sideloaded-model device before updating video claims.

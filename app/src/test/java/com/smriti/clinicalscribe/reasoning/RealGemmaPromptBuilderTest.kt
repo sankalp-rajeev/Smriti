@@ -27,6 +27,13 @@ class RealGemmaPromptBuilderTest {
         assertTrue(prompt.contains(protocol.citation))
         assertTrue(prompt.contains("This is not a diagnosis"))
         assertTrue(prompt.contains("CHW confirmation is required"))
+        assertTrue(prompt.contains("Generate all user-facing output in Hindi"))
+        assertTrue(prompt.contains("Use plain, non-technical language for a community health worker"))
+        assertTrue(prompt.contains("Do not diagnose. If uncertain, ask for clarification. Safety wording must appear in Hindi"))
+        assertTrue(prompt.contains("Safety wording must appear in Hindi"))
+        assertTrue(prompt.contains("Protocol citation IDs may remain in English"))
+        assertTrue(prompt.contains("If uncertain, ask for clarification."))
+        assertTrue(prompt.contains("preferred output language: Hindi (hi)"))
         assertTrue(prompt.contains("Return compact JSON only"))
         assertTrue(prompt.contains("Output exactly one JSON object and nothing else"))
         assertTrue(prompt.contains("The first character must be { and the last character must be }"))
@@ -34,6 +41,32 @@ class RealGemmaPromptBuilderTest {
         assertTrue(prompt.contains("choose the single most urgent or primary citation"))
         assertTrue(prompt.contains("Do not join citations with semicolons"))
         assertTrue(prompt.contains("same exact supplied citation as protocolCitation"))
+    }
+
+    @Test
+    fun promptUsesPatientPreferredLanguageForSpanishAndSwahili() {
+        val lucia = DemoSeedData.patients.first { it.id == "patient-lucia" }
+        val grace = DemoSeedData.patients.first { it.id == "patient-grace" }
+
+        val spanishPrompt = RealGemmaPromptBuilder().buildVisitReasoningPrompt(
+            patient = lucia,
+            visitHistory = emptyList(),
+            observationText = "Routine ANC visit with headache check.",
+            protocolChunks = listOf(protocolChunk())
+        )
+        val swahiliPrompt = RealGemmaPromptBuilder().buildVisitReasoningPrompt(
+            patient = grace,
+            visitHistory = emptyList(),
+            observationText = "Routine ANC visit with headache check.",
+            protocolChunks = listOf(protocolChunk())
+        )
+
+        assertTrue(spanishPrompt.contains("Generate all user-facing output in Spanish"))
+        assertTrue(spanishPrompt.contains("Safety wording must appear in Spanish"))
+        assertTrue(spanishPrompt.contains("preferred output language: Spanish (es)"))
+        assertTrue(swahiliPrompt.contains("Generate all user-facing output in Swahili"))
+        assertTrue(swahiliPrompt.contains("Safety wording must appear in Swahili"))
+        assertTrue(swahiliPrompt.contains("preferred output language: Swahili (sw)"))
     }
 
     @Test

@@ -23,6 +23,15 @@ data class OfflineProofStatus(
     val realGemmaSubmissionModeLabel: String = "Disabled",
     val realGemmaDeveloperWarning: String? = null
 ) {
+    val compactLines: List<Pair<String, String>>
+        get() = listOf(
+            "Network" to "No",
+            "Patient data" to "Local Room/SQLite",
+            "Protocols" to "Local JSON, country-aware",
+            "Active mode" to reasoningModeLabel,
+            "Direct Gemma audio" to "Blocked; transcript fallback"
+        )
+
     val lines: List<Pair<String, String>>
         get() = listOf(
             "Network required" to "No",
@@ -43,7 +52,8 @@ data class OfflineProofStatus(
 @Composable
 fun OfflineProofCard(
     status: OfflineProofStatus,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -51,11 +61,12 @@ fun OfflineProofCard(
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)
         ) {
             Text("Offline Proof", fontWeight = FontWeight.SemiBold)
-            status.lines.forEach { (label, value) ->
-                Text("$label: $value")
+            val proofLines = if (compact) status.compactLines else status.lines
+            proofLines.forEach { (label, value) ->
+                Text("$label: $value", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

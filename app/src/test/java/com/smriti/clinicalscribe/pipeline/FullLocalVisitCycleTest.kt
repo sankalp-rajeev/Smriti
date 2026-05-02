@@ -3,6 +3,7 @@ package com.smriti.clinicalscribe.pipeline
 import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.data.LocalVisitMemoryStore
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.PatientDao
 import com.smriti.clinicalscribe.data.ProtocolChunkDao
 import com.smriti.clinicalscribe.data.ReferralFlag
@@ -207,8 +208,15 @@ class FullLocalVisitCycleTest {
             reasoning.suggestedFollowUp,
             reasoning.referralFlag?.reason.orEmpty()
         ).joinToString(separator = "\n").lowercase()
-        assertTrue(combined.contains("not a diagnosis"))
-        assertTrue(combined.contains("chw confirmation") || combined.contains("confirm"))
+        assertTrue(
+            combined.contains("not a diagnosis") ||
+                combined.contains(PatientLanguages.Hindi.safetyWording.lowercase())
+        )
+        assertTrue(
+            combined.contains("chw confirmation") ||
+                combined.contains("confirm") ||
+                combined.contains("पुष्टि")
+        )
     }
 
     private fun fakeStore(): LocalVisitMemoryStore {

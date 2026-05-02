@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Smriti</string>
+    <string name="speak_observation">अवलोकन बोलें</string>
+    <string name="generate_note">नोट बनाएं</string>
+    <string name="review">समीक्षा</string>
+    <string name="confirm_and_save">पुष्टि करें और सहेजें</string>
+    <string name="referral_support">रेफरल सहायता</string>
+    <string name="supervisor_summary">पर्यवेक्षक सारांश</string>
+    <string name="offline_proof">ऑफलाइन प्रमाण</string>
+    <string name="history_signal">इतिहास संकेत</string>
+    <string name="missed_follow_up">छूटा हुआ फॉलो-अप</string>
+    <string name="protocol_grounded_support">प्रोटोकॉल-आधारित सहायता</string>
+    <string name="not_a_diagnosis">यह निदान नहीं है</string>
+    <string name="chw_confirmation_required">CHW की पुष्टि आवश्यक है</string>
+    <string name="reasoning_unavailable_retry">ऑन-डिवाइस reasoning उपलब्ध नहीं है — कृपया फिर प्रयास करें</string>
+    <string name="reading_local_patient_history">स्थानीय मरीज इतिहास पढ़ा जा रहा है</string>
+    <string name="retrieving_local_protocol_guidance">स्थानीय प्रोटोकॉल मार्गदर्शन लिया जा रहा है</string>
+    <string name="running_on_device_gemma_reasoning">ऑन-डिवाइस Gemma 4 reasoning चल रही है</string>
+    <string name="preparing_chw_review_note">CHW समीक्षा नोट तैयार हो रहा है</string>
+    <string name="add_patient">मरीज जोड़ें</string>
+    <string name="import_supervisor_register">पर्यवेक्षक रजिस्टर आयात करें</string>
+    <string name="mark_confirmed">पुष्टि करें</string>
+    <string name="note_as_ongoing">जारी के रूप में नोट करें</string>
+</resources>

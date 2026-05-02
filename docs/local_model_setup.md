@@ -43,6 +43,7 @@ There is currently no debug `applicationIdSuffix`, so `run-as com.smriti.clinica
 - Normal app startup and UI screens do not run inference.
 - Manual text inference requires `allowManualTextInference=true`.
 - Developer-only RealGemma text UI mode requires both `-Psmriti.realGemmaDevMode=true` at build time and an app-private sentinel file at `files/dev/enable_real_gemma_text_mode`.
+- Recorded-demo RealGemma visit-note prompts use the selected patient's `preferredLanguage` for English, Hindi, Swahili, or Spanish output; citation IDs remain English/stable.
 - `MockGemmaAgent` remains the safe default.
 
 ## Developer-Only RealGemma Text UI Mode
@@ -176,6 +177,30 @@ View the benchmark output:
 ```powershell
 adb logcat -s SmritiRealGemmaBenchmark:I "*:S"
 ```
+
+## Manual Multilingual RealGemma Test
+
+Phase C adds a manual multilingual validation harness for the recorded demo:
+
+```text
+app/src/androidTest/java/com/smriti/clinicalscribe/reasoning/ManualRealGemmaMultilingualInstrumentedTest.kt
+```
+
+It requires the sideloaded app-private model and `allowManualTextInference=true`. The harness runs Meena/Hindi, Grace/Swahili, and Lucia/Spanish scenarios, builds prompts from each patient's `preferredLanguage`, runs manual LiteRT text inference, parses the result, applies language-specific safety post-processing through `RealGemmaAgent`, verifies a protocol citation is present, logs a raw output preview, logs parser status, logs the requested language, and logs a simple heuristic for whether output appears to use the requested language.
+
+Run only the manual multilingual instrumentation test:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaMultilingualInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
+```
+
+View the multilingual output:
+
+```powershell
+adb logcat -s SmritiRealGemmaLang:I "*:S"
+```
+
+Do not claim a filmed language until this harness passes for that language. If a language fails manual validation, remove it from the filmed demo and docs claim. Protocol citation IDs should remain English/stable. No cloud translation API is used.
 
 ## Recorded-Demo Submission Mode
 

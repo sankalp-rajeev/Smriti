@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.rag.ProtocolChunk
 import kotlinx.coroutines.runBlocking
@@ -141,6 +142,7 @@ class ManualRealGemmaVisitJsonInstrumentedTest {
         assertFalse("Parsed output used diagnostic language.", lower.contains("diagnosed"))
         assertTrue(
             "Parsed output should include CHW confirmation/safety wording.",
+            combined.contains(PatientLanguages.Hindi.safetyWording) ||
             (lower.contains("chw") && lower.contains("confirm")) ||
                 lower.contains("confirmation required") ||
                 lower.contains("not a diagnosis")

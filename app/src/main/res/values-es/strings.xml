@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Smriti</string>
+    <string name="speak_observation">Decir observación</string>
+    <string name="generate_note">Generar nota</string>
+    <string name="review">Revisar</string>
+    <string name="confirm_and_save">Confirmar y guardar</string>
+    <string name="referral_support">Apoyo para referencia</string>
+    <string name="supervisor_summary">Resumen para supervisora</string>
+    <string name="offline_proof">Prueba sin conexión</string>
+    <string name="history_signal">Señal del historial</string>
+    <string name="missed_follow_up">Seguimiento perdido</string>
+    <string name="protocol_grounded_support">Apoyo basado en protocolo</string>
+    <string name="not_a_diagnosis">No es un diagnóstico</string>
+    <string name="chw_confirmation_required">Se requiere confirmación de la trabajadora de salud</string>
+    <string name="reasoning_unavailable_retry">Razonamiento en el dispositivo no disponible — inténtelo de nuevo</string>
+    <string name="reading_local_patient_history">Leyendo historial local de la paciente</string>
+    <string name="retrieving_local_protocol_guidance">Buscando orientación local del protocolo</string>
+    <string name="running_on_device_gemma_reasoning">Ejecutando razonamiento Gemma 4 en el dispositivo</string>
+    <string name="preparing_chw_review_note">Preparando nota para revisión de la trabajadora de salud</string>
+    <string name="add_patient">Agregar paciente</string>
+    <string name="import_supervisor_register">Importar registro de supervisora</string>
+    <string name="mark_confirmed">Marcar confirmado</string>
+    <string name="note_as_ongoing">Marcar como en curso</string>
+</resources>

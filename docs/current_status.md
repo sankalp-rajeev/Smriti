@@ -49,7 +49,7 @@ Phase A for the final recorded demo is implemented:
 - Patient records now include country, country code, preferred language, protocol region, scenario preview, and optional notes for localization/protocol context.
 - Prior visit history includes Meena's danger-sign setup, Fatima's rising BP trend, Amara's overdue/uncompleted follow-up data for Phase B, Grace's routine/no-referral history, Priya's sparse early ANC history, and Lucia's Peru/South America fallback context.
 - Local supervisor-register import loads `app/src/main/assets/demo/smriti_patients.json` offline and re-imports without duplicate patient histories.
-- Patient Roster includes Add Patient and Load Demo Supervisor Register actions.
+- Patient Roster includes Add Patient, End-of-Day Summary, and Import Supervisor Register actions.
 - Add Patient supports EN/HI/ES/SW offline speech prompts for name, age, pregnancy weeks, and village, while preserving editable manual fallback.
 ## Phase B Intelligence Features
 
@@ -62,6 +62,23 @@ Phase B is implemented for the final recorded demo while preserving the safe nor
 - Fully active submission mode sends visit generation through `VisitReasoningPipeline` with `RealGemmaAgent`; failures show `On-device reasoning unavailable — please retry.` and do not save or silently display mock output as RealGemma.
 - SummaryScreen keeps the deterministic local supervisor brief and adds a RealGemma priority queue only when submission mode is fully active. RealGemma summary failure shows `On-device summary unavailable — deterministic local summary shown below.`
 - Offline Proof reports active reasoning mode, RealGemma text mode, submission mode, inference, model found/missing, and direct Gemma audio blocked with offline speech/transcript fallback.
+
+## Phase C Multilingual Output
+
+Phase C supports selected patient-specific local-language output for the recorded demo:
+
+- Demo languages are English, Hindi, Swahili, and Spanish only.
+- Patient mapping: Meena/Priya -> Hindi, Grace -> Swahili, Lucia -> Spanish, Fatima/Amara -> English.
+- Lucia remains Peru/Spanish; the app does not use Brazil for a Spanish-language Lucia demo.
+- Amara/Ethiopia and Fatima/Bangladesh remain English because Amharic/Oromo/Bangla are not implemented or tested.
+- Patient Roster and VisitScreen show each patient's output language label.
+- Fully gated RealGemma submission mode passes `preferredLanguage` into the visit-note prompt and asks for all user-facing output in that language.
+- Protocol citation IDs remain stable/English, for example `WHO ANC Recommendation B1.2`.
+- `RealGemmaSafetyPostProcessor` appends required safety wording in English, Hindi, Spanish, or Swahili if missing.
+- Lightweight localized resources exist for key demo-visible strings, but there is no risky app-wide runtime locale switch.
+- No cloud translation API, runtime downloads, vector DB, model/audio artifact, PHI, or direct Gemma audio wiring was added.
+- Manual multilingual RealGemma output must be verified before filming; if a language fails manual validation, remove it from the filmed claim.
+- The architecture can extend to more Gemma-supported languages as protocol packs and UI translations are added.
 
 Recommended order:
 
@@ -112,6 +129,7 @@ Recommended order:
 - `ManualRealGemmaVisitJsonInstrumentedTest`
 - `ManualRealGemmaAgentInstrumentedTest`
 - `ManualRealGemmaBenchmarkInstrumentedTest`
+- `ManualRealGemmaMultilingualInstrumentedTest`
 - `ManualRealGemmaMemoryStressInstrumentedTest`
 - `ManualLiteRtFunctionCallingInstrumentedTest`
 - `ManualLiteRtAudioCapabilityInstrumentedTest`

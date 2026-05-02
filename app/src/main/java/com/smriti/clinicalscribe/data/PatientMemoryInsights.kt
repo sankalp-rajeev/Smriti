@@ -11,7 +11,7 @@ data class MissedFollowUpAlert(
     val protocolCitation: String
 ) {
     val message: String
-        get() = "Missed follow-up: Referred to $reason $daysOverdue days ago. Outcome unknown. Confirm before today's visit."
+        get() = "Missed follow-up: Follow-up was due after the previous ANC visit. Outcome unknown. Confirm before today's visit."
 }
 
 data class HistorySignal(
@@ -41,14 +41,12 @@ object PatientMemoryInsights {
         val todayStartMillis = startOfDayMillis(nowMillis)
         return visits
             .filter { visit ->
-                visit.patientId == patientId &&
-                    visit.followUpDueDateMillis != null &&
-                    visit.followUpDueDateMillis < todayStartMillis &&
-                    visit.followUpCompleted == false
+                visit.patientId == patientId && visit.hasMissedFollowUpSignal(todayStartMillis)
             }
-            .sortedBy { it.followUpDueDateMillis }
+            .sortedBy { it.followUpDueDateMillis ?: it.visitDateMillis }
             .map { visit ->
-                val daysOverdue = max(1L, (nowMillis - visit.followUpDueDateMillis!!) / DAY_MILLIS)
+                val dueMillis = visit.followUpDueDateMillis ?: visit.visitDateMillis
+                val daysOverdue = max(1L, (nowMillis - dueMillis) / DAY_MILLIS)
                 MissedFollowUpAlert(
                     visitId = visit.id,
                     patientId = patientId,
@@ -60,6 +58,23 @@ object PatientMemoryInsights {
                     protocolCitation = visit.protocolCitation
                 )
             }
+    }
+
+    private fun VisitLog.hasMissedFollowUpSignal(todayStartMillis: Long): Boolean {
+        if (followUpCompleted == true) return false
+        val structuredSignal = followUpDueDateMillis != null &&
+            followUpDueDateMillis < todayStartMillis
+        return structuredSignal || hasLegacyMissedFollowUpText()
+    }
+
+    private fun VisitLog.hasLegacyMissedFollowUpText(): Boolean {
+        if (followUpDueDateMillis != null) return false
+        val text = listOf(observationText, structuredNote, suggestedFollowUp)
+            .joinToString(separator = " ")
+            .lowercase()
+        return "follow-up" in text &&
+            "due" in text &&
+            "outcome unknown" in text
     }
 
     private fun startOfDayMillis(nowMillis: Long): Long {

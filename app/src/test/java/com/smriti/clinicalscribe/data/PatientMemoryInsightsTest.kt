@@ -20,7 +20,10 @@ class PatientMemoryInsightsTest {
         assertEquals(1, alerts.size)
         assertEquals("patient-amara", alerts.single().patientId)
         assertEquals(7, alerts.single().daysOverdue)
-        assertTrue(alerts.single().message.contains("Outcome unknown"))
+        assertEquals(
+            "Missed follow-up: Follow-up was due after the previous ANC visit. Outcome unknown. Confirm before today's visit.",
+            alerts.single().message
+        )
     }
 
     @Test
@@ -32,6 +35,49 @@ class PatientMemoryInsightsTest {
 
         assertEquals(before, after)
         assertEquals(false, visits.first { it.id == before.single().visitId }.followUpCompleted)
+    }
+
+    @Test
+    fun amaraLegacyFreeTextFollowUpStillShowsAlertWhenStructuredFieldsAreMissing() {
+        val visits = DemoSeedData.initialVisitLogs(nowMillis = SEED_TIME).map { visit ->
+            if (visit.id == 3_001L) {
+                visit.copy(followUpDueDateMillis = null, followUpCompleted = null)
+            } else {
+                visit
+            }
+        }
+
+        val alerts = PatientMemoryInsights.missedFollowUpAlerts(
+            patientId = "patient-amara",
+            visits = visits,
+            nowMillis = SEED_TIME
+        )
+
+        assertEquals(1, alerts.size)
+        assertEquals(3_001L, alerts.single().visitId)
+        assertEquals(
+            "Missed follow-up: Follow-up was due after the previous ANC visit. Outcome unknown. Confirm before today's visit.",
+            alerts.single().message
+        )
+    }
+
+    @Test
+    fun confirmedLegacyFreeTextFollowUpDoesNotShowAlert() {
+        val visits = DemoSeedData.initialVisitLogs(nowMillis = SEED_TIME).map { visit ->
+            if (visit.id == 3_001L) {
+                visit.copy(followUpDueDateMillis = null, followUpCompleted = true)
+            } else {
+                visit
+            }
+        }
+
+        val alerts = PatientMemoryInsights.missedFollowUpAlerts(
+            patientId = "patient-amara",
+            visits = visits,
+            nowMillis = SEED_TIME
+        )
+
+        assertEquals(emptyList<MissedFollowUpAlert>(), alerts)
     }
 
     @Test

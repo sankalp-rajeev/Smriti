@@ -1,9 +1,14 @@
 package com.smriti.clinicalscribe.reasoning
 
+import com.smriti.clinicalscribe.data.PatientLanguages
+
 class RealGemmaSafetyPostProcessor {
-    fun enforce(result: VisitReasoningResult): VisitReasoningResult {
-        val requiredPhrases = result.structuredNote.missingSafetyPhrases()
-        if (requiredPhrases.isEmpty()) {
+    fun enforce(
+        result: VisitReasoningResult,
+        languageCode: String = PatientLanguages.English.code
+    ): VisitReasoningResult {
+        val requiredSafetyWording = PatientLanguages.fromCode(languageCode).safetyWording
+        if (result.structuredNote.hasSafetyWording(requiredSafetyWording, languageCode)) {
             return result
         }
 
@@ -11,35 +16,23 @@ class RealGemmaSafetyPostProcessor {
             structuredNote = buildString {
                 append(result.structuredNote.trim())
                 append("\n\nSafety note: ")
-                append(requiredPhrases.joinToString(separator = " "))
+                append(requiredSafetyWording)
             }
         )
     }
 
-    private fun String.missingSafetyPhrases(): List<String> {
-        val lower = lowercase()
-        return buildList {
-            if (!containsNonDiagnosticWording(lower)) {
-                add(NOT_DIAGNOSIS)
-            }
-            if (!containsChwConfirmation(lower)) {
-                add(CHW_CONFIRMATION)
-            }
-        }
+    fun hasRequiredSafetyWording(
+        text: String,
+        languageCode: String = PatientLanguages.English.code
+    ): Boolean {
+        val requiredSafetyWording = PatientLanguages.fromCode(languageCode).safetyWording
+        return text.hasSafetyWording(requiredSafetyWording, languageCode)
     }
 
-    private fun containsNonDiagnosticWording(lower: String): Boolean {
-        return lower.contains("not a diagnosis") ||
-            lower.contains("no diagnosis generated")
-    }
-
-    private fun containsChwConfirmation(lower: String): Boolean {
-        return (lower.contains("chw") && lower.contains("confirm")) ||
-            lower.contains("confirmation required")
-    }
-
-    private companion object {
-        const val NOT_DIAGNOSIS = "This is not a diagnosis."
-        const val CHW_CONFIRMATION = "CHW confirmation is required before saving."
+    private fun String.hasSafetyWording(requiredSafetyWording: String, languageCode: String): Boolean {
+        return contains(
+            other = requiredSafetyWording,
+            ignoreCase = PatientLanguages.fromCode(languageCode) == PatientLanguages.English
+        )
     }
 }

@@ -1,6 +1,7 @@
 package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.DemoSeedData
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -35,8 +36,7 @@ class RealGemmaAgentTest {
         assertTrue(result.uncertain)
         assertNull(result.referralFlag)
         assertTrue(result.structuredNote.contains("Experimental Real Gemma path unavailable"))
-        assertTrue(result.structuredNote.contains("No diagnosis generated"))
-        assertTrue(result.structuredNote.contains("CHW confirmation required"))
+        assertTrue(result.structuredNote.contains(PatientLanguages.Hindi.safetyWording))
         assertTrue(result.structuredNote.contains("Protocol citation required before recommendation"))
         assertTrue(result.suggestedFollowUp.contains("MockGemmaAgent fallback"))
     }
@@ -104,14 +104,13 @@ class RealGemmaAgentTest {
         )
 
         assertFalse(result.uncertain)
-        assertTrue(result.structuredNote.contains("This is not a diagnosis."))
-        assertTrue(result.structuredNote.contains("CHW confirmation is required before saving."))
+        assertTrue(result.structuredNote.contains(PatientLanguages.Hindi.safetyWording))
     }
 
     @Test
     fun existingSafetyWordingIsNotDuplicated() = runBlocking {
         val protocol = protocolChunks.first()
-        val safeNote = "Protocol-grounded support only. This is not a diagnosis. CHW confirmation is required before saving."
+        val safeNote = "Protocol-grounded support only. ${PatientLanguages.Hindi.safetyWording}"
         val fakeAgent = RealGemmaAgent(
             textClient = StaticTextClient(
                 TextGenerationResult.Success(
@@ -130,8 +129,7 @@ class RealGemmaAgentTest {
             protocolChunks = protocolChunks
         )
 
-        assertEquals(1, result.structuredNote.countOccurrences("This is not a diagnosis."))
-        assertEquals(1, result.structuredNote.countOccurrences("CHW confirmation is required before saving."))
+        assertEquals(1, result.structuredNote.countOccurrences(PatientLanguages.Hindi.safetyWording))
     }
 
     @Test
@@ -244,8 +242,7 @@ class RealGemmaAgentTest {
     private fun assertSafeRejectedResult(result: VisitReasoningResult) {
         assertTrue(result.uncertain)
         assertNull(result.referralFlag)
-        assertTrue(result.structuredNote.contains("No diagnosis generated"))
-        assertTrue(result.structuredNote.contains("CHW confirmation required"))
+        assertTrue(result.structuredNote.contains(PatientLanguages.Hindi.safetyWording))
         assertTrue(result.structuredNote.contains("Protocol citation required before recommendation"))
     }
 

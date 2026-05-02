@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Smriti</string>
+    <string name="speak_observation">Sema uchunguzi</string>
+    <string name="generate_note">Tengeneza dokezo</string>
+    <string name="review">Pitia</string>
+    <string name="confirm_and_save">Thibitisha na hifadhi</string>
+    <string name="referral_support">Usaidizi wa rufaa</string>
+    <string name="supervisor_summary">Muhtasari wa msimamizi</string>
+    <string name="offline_proof">Uthibitisho wa nje ya mtandao</string>
+    <string name="history_signal">Ishara ya historia</string>
+    <string name="missed_follow_up">Ufuatiliaji uliokosekana</string>
+    <string name="protocol_grounded_support">Usaidizi unaotegemea itifaki</string>
+    <string name="not_a_diagnosis">Si utambuzi wa ugonjwa</string>
+    <string name="chw_confirmation_required">Uthibitisho wa mfanyakazi wa afya unahitajika</string>
+    <string name="reasoning_unavailable_retry">Uchambuzi kwenye kifaa haupatikani — tafadhali jaribu tena</string>
+    <string name="reading_local_patient_history">Inasoma historia ya mgonjwa iliyo kwenye kifaa</string>
+    <string name="retrieving_local_protocol_guidance">Inatafuta mwongozo wa itifaki ulio kwenye kifaa</string>
+    <string name="running_on_device_gemma_reasoning">Inaendesha uchambuzi wa Gemma 4 kwenye kifaa</string>
+    <string name="preparing_chw_review_note">Inaandaa dokezo la mapitio ya mfanyakazi wa afya</string>
+    <string name="add_patient">Ongeza mgonjwa</string>
+    <string name="import_supervisor_register">Ingiza rejista ya msimamizi</string>
+    <string name="mark_confirmed">Weka imethibitishwa</string>
+    <string name="note_as_ongoing">Weka inaendelea</string>
+</resources>

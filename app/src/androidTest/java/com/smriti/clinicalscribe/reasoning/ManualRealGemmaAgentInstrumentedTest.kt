@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.rag.ProtocolChunk
 import kotlinx.coroutines.runBlocking
@@ -165,11 +166,8 @@ class ManualRealGemmaAgentInstrumentedTest {
     }
 
     private fun VisitReasoningResult.hasSafetyWording(): Boolean {
-        val lower = combinedSafetyText().lowercase()
-        val hasNotDiagnosis = lower.contains("not a diagnosis")
-        val hasChwConfirmation = (lower.contains("chw") && lower.contains("confirm")) ||
-            lower.contains("confirmation required")
-        return hasNotDiagnosis && hasChwConfirmation
+        val language = PatientLanguages.Hindi
+        return combinedSafetyText().contains(language.safetyWording)
     }
 
     private fun logLong(label: String, text: String) {

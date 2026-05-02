@@ -1,6 +1,7 @@
 package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.rag.ProtocolChunk
 
@@ -15,6 +16,7 @@ class RealGemmaPromptBuilder(
         protocolChunks: List<ProtocolChunk>
     ): String {
         val historySummary = historyFormatter.format(visitHistory, maxHistoryVisits)
+        val outputLanguage = PatientLanguages.forPatient(patient)
 
         val protocolContext = protocolChunks
             .joinToString(separator = "\n") { chunk ->
@@ -52,6 +54,8 @@ class RealGemmaPromptBuilder(
             Safety rules:
             - This is not a diagnosis.
             - CHW confirmation is required before saving any record.
+            - Generate all user-facing output in ${outputLanguage.englishName}. Use plain, non-technical language for a community health worker. Protocol citation IDs may remain in English. Do not translate citation identifiers. Do not diagnose. If uncertain, ask for clarification. Safety wording must appear in ${outputLanguage.englishName}.
+            - Required safety wording in ${outputLanguage.englishName}: ${outputLanguage.safetyWording}
             - Every referral or follow-up recommendation must cite exactly one supplied protocol citation.
             - If no protocol chunk is supplied, return an uncertain result with an empty protocolCitation.
             - Avoid diagnostic wording such as "diagnosis", "diagnosed with", or "patient has preeclampsia".
@@ -66,6 +70,7 @@ class RealGemmaPromptBuilder(
             Patient identity:
             - id: ${patient.id}
             - label: ${patient.displayLabel()}
+            - preferred output language: ${outputLanguage.englishName} (${outputLanguage.code})
             - village: ${patient.village}
             - pregnancy weeks: ${patient.pregnancyWeeks ?: "unknown"}
             - risk summary: ${patient.riskSummary}

@@ -35,11 +35,12 @@ adb shell run-as com.smriti.clinicalscribe ls -lh files/models/gemma-4-E2B-it-in
 | --- | --- | --- | --- |
 | Launch app | Open Smriti after airplane mode is on. | Patient Roster loads locally. | App crashes, requires network, or roster does not load. |
 | Reset demo data | Open End-of-Day Summary if needed, tap `Reset Demo Data`, then return to Patient Roster. | Saved demo visits/referrals are cleared and the six-patient synthetic roster is restored. | Old saved referrals remain or reset fails. |
-| Optional register import | Tap `Load Demo Supervisor Register`, confirm import. | `6 synthetic patients imported from local supervisor register.` appears and no duplicate histories are created after repeat import. | Import asks for network/storage permission or duplicates patients endlessly. |
+| Optional register import | Tap `Import Supervisor Register`, confirm import. | `6 synthetic patients imported from local supervisor register.` appears and no duplicate histories are created after repeat import. | Import asks for network/storage permission or duplicates patients endlessly. |
 | Optional add patient | Tap `Add Patient`; try one offline speech prompt or type manually, then `Confirm and Add`. | Speech unavailable states keep fields editable; manual save creates a local Room patient. | Speech failure blocks manual entry or auto-saves before confirmation. |
 | Show Amara alert | Select `Amara Tesfaye, 30F`. | Missed follow-up card appears above transcript input with `Mark Confirmed` and `Note as Ongoing`. | No alert appears after Reset Demo Data or action saves a generated visit automatically. |
 | Show Fatima history signal | Select `Fatima Begum, 24F`. | History signal card appears for rising BP trend with cautious ANC monitoring wording. | Card diagnoses disease, says preeclampsia, or appears for routine Grace. |
 | Show roster purpose | On Patient Roster, show `Smriti`, `Offline CHW visit copilot`, and patient list. | Purpose, offline status, and patient list are clear. | Screen looks empty, misleading, or lacks patient list. |
+| Show patient languages | Point to roster language labels for Meena/Priya, Grace, Lucia, Fatima, and Amara. | Labels show Hindi, Swahili, Spanish, or English from patient metadata. | Lucia appears as Brazil/Spanish, or unsupported languages are claimed. |
 | Show Offline Proof | Point to `Offline Proof`. | It shows `Network required: No`, local Room/SQLite patient data, local JSON country-aware protocol retrieval, default mock reasoning, RealGemma model status, inference status, and direct Gemma audio blocked with offline speech/transcript fallback. | It implies cloud runtime, default RealGemma, or direct Gemma audio working. |
 | Select Meena | Tap `Meena Sharma, 28F` / `Select Patient and View History`. | Visit screen opens for Meena. | Wrong patient opens or navigation fails. |
 | Show prior history | Scroll or point to Prior Visit History. | Confirmed local history is visible before new transcript entry. | History missing after reset or latest confirmed order looks wrong. |
@@ -54,6 +55,7 @@ adb shell run-as com.smriti.clinicalscribe ls -lh files/models/gemma-4-E2B-it-in
 | Confirm/save | Tap `Confirm CHW Review and Save`. | Visit is saved and Summary screen opens. | Save happens before confirmation, button fails, or summary does not open. |
 | Show summary counts | On Summary screen, show Local Supervisor Brief, total visits, and referral flags. | Counts reflect confirmed local data after save. | Counts do not update after save. |
 | Optional RealGemma priority queue | In fully gated submission mode, show `RealGemma Priority Follow-Up Queue`. | Ranked list appears, or the deterministic fallback message appears with local summary below. | Mock output is presented as RealGemma or local summary disappears. |
+| Optional multilingual RealGemma output | Only after manual validation, show a Hindi, Swahili, or Spanish patient in fully gated submission mode. | User-facing generated note/safety wording appears in the selected patient language, while protocol citation IDs stay English. | A language fails manual validation, citation IDs are translated, or the video implies all-language support. |
 | Show urgent case | Point to `Urgent Cases`. | Meena urgent case appears with concise danger signs and citation. | Urgent case missing or contains long raw paragraphs. |
 | Show Offline Proof again | Point to Offline Proof on Summary. | Same offline evidence is visible after save. | Offline Proof missing on Summary. |
 | Optional export | Tap `Export Summary JSON`. | Local export path appears. | Export fails or implies remote sync/cloud upload. |
@@ -67,6 +69,8 @@ adb shell run-as com.smriti.clinicalscribe ls -lh files/models/gemma-4-E2B-it-in
 - `This is protocol-grounded referral support, not diagnosis.`
 - `CHW reviews and confirms before saving.`
 - `RealGemma text inference has been manually validated and is available only in developer-gated mode.`
+- `Smriti demonstrates selected patient-specific local-language output in English, Hindi, Swahili, and Spanish when RealGemma submission mode is fully gated and manually verified.`
+- `Protocol citation IDs remain stable in English; no cloud translation API is used.`
 - `Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin path, so Smriti uses offline speech or editable transcript fallback into text reasoning.`
 
 ## What Not To Claim
@@ -75,6 +79,8 @@ adb shell run-as com.smriti.clinicalscribe ls -lh files/models/gemma-4-E2B-it-in
 - Do not claim autonomous diagnosis or treatment.
 - Do not claim direct Gemma 4 audio works.
 - Do not claim RealGemma is the default demo mode.
+- Do not claim broad all-language support or unsupported Amharic, Oromo, or Bangla output.
+- Do not claim multilingual RealGemma output in the video until the manual multilingual harness passes for the filmed language.
 - Do not claim cloud runtime, cloud ASR, remote RAG, or model downloads.
 - Do not show or use real patient data.
 

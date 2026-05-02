@@ -46,6 +46,7 @@ class NormalVisitFlowWiringTest {
         assertTrue(visitScreen.contains("Active mode: \$reasoningModeLabel"))
         assertTrue(visitScreen.contains("Protocol pack: \$protocolContextLabel"))
         assertTrue(visitScreen.contains("Protocol-grounded referral support, not diagnosis."))
+        assertTrue(visitScreen.contains("Output language: \${PatientLanguages.forPatient(patient).displayLabel}"))
     }
 
     @Test
@@ -55,12 +56,42 @@ class NormalVisitFlowWiringTest {
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
 
         assertTrue(patientListScreen.contains("Local patient memory + local protocol pack."))
+        assertTrue(patientListScreen.contains("Output language: \${PatientLanguages.forPatient(patient).displayLabel}"))
         assertTrue(patientListScreen.contains("Works offline; no cloud API required for core runtime."))
         assertTrue(reviewScreen.contains("Protocol-grounded referral support, not diagnosis."))
         assertTrue(reviewScreen.contains("CHW reviews and confirms before saving."))
         assertTrue(reviewScreen.contains("Safety Gate"))
         assertTrue(summaryScreen.contains("Confirmed local data only"))
         assertTrue(summaryScreen.contains("Local Supervisor Brief"))
+    }
+
+    @Test
+    fun rosterUsesReadableFullWidthActionsAndCompactProof() {
+        val patientListScreen = appSourceFile("ui/PatientListScreen.kt").readText()
+
+        assertTrue(patientListScreen.contains("Text(\"Add Patient\")"))
+        assertTrue(patientListScreen.contains("Text(\"End-of-Day Summary\")"))
+        assertTrue(patientListScreen.contains("Text(if (isImportingSupervisorRegister) \"Importing...\" else \"Import Supervisor Register\")"))
+        assertTrue(patientListScreen.contains(".heightIn(min = 48.dp)"))
+        assertTrue(patientListScreen.contains("OfflineProofCard(status = offlineProofStatus, compact = true)"))
+        assertFalse(patientListScreen.contains("Load Demo Supervisor Register"))
+    }
+
+    @Test
+    fun visitScreenShowsPhaseBSignalsBeforeHistoryAndTranscript() {
+        val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
+
+        val alertIndex = visitScreen.indexOf("MissedFollowUpCard(")
+        val signalIndex = visitScreen.indexOf("HistorySignalCard(signal = signal)")
+        val historyIndex = visitScreen.indexOf("Text(\"Prior Visit History\"")
+        val transcriptIndex = visitScreen.indexOf("Text(\"Transcript Input\"")
+
+        assertTrue(alertIndex >= 0)
+        assertTrue(signalIndex >= 0)
+        assertTrue(historyIndex > alertIndex)
+        assertTrue(transcriptIndex > historyIndex)
+        assertTrue(visitScreen.contains("items(history.take(2))"))
+        assertTrue(visitScreen.contains("older visit(s) kept in local memory"))
     }
 
     @Test

@@ -113,6 +113,23 @@ class RealGemmaOutputParserTest {
     }
 
     @Test
+    fun multilingualSafetyWordingDoesNotBypassDiagnosticRejection() {
+        val unsafe = validJson(
+            structuredNote = "Nota de apoyo. Esto no es un diagnóstico. Se requiere confirmación de la trabajadora de salud. Patient has preeclampsia.",
+            referralReason = "Protocol-grounded support requested."
+        )
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = unsafe,
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertRejected(result, "diagnostic language")
+    }
+
+    @Test
     fun recommendationWithoutCitationIsRejected() {
         val noCitation = validJson(protocolCitation = "No matching protocol citation")
 

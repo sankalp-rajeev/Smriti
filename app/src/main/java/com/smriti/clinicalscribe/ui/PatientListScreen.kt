@@ -3,11 +3,11 @@ package com.smriti.clinicalscribe.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,11 +25,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.VisitLog
 
 @Composable
@@ -77,22 +77,45 @@ fun PatientListScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Smriti", style = MaterialTheme.typography.headlineMedium)
                     Text("Offline CHW visit copilot", style = MaterialTheme.typography.labelLarge)
                     Text("Local patient memory + local protocol pack.", style = MaterialTheme.typography.bodyMedium)
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onShowSummary, enabled = !isLoading) {
+                    Button(
+                        onClick = onAddPatient,
+                        enabled = !isLoading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                    ) {
+                        Text("Add Patient")
+                    }
+                    OutlinedButton(
+                        onClick = onShowSummary,
+                        enabled = !isLoading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                    ) {
                         Text("End-of-Day Summary")
                     }
-                    Button(onClick = onAddPatient, enabled = !isLoading) {
-                        Text("Add Patient")
+                    OutlinedButton(
+                        onClick = { showImportDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp),
+                        enabled = !isImportingSupervisorRegister
+                    ) {
+                        Text(if (isImportingSupervisorRegister) "Importing..." else "Import Supervisor Register")
+                    }
+                    importStatusMessage?.let { message ->
+                        Text(message, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -120,31 +143,7 @@ fun PatientListScreen(
                         }
                     }
                     item {
-                        OfflineProofCard(status = offlineProofStatus)
-                    }
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Text("Supervisor Register", style = MaterialTheme.typography.titleMedium)
-                                Text("Local synthetic demo register in app assets. No cloud or storage permission required.")
-                                OutlinedButton(
-                                    onClick = { showImportDialog = true },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = !isImportingSupervisorRegister
-                                ) {
-                                    Text(if (isImportingSupervisorRegister) "Importing..." else "Load Demo Supervisor Register")
-                                }
-                                importStatusMessage?.let { message ->
-                                    Text(message, style = MaterialTheme.typography.bodyMedium)
-                                }
-                            }
-                        }
+                        OfflineProofCard(status = offlineProofStatus, compact = true)
                     }
                     item {
                         Text("Patient List", style = MaterialTheme.typography.titleMedium)
@@ -185,6 +184,10 @@ private fun PatientRow(
             Text(
                 text = "${patient.countryCode} / ${patient.preferredLanguage} - ${patient.riskSummary}",
                 style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Output language: ${PatientLanguages.forPatient(patient).displayLabel}",
+                style = MaterialTheme.typography.labelLarge
             )
             patient.scenarioPreview.takeIf { it.isNotBlank() }?.let { preview ->
                 Text(preview, style = MaterialTheme.typography.labelLarge)

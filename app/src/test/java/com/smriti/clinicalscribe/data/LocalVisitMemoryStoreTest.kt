@@ -82,6 +82,36 @@ class LocalVisitMemoryStoreTest {
     }
 
     @Test
+    fun seedDemoBackfillsAmaraStructuredFollowUpForExistingPhaseAData() = runBlocking {
+        val store = fakeStore()
+        val phaseAVisits = DemoSeedData.initialVisitLogs(SEED_TIME).map { visit ->
+            if (visit.id == 3_001L) {
+                visit.copy(followUpDueDateMillis = null, followUpCompleted = null)
+            } else {
+                visit
+            }
+        }
+        store.importSupervisorRegister(
+            SupervisorRegister(
+                patients = DemoSeedData.patients,
+                priorVisits = phaseAVisits
+            )
+        )
+
+        val snapshot = store.seedDemoIfNeeded(listOf(protocolChunk), nowMillis = SEED_TIME)
+        val alert = PatientMemoryInsights.missedFollowUpAlerts(
+            patientId = "patient-amara",
+            visits = snapshot.visits,
+            nowMillis = SEED_TIME
+        ).single()
+
+        val amaraVisit = snapshot.visits.first { it.id == alert.visitId }
+        assertEquals(3_001L, alert.visitId)
+        assertEquals(SEED_TIME - (7L * 24L * 60L * 60L * 1000L), amaraVisit.followUpDueDateMillis)
+        assertEquals(false, amaraVisit.followUpCompleted)
+    }
+
+    @Test
     fun markFollowUpConfirmedCompletesAmaraAlert() = runBlocking {
         val store = fakeStore()
         val seeded = store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)

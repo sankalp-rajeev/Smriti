@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.rag.ProtocolChunk
 import kotlinx.coroutines.runBlocking
@@ -243,12 +244,16 @@ class ManualRealGemmaBenchmarkInstrumentedTest {
     }
 
     private fun VisitReasoningResult.hasSafetyWording(): Boolean {
-        val lower = listOf(
+        val combined = listOf(
             structuredNote,
             suggestedFollowUp,
             clarificationPrompt.orEmpty(),
             referralFlag?.reason.orEmpty()
-        ).joinToString(separator = "\n").lowercase()
+        ).joinToString(separator = "\n")
+        if (combined.contains(PatientLanguages.Hindi.safetyWording)) {
+            return true
+        }
+        val lower = combined.lowercase()
         val hasNonDiagnosticWording = lower.contains("not a diagnosis") ||
             lower.contains("no diagnosis generated")
         val hasChwConfirmation = (lower.contains("chw") && lower.contains("confirm")) ||

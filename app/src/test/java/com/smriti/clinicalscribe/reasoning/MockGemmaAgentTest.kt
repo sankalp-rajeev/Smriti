@@ -1,6 +1,7 @@
 package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.DemoSeedData
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -89,6 +90,21 @@ class MockGemmaAgentTest {
         ).joinToString(separator = "\n").lowercase()
 
         assertFalse(combinedOutput.contains("diagnosed with"))
+    }
+
+    @Test
+    fun mockOutputUsesPatientLanguageSafetyWording() = runBlocking {
+        val grace = DemoSeedData.patients.first { it.id == "patient-grace" }
+
+        val result = agent.generateVisitNote(
+            patient = grace,
+            visitHistory = history.filter { it.patientId == grace.id },
+            observationText = "Grace reports routine ANC visit. BP 116 over 74. Fetal movement present.",
+            protocolChunks = listOf(dangerProtocol)
+        )
+
+        assertTrue(result.structuredNote.contains(PatientLanguages.Swahili.safetyWording))
+        assertFalse(result.structuredNote.contains(PatientLanguages.English.safetyWording))
     }
 
     @Test

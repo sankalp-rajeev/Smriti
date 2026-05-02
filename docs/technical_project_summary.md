@@ -56,7 +56,7 @@ Out of scope for the current submission:
 - Full clinical guideline validation.
 - Direct Gemma 4 audio through the current public LiteRT-LM Android/Kotlin path.
 - Making RealGemma the default normal demo agent.
-- Multilingual UI/output beyond the existing add-patient prompt support.
+- Broad all-language support or untested Amharic, Oromo, or Bangla output.
 
 ## 4. System Architecture
 
@@ -126,6 +126,8 @@ Reasoning is behind the `GemmaAgent` interface.
 
 `RealGemmaAgent` is implemented as a developer-only/gated validation path. It builds prompts, calls a text client, parses strict JSON, validates citations, applies safety post-processing, and returns a `VisitReasoningResult`. It is not the default demo agent.
 
+Phase C adds selected multilingual output support for the recorded demo. `Patient.preferredLanguage` maps to English, Hindi, Swahili, or Spanish and is passed into `RealGemmaPromptBuilder` for visit-note prompts in fully gated submission mode. Protocol citation IDs remain stable in English. `RealGemmaSafetyPostProcessor` appends required safety wording in the requested demo language if the model omits it. The normal/default path remains `MockGemmaAgent`, with deterministic referral/citation behavior unchanged and simple patient-language safety wording for demo consistency. The architecture can extend to more Gemma-supported languages as protocol packs and UI translations are added.
+
 `VisitReasoningPipeline` takes patient context, observation text or local audio metadata, retrieves protocol chunks, calls the configured `GemmaAgent`, and returns a structured result. It does not write to Room. The Review screen remains the save gate.
 
 ## 7. RealGemma / LiteRT-LM Integration
@@ -176,6 +178,8 @@ Recorded-demo RealGemma submission mode is gated by all of:
 - app-private model presence at `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
 
 If submission gates are closed, the app uses `MockGemmaAgent`. If RealGemma is active but inference fails, times out, produces invalid JSON, or violates citation/safety rules, the app shows an unavailable/retry state, preserves the transcript, and does not save or silently show mock output as RealGemma.
+
+Manual multilingual RealGemma validation is available through `ManualRealGemmaMultilingualInstrumentedTest`. It runs Meena/Hindi, Grace/Swahili, and Lucia/Spanish with the sideloaded app-private model, logs requested language, raw output preview, parser status, citation presence, safety wording, and a simple language heuristic. These results must pass before a language is claimed in the video.
 
 ## 8. Direct Audio Limitation
 
@@ -302,11 +306,14 @@ RealGemma-specific safety:
 - `RealGemmaOutputParser` rejects diagnostic-language patterns.
 - `ProtocolCitationValidator` rejects invented citations, semicolon-joined citations, and unsafe no-protocol citation patterns.
 - If output cannot be trusted, the agent returns a safe uncertain fallback.
-- `RealGemmaSafetyPostProcessor` appends required safety wording when missing:
+- `RealGemmaSafetyPostProcessor` appends required safety wording when missing. English, Hindi, Spanish, and Swahili are supported for the recorded demo:
 
 ```text
 This is not a diagnosis.
 CHW confirmation is required before saving.
+यह निदान नहीं है। CHW की पुष्टि आवश्यक है।
+Esto no es un diagnóstico. Se requiere confirmación de la trabajadora de salud.
+Hii si utambuzi wa ugonjwa. Uthibitisho wa mfanyakazi wa afya unahitajika.
 ```
 
 ## 13. Final Validation And APK

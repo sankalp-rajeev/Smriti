@@ -35,6 +35,7 @@ import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.data.HistorySignal
 import com.smriti.clinicalscribe.data.MissedFollowUpAlert
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.transcript.AndroidOfflineSpeechRecognizerClient
 import com.smriti.clinicalscribe.transcript.TranscriptResult
@@ -168,6 +169,9 @@ fun VisitScreen(
         }
     }
 
+    val visibleFollowUpAlerts = missedFollowUpAlerts
+        .filter { it.visitId !in dismissedOngoingFollowUpIds }
+
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -186,9 +190,32 @@ fun VisitScreen(
                             text = "${patient.pregnancyWeeks ?: "-"} weeks - ${patient.village}",
                             style = MaterialTheme.typography.bodyMedium
                         )
+                        Text(
+                            text = "Output language: ${PatientLanguages.forPatient(patient).displayLabel}",
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                     OutlinedButton(onClick = onBack) {
                         Text("Patient Roster")
+                    }
+                }
+            }
+
+            if (visibleFollowUpAlerts.isNotEmpty() || historySignal != null) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        visibleFollowUpAlerts.forEach { alert ->
+                            MissedFollowUpCard(
+                                alert = alert,
+                                onMarkConfirmed = { onMarkFollowUpConfirmed(alert.visitId) },
+                                onNoteOngoing = {
+                                    dismissedOngoingFollowUpIds = dismissedOngoingFollowUpIds + alert.visitId
+                                }
+                            )
+                        }
+                        historySignal?.let { signal ->
+                            HistorySignalCard(signal = signal)
+                        }
                     }
                 }
             }
@@ -219,7 +246,7 @@ fun VisitScreen(
             item {
                 Text("Prior Visit History", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = "Confirmed local history is used as context before generating the next note.",
+                    text = "Recent confirmed local history used as context before generating the next note.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -229,28 +256,15 @@ fun VisitScreen(
                     Text("No prior visits saved for this patient.")
                 }
             } else {
-                items(history) { visit ->
+                items(history.take(2)) { visit ->
                     HistoryCard(visit = visit)
                 }
-            }
-
-            val visibleFollowUpAlerts = missedFollowUpAlerts
-                .filter { it.visitId !in dismissedOngoingFollowUpIds }
-            if (visibleFollowUpAlerts.isNotEmpty() || historySignal != null) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        visibleFollowUpAlerts.forEach { alert ->
-                            MissedFollowUpCard(
-                                alert = alert,
-                                onMarkConfirmed = { onMarkFollowUpConfirmed(alert.visitId) },
-                                onNoteOngoing = {
-                                    dismissedOngoingFollowUpIds = dismissedOngoingFollowUpIds + alert.visitId
-                                }
-                            )
-                        }
-                        historySignal?.let { signal ->
-                            HistorySignalCard(signal = signal)
-                        }
+                if (history.size > 2) {
+                    item {
+                        Text(
+                            text = "${history.size - 2} older visit(s) kept in local memory.",
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                 }
             }
@@ -390,7 +404,7 @@ private fun MissedFollowUpCard(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Missed Follow-Up", fontWeight = FontWeight.SemiBold)
+            Text("Missed follow-up", fontWeight = FontWeight.SemiBold)
             Text(alert.message, style = MaterialTheme.typography.bodyMedium)
             Text("Protocol basis: ${alert.protocolCitation}", style = MaterialTheme.typography.labelMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
