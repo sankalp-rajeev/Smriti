@@ -2,6 +2,8 @@ package com.smriti.clinicalscribe.data
 
 import com.smriti.clinicalscribe.rag.ProtocolChunk
 import com.smriti.clinicalscribe.reasoning.MockGemmaAgent
+import com.smriti.clinicalscribe.reasoning.PaperNoteVisionConfidence
+import com.smriti.clinicalscribe.reasoning.PaperNoteVisionExtraction
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -208,6 +210,35 @@ class LocalVisitMemoryStoreTest {
     }
 
     @Test
+    fun scannedPaperNoteStoresPaperScanSourceWithoutImageBytesOrReferral() = runBlocking {
+        val store = fakeStore()
+        store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)
+
+        val snapshot = store.saveConfirmedScannedPaperNote(
+            patientId = "patient-grace",
+            extraction = paperNoteExtraction(),
+            editedPatientName = "Grace Achieng",
+            editedVisitDate = "02 May 2026",
+            editedBloodPressure = "116/74",
+            editedSymptoms = listOf("no headache", "no bleeding", "normal fetal movement"),
+            editedFollowUpPlan = "routine ANC follow-up",
+            nowMillis = RETURN_VISIT_TIME
+        )
+
+        val savedVisit = store.historyForPatient(snapshot, "patient-grace").first()
+        assertEquals(TranscriptSource.PAPER_SCAN, savedVisit.transcriptSource)
+        assertEquals(null, savedVisit.audioFilePath)
+        assertEquals(null, savedVisit.audioDurationSeconds)
+        assertTrue(savedVisit.confirmed)
+        assertTrue(savedVisit.structuredNote.contains("Scanned paper note extraction"))
+        assertTrue(savedVisit.protocolCitation.contains("no referral or diagnosis"))
+        assertEquals(emptyList<ReferralFlag>(), snapshot.referrals)
+        assertTrue(savedVisit.observationText.contains("Grace Achieng"))
+        assertTrue(savedVisit.observationText.contains("116/74"))
+        assertTrue(!savedVisit.observationText.contains("PNG", ignoreCase = true))
+    }
+
+    @Test
     fun unavailableRealGemmaParserFailureCannotBeSaved() = runBlocking {
         val store = fakeStore()
         store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)
@@ -300,6 +331,19 @@ class LocalVisitMemoryStoreTest {
             protocolChunk = protocolChunk,
             uncertain = false,
             clarificationPrompt = null
+        )
+    }
+
+    private fun paperNoteExtraction(): PaperNoteVisionExtraction {
+        return PaperNoteVisionExtraction(
+            patientName = "Grace Achieng",
+            visitDate = "02 May 2026",
+            bloodPressure = "116/74",
+            symptoms = listOf("no headache", "no bleeding", "normal fetal movement"),
+            followUpPlan = "routine ANC follow-up",
+            confidence = PaperNoteVisionConfidence.HIGH,
+            needsReview = true,
+            safetyNote = "Extracted from image. Health worker must review before saving."
         )
     }
 

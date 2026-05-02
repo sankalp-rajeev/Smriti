@@ -14,7 +14,7 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
 - If the model is absent, Offline Proof says `Real Gemma model: Not found`.
 - If a model is present, Offline Proof says `Real Gemma model: Found`, `Engine: Loads on demand`, and `Inference: Enabled; on-device RealGemma text reasoning` when gates are active. After a successful generation in the app session, engine status can show `Loaded`.
 - Direct LiteRT-LM API types now compile through a passive type probe:
-  `Engine`, `EngineConfig`, `Backend`, `Content.Text`, `Content.AudioBytes`, `Content.AudioFile`, `InputData.Audio`, `Conversation`, `ConversationConfig`, `ToolCall`, and `OpenApiTool`.
+  `Engine`, `EngineConfig`, `Backend`, `Content.Text`, `Content.ImageBytes`, `Content.ImageFile`, `Content.AudioBytes`, `Content.AudioFile`, `InputData.Image`, `InputData.Audio`, `Conversation`, `ConversationConfig`, `ToolCall`, and `OpenApiTool`.
 - `LiteRtEngineConfigFactory` constructs a real `EngineConfig` with `Backend.CPU()` only when the model file is found.
 - `LiteRtEngineInitializationChecker` can initialize and immediately close `Engine` only when an explicit manual-test flag is true.
 - `LiteRtGemmaTextClient.generateTextManual(...)` can run one text-only `sendMessage` call only when an explicit manual inference flag is true.
@@ -25,6 +25,7 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
 - `ManualLiteRtFunctionCallingInstrumentedTest` probes native tool/function calling with `OpenApiTool` and `ConversationConfig(tools=...)`.
 - `ManualLiteRtAudioCapabilityInstrumentedTest` probes the exposed audio API surface.
 - `ManualLiteRtAudioInferenceInstrumentedTest` is the separate real-audio manual inference harness.
+- `ManualRealGemmaVisionProbeInstrumentedTest` is the separate gated image-input runtime probe.
 - No model file is committed to the repository.
 
 ## Manual-Only Engine Work
@@ -83,6 +84,26 @@ LiteRtLmJniException: Failed to generate content: INTERNAL: Audio must be prepro
 `ManualLiteRtAudioInferenceInstrumentedTest` is the separate real-audio manual harness. It requires `allowManualAudioInference=true`, `manualAudioFilePath=/data/local/tmp/manual-smriti-audio.wav`, and the sideloaded app-private Gemma model. It now tries the `Conversation.sendMessage(Contents.of(Content.Text(...), Content.AudioFile(...)))` route first, then the raw `Session.generateContent(InputData.Text(...), InputData.Audio(...))` route. If both routes hit the preprocessing requirement, the test logs and skips as blocked instead of claiming transcription works.
 
 Current audio status: API surface available, real raw-audio runtime blocked until a public/wired LiteRT-LM audio preprocessing and prompt-template path is identified. Direct Gemma 4 audio transcription is therefore blocked by the current public Gemma 4 LiteRT-LM Android/Kotlin artifact/API limitations, not enabled in the normal app flow, and not claimed as working.
+
+## Vision API Status
+
+LiteRT-LM Android `0.10.2` exposes image-capable classes and config fields:
+
+- `Content.ImageBytes`
+- `Content.ImageFile`
+- `InputData.Image`
+- `EngineConfig.visionBackend`
+- `EngineConfig.maxNumImages`
+- `Session.generateContent(...)` over `InputData`
+- `Conversation.sendMessage(Contents)` with `Content.ImageBytes` / `Content.ImageFile`
+
+The local AAR/classes.jar inspection did not find a public class or method named like `PromptTemplate`, `MediaPlaceholder`, `MultiModalTemplate`, `ImagePreprocessor`, or `preprocess(...)`. This is the same risk area as direct audio: multimodal Gemma paths may require prompt-template/media-placeholder handling not exposed by the current Kotlin/JNI surface.
+
+`ManualRealGemmaVisionProbeInstrumentedTest` was added as a gated androidTest. It requires `allowManualVisionInference=true`, a sideloaded app-private model, and the synthetic `app/src/androidTest/assets/sample_paper_visit_note.png` asset. The test reads that asset from `InstrumentationRegistry.getInstrumentation().context.assets`, tries the `Conversation` image-content route and the raw `Session` image-input route, logs under `SmritiRealGemmaVision`, and never saves anything.
+
+Current vision status: the manual probe passed on emulator. The engine accepted the `Conversation` image input path, and local Gemma 4 vision extracted structured JSON from the synthetic paper note: Grace Achieng, 02 May 2026, BP 116/74, symptoms, routine ANC follow-up, confidence HIGH, and `needsReview=true`.
+
+The app now includes a narrow paper-note scan flow using `RealGemmaVisionPaperNoteClient` and `PaperNoteVisionParser`. It is data-entry support only. CHW review/edit and explicit patient-record confirmation are required before saving to local history with `transcriptSource=paper_scan`. The flow does not call visit-note referral generation, does not call supervisor priority reasoning, does not persist image bytes, and does not use cloud OCR/API.
 
 Phase 2 starts the fallback architecture for voice visits:
 

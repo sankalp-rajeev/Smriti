@@ -12,6 +12,33 @@ No public audio preprocessing API was found in the local AAR inspection. The cur
 
 The current Kotlin API path also does not expose prompt-template customization needed for multimodal placeholder injection. Direct Gemma 4 audio through the public LiteRT-LM Android/Kotlin path remains blocked by upstream artifact/API limits.
 
+## Gemma 4 Vision Scope
+
+The Phase H API surface check inspected the local `litertlm-android-0.10.2` AAR/classes.jar and found:
+
+- `Content.ImageBytes`
+- `Content.ImageFile`
+- `InputData.Image`
+- `EngineConfig.visionBackend`
+- `EngineConfig.maxNumImages`
+- `Conversation.sendMessage(Contents)`
+- `Session.generateContent(List<InputData>)`
+
+The same inspection did not find a public prompt-template, media-placeholder, multimodal-template, image-preprocessor, or `preprocess(...)` API. Despite that risk, the gated `ManualRealGemmaVisionProbeInstrumentedTest` passed on emulator with the sideloaded app-private model: the engine accepted `Conversation` image input and extracted structured JSON from the synthetic paper note.
+
+The implemented feature is intentionally narrow:
+
+- synthetic/demo paper-note data entry only,
+- CHW review and explicit patient-record confirmation before save,
+- no image bytes persisted,
+- no diagnosis,
+- no referral advice from image alone,
+- no treatment recommendations beyond text written on the paper note,
+- no wounds, rashes, ultrasound, medicine strips, growth charts, or photos of people,
+- no cloud OCR/API.
+
+Real-world handwriting quality, camera quality, and model behavior still need field validation before broader use.
+
 ## RealGemma Local Setup Required
 
 `RealGemmaAgent` is the app-facing reasoning engine. It requires a local submission build flag, an app-private sentinel, and a sideloaded app-private `.litertlm` model. If setup is missing or inference fails, the app shows setup/retry messaging and does not show mock clinical output.

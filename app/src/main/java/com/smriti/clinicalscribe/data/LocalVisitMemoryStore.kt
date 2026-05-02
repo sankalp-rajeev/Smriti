@@ -2,6 +2,7 @@ package com.smriti.clinicalscribe.data
 
 import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.rag.ProtocolChunk
+import com.smriti.clinicalscribe.reasoning.PaperNoteVisionExtraction
 import com.smriti.clinicalscribe.reasoning.RealGemmaUnavailableResult
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 
@@ -106,6 +107,44 @@ class LocalVisitMemoryStore(
         result.referralFlag?.let { flag ->
             referralFlagDao.insert(flag.copy(visitLogId = visitId))
         }
+        return refresh()
+    }
+
+    suspend fun saveConfirmedScannedPaperNote(
+        patientId: String,
+        extraction: PaperNoteVisionExtraction,
+        editedPatientName: String,
+        editedVisitDate: String,
+        editedBloodPressure: String,
+        editedSymptoms: List<String>,
+        editedFollowUpPlan: String,
+        nowMillis: Long = System.currentTimeMillis()
+    ): VisitMemorySnapshot {
+        require(patientId.isNotBlank()) {
+            "A patient must be selected before saving a scanned paper note."
+        }
+        val confirmedExtraction = extraction.copy(
+            patientName = editedPatientName.trim(),
+            visitDate = editedVisitDate.trim(),
+            bloodPressure = editedBloodPressure.trim(),
+            symptoms = editedSymptoms.map { it.trim() }.filter { it.isNotBlank() },
+            followUpPlan = editedFollowUpPlan.trim(),
+            needsReview = true
+        )
+        visitLogDao.insert(
+            VisitLog(
+                patientId = patientId,
+                visitDateMillis = nowMillis,
+                observationText = confirmedExtraction.toObservationText(),
+                structuredNote = confirmedExtraction.toStructuredNote(),
+                protocolCitation = "Paper note extraction only; no referral or diagnosis generated from image.",
+                suggestedFollowUp = confirmedExtraction.followUpPlan.ifBlank {
+                    "No follow-up plan was extracted from the paper note."
+                },
+                confirmed = true,
+                transcriptSource = TranscriptSource.PAPER_SCAN
+            )
+        )
         return refresh()
     }
 

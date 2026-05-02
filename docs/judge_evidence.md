@@ -4,6 +4,25 @@ This page is the concise evidence ledger for Smriti's current hackathon state. T
 
 For the filmed/live runbook, use `docs/final_demo_checklist.md`.
 
+## Phase D UX Evidence
+
+The recorded-demo UI was simplified for community health workers and low-digital-literacy field use:
+
+- Welcome screen explains Smriti in plain language before showing the roster.
+- User Guide gives six short steps: choose patient, speak/type visit, generate note, review carefully, confirm/save, end of day.
+- Setup Guidance appears when the model file is absent on first launch and avoids internal runtime terms.
+- Patient Roster has local search, large primary actions, language selector, attention/routine sections, empty states, and patient status chips.
+- Status chips are deterministic from local data: Amara shows `Follow-up due`, Fatima shows `History signal`, Grace shows `Routine`, and Meena shows `Referral saved` after a confirmed referral visit.
+- Visit screen places missed follow-up and history-signal cards above transcript input, then shows a simple instruction card.
+- Sample transcripts are patient-specific, so Grace never receives Meena's danger-sign sample.
+- Loading copy is calm and sequential; generation is disabled while running.
+- RealGemma failure shows a retry card and preserves the transcript. It does not display mock output.
+- Review screen uses plain cards for `Referral suggested`, `No referral flag`, and `More information needed`, plus a collapsed source section explaining what information was used.
+- Summary screen shows priority list, urgent cases, follow-ups, routine visits, and a plain fallback when on-device summary reasoning is unavailable.
+- Offline Proof uses CHW-facing wording and avoids confusing model/internal status labels.
+- Destructive actions are confirmed before import/reset.
+- No cloud APIs, runtime downloads, direct Gemma audio, PHI, or invalid-output save path was added. The paper-note scan flow is local Gemma vision data entry only and requires CHW review before save.
+
 ## RealGemma-Required Demo
 
 The filmed/local submission path is offline and RealGemma-backed:
@@ -78,7 +97,7 @@ Global Protocol Pack v1 is local JSON:
 - 46 local maternal/ANC and CHW referral-support chunks.
 - Required tags: `GLOBAL_CORE`, `INDIA`, `BANGLADESH`, `ETHIOPIA`, `AFRICA_REGION`, `SOUTH_AMERICA_REGION`.
 - Retrieval ranks exact country first, then region, then `GLOBAL_CORE`.
-- No vector DB, cloud RAG, remote search, or runtime download is used.
+- No vector DB, remote search, or runtime download is used.
 
 This is a protocol scaffold for the demo. It is not clinical validation.
 
@@ -99,7 +118,7 @@ Accepted manual RealGemma benchmark:
 - `averageLatencyMs=15812`
 - `maxLatencyMs=26272`
 
-The 15.8s average latency reflects real on-device Gemma 4 E2B text inference on CPU backend; in the CHW field workflow, this is positioned as protocol-grounded reasoning support replacing manual paper/protocol lookup, not instant chat.
+The 15.8s average latency reflects real on-device Gemma 4 E2B text inference on CPU backend; in the CHW field workflow, this is positioned as local-guidance reasoning support replacing manual paper/protocol lookup, not instant chat.
 
 Latency tuning note: the app now preloads and reuses the RealGemma engine where supported, compacts visit prompts to recent history plus top protocol chunks, and keeps save latency separate from generation latency. The measured emulator/local setup showed preload/init at 1.885 s, a first Meena generation at 21.726 s, and a later Lucia generation at 14.434 s after preload/reuse. This is performance evidence only, not clinical validation.
 
@@ -128,6 +147,24 @@ Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin p
 
 Do not claim direct Gemma 4 audio works.
 
+## Paper-Note Vision Evidence
+
+Local Gemma 4 vision is claimed only for synthetic paper-note data extraction.
+
+- The `litertlm-android-0.10.2` AAR/classes.jar surface was checked.
+- Found image API holders: `Content.ImageBytes`, `Content.ImageFile`, and `InputData.Image`.
+- Found related `EngineConfig` fields: `visionBackend` and `maxNumImages`.
+- Found transport methods that can carry multimodal-looking inputs: `Conversation.sendMessage(Contents)` and `Session.generateContent(List<InputData>)`.
+- No public prompt-template, media-placeholder, multimodal-template, image-preprocessor, or `preprocess(...)` API was found in the AAR inspection.
+- `ManualRealGemmaVisionProbeInstrumentedTest` passed on emulator with a sideloaded app-private model.
+- The engine accepted `Conversation` image input.
+- Local Gemma 4 vision extracted structured JSON from the synthetic paper note: Grace Achieng, 02 May 2026, BP 116/74, symptoms, routine ANC follow-up, confidence HIGH, and `needsReview=true`.
+- The app flow now supports `Scan paper note` / `Use sample paper note`, Review Scanned Note, explicit patient link/current-patient confirmation, and local save to history with `source=paper_scan`.
+- The image bytes are not persisted.
+- The scan flow does not call visit-note referral generation or supervisor priority reasoning.
+
+Do not claim clinical image diagnosis, referral decisions from image alone, real patient image support, or cloud OCR.
+
 ## Not Claimed
 
 Smriti does not claim:
@@ -136,6 +173,7 @@ Smriti does not claim:
 - autonomous diagnosis,
 - autonomous treatment,
 - direct Gemma 4 audio transcription,
+- clinical image diagnosis or referral from paper-note image alone,
 - cloud runtime,
 - mock output as RealGemma,
 - model files bundled or downloaded by the app,

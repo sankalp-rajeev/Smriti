@@ -24,32 +24,39 @@ data class OfflineProofStatus(
     val realGemmaSubmissionModeLabel: String = "Disabled",
     val realGemmaDeveloperWarning: String? = null
 ) {
+    val modelReadyLabel: String
+        get() = if (realGemmaModelStatusLabel.equals("Found", ignoreCase = true)) {
+            "ready"
+        } else {
+            "Setup needed"
+        }
+
     val compactLines: List<Pair<String, String>>
         get() = listOf(
-            "Network" to "No",
-            "Patient data" to "Local Room/SQLite",
-            "Protocols" to "Local JSON, country-aware",
-            "Active mode" to reasoningModeLabel,
-            "RealGemma text" to realGemmaTextModeLabel,
-            "Direct Gemma audio" to "Blocked; transcript fallback"
+            "Works offline after setup" to "",
+            "Patient memory" to "saved on this device",
+            "Health guidance" to "stored on this device",
+            "On-device Gemma" to modelReadyLabel,
+            "Paper note scan" to if (modelReadyLabel == "ready") "available" else "setup needed",
+            "Cloud APIs" to "none",
+            "Direct Gemma audio" to "not used"
         )
 
     val lines: List<Pair<String, String>>
         get() = listOf(
-            "Network required" to "No",
-            "Patient data" to "Local Room/SQLite",
-            "Protocol source" to "Local JSON; country-aware retrieval",
-            "Active reasoning mode" to reasoningModeLabel,
-            "Cloud API" to "No",
-            "RealGemma text mode" to realGemmaTextModeLabel,
-            "Submission mode" to realGemmaSubmissionModeLabel,
-            "Real Gemma model" to realGemmaModelStatusLabel,
-            "Engine" to realGemmaEngineStatusLabel,
-            "Inference" to realGemmaInferenceLabel,
-            "Direct Gemma audio" to "Blocked by current public LiteRT-LM Android/Kotlin path; using offline speech/transcript fallback"
-        ) + realGemmaDeveloperWarning?.let { warning ->
-            listOf("Developer warning" to warning)
-        }.orEmpty()
+            "Patient memory" to "Room/SQLite local storage",
+            "Health guidance" to "Local JSON pack: 46 chunks, 6 countries",
+            "Model file" to modelReadyLabel,
+            "Engine state" to if (modelReadyLabel == "ready") "ready for use" else "manual only",
+            "Transcript source" to "offline speech or manual typing",
+            "Paper note scan" to "Available",
+            "Vision support" to "Uses local Gemma vision",
+            "Scan review" to "Review required before save",
+            "Cloud OCR" to "none",
+            "Languages" to "EN, HI, ES, SW",
+            "Cloud APIs" to "none",
+            "Direct Gemma audio" to "not used"
+        )
 }
 
 @Composable
@@ -66,10 +73,13 @@ fun OfflineProofCard(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)
         ) {
-            Text("Offline Proof", fontWeight = FontWeight.SemiBold)
+            Text("Local proof", fontWeight = FontWeight.SemiBold)
             val proofLines = if (compact) status.compactLines else status.lines
             proofLines.forEach { (label, value) ->
-                Text("$label: $value", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = if (value.isBlank()) label else "$label: $value",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }

@@ -1,7 +1,5 @@
 package com.smriti.clinicalscribe.ui
 
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,6 +10,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -20,22 +19,25 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.smriti.clinicalscribe.audio.AudioRecorder
 import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.data.HistorySignal
 import com.smriti.clinicalscribe.data.MissedFollowUpAlert
 import com.smriti.clinicalscribe.data.Patient
-import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.transcript.AndroidOfflineSpeechRecognizerClient
 import com.smriti.clinicalscribe.transcript.TranscriptResult
@@ -61,144 +63,156 @@ fun VisitScreen(
     protocolContextLabel: String,
     missedFollowUpAlerts: List<MissedFollowUpAlert>,
     historySignal: HistorySignal?,
+    isReadingPaperNote: Boolean,
+    paperNoteStatusMessage: String?,
     onRequestAudioPermission: () -> Unit,
     onMarkFollowUpConfirmed: (Long) -> Unit,
     onGenerate: (String, VoiceNoteMetadata?) -> Unit,
+    onScanPaperNote: () -> Unit,
+    onUseSamplePaperNote: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val audioRecorder = remember(context) { AudioRecorder(context) }
     val offlineSpeechClient = remember(context) { AndroidOfflineSpeechRecognizerClient(context) }
     val scope = rememberCoroutineScope()
-    var voiceNoteStatus by remember { mutableStateOf(VoiceNoteStatus.Idle) }
-    var voiceNoteError by remember { mutableStateOf<String?>(null) }
     var offlineSpeechStatus by remember { mutableStateOf<String?>(null) }
     var isListeningOfflineSpeech by remember { mutableStateOf(false) }
-    var isRecordingVoiceNote by remember { mutableStateOf(false) }
-    var elapsedSeconds by remember { mutableStateOf(0) }
-    var savedVoiceNote by remember { mutableStateOf<VoiceNoteMetadata?>(null) }
     var dismissedOngoingFollowUpIds by remember(patient.id) { mutableStateOf<Set<Long>>(emptySet()) }
-    var observationText by remember {
-        mutableStateOf(
-            SampleDangerSignTranscript
-        )
+    var observationText by remember(patient.id) { mutableStateOf("") }
+    var inlineError by remember(patient.id) { mutableStateOf<String?>(null) }
+    var showHistory by remember(patient.id) { mutableStateOf(false) }
+    var showStopDialog by remember { mutableStateOf(false) }
+    var loadingStep by remember { mutableIntStateOf(0) }
+    val loadingMessages = listOf(
+        "Reading patient history...",
+        "Checking local health guidance...",
+        "Running on-device Gemma...",
+        "Preparing note for review..."
+    )
+    val visibleFollowUpAlerts = missedFollowUpAlerts
+        .filter { it.visitId !in dismissedOngoingFollowUpIds }
+    val modelReady = realGemmaModelStatusLabel.contains("found", ignoreCase = true)
+
+    LaunchedEffect(isGenerating) {
+        if (!isGenerating) {
+            loadingStep = 0
+            return@LaunchedEffect
+        }
+        while (isGenerating) {
+            delay(1800L)
+            loadingStep = (loadingStep + 1).coerceAtMost(loadingMessages.lastIndex)
+        }
     }
 
-    fun stopVoiceNote() {
-        audioRecorder.stop()
-            .onSuccess { metadata ->
-                savedVoiceNote = metadata
-                elapsedSeconds = metadata.audioDurationSeconds
-                voiceNoteStatus = VoiceNoteStatus.SavedLocally
-                voiceNoteError = null
-            }
-            .onFailure { error ->
-                voiceNoteStatus = VoiceNoteStatus.Error
-                voiceNoteError = error.message ?: "Could not save local voice note."
-            }
-        isRecordingVoiceNote = false
-    }
-
-    fun startVoiceNote() {
-        if (!audioPermissionGranted) {
-            voiceNoteStatus = VoiceNoteStatus.Error
-            voiceNoteError = "Microphone permission is required to record a local voice note."
-            onRequestAudioPermission()
-            return
-        }
-
-        audioRecorder.start()
-            .onSuccess {
-                savedVoiceNote = null
-                elapsedSeconds = 0
-                isRecordingVoiceNote = true
-                voiceNoteStatus = VoiceNoteStatus.RecordingLocally
-                voiceNoteError = null
-            }
-            .onFailure { error ->
-                isRecordingVoiceNote = false
-                voiceNoteStatus = VoiceNoteStatus.Error
-                voiceNoteError = error.message ?: "Could not start local voice recording."
-        }
+    DisposableEffect(Unit) {
+        onDispose { }
     }
 
     fun tryOfflineSpeech() {
         if (!audioPermissionGranted) {
-            offlineSpeechStatus = "Microphone permission is required for offline speech recognition. Grant permission, then try again."
+            offlineSpeechStatus = "Microphone permission is needed. Please allow it, then try again."
             onRequestAudioPermission()
             return
         }
 
         scope.launch {
             isListeningOfflineSpeech = true
-            offlineSpeechStatus = "Listening with Android offline speech..."
+            offlineSpeechStatus = "Listening offline..."
             val speechResult = runCatching {
                 offlineSpeechClient.transcribeLiveSpeech()
             }.getOrElse { error ->
-                TranscriptResult.Error(error.message ?: "Could not run Android offline speech recognition.")
+                TranscriptResult.Error(error.message ?: "Could not run offline speech.")
             }
             when (speechResult) {
                 is TranscriptResult.Success -> {
-                    observationText = speechResult.transcript
-                    offlineSpeechStatus = "Offline speech transcript added. Review and edit before generating."
+                    if (speechResult.transcript.isBlank()) {
+                        offlineSpeechStatus = "No speech detected. Please try again or type manually."
+                    } else {
+                        observationText = speechResult.transcript
+                        inlineError = null
+                        offlineSpeechStatus = "Speech added. Please review before generating."
+                    }
                 }
-
                 is TranscriptResult.Unavailable -> {
-                    offlineSpeechStatus = "Offline speech unavailable: ${speechResult.reason}"
+                    offlineSpeechStatus = "Speech is not available on this device. Please type manually."
                 }
-
                 is TranscriptResult.Error -> {
-                    offlineSpeechStatus = "Offline speech error: ${speechResult.reason}"
+                    offlineSpeechStatus = "No speech detected. Please try again or type manually."
                 }
             }
             isListeningOfflineSpeech = false
         }
     }
 
-    LaunchedEffect(isRecordingVoiceNote) {
-        while (isRecordingVoiceNote) {
-            delay(1000L)
-            elapsedSeconds = (elapsedSeconds + 1).coerceAtMost(AudioRecorder.MAX_DURATION_SECONDS)
-            if (elapsedSeconds >= AudioRecorder.MAX_DURATION_SECONDS) {
-                stopVoiceNote()
+    fun requestGenerate() {
+        val trimmed = observationText.trim()
+        when {
+            trimmed.isBlank() -> {
+                inlineError = "Please speak or type today's visit observation first."
+            }
+            trimmed.length < 10 -> {
+                inlineError = "This observation is very short.\nAdd more detail for a better note."
+                onGenerate(observationText, null)
+            }
+            !isGenerating -> {
+                inlineError = null
+                onGenerate(observationText, null)
             }
         }
     }
 
-    DisposableEffect(audioRecorder) {
-        onDispose {
-            audioRecorder.cancel()
-        }
+    if (showStopDialog) {
+        AlertDialog(
+            onDismissRequest = { showStopDialog = false },
+            title = { Text("Stop generating note?") },
+            text = { Text("Going back will cancel the current note.") },
+            confirmButton = {
+                TextButton(onClick = { showStopDialog = false }) {
+                    Text("Stay")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showStopDialog = false
+                        onBack()
+                    }
+                ) {
+                    Text("Go back")
+                }
+            }
+        )
     }
-
-    val visibleFollowUpAlerts = missedFollowUpAlerts
-        .filter { it.visitId !in dismissedOngoingFollowUpIds }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(patient.displayLabel(), style = MaterialTheme.typography.headlineSmall)
-                        Text("Local visit workspace", style = MaterialTheme.typography.labelLarge)
-                        Text(
-                            text = "${patient.pregnancyWeeks ?: "-"} weeks - ${patient.village}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "Output language: ${PatientLanguages.forPatient(patient).displayLabel}",
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                    OutlinedButton(onClick = onBack) {
-                        Text("Patient Roster")
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(patient.displayLabel(), style = MaterialTheme.typography.headlineSmall)
+                            Text(PatientVisitUiText.gestationLabel(patient), style = MaterialTheme.typography.bodyLarge)
+                            Text(PatientVisitUiText.countryVillage(patient), style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                "Output language: ${PatientVisitUiText.outputLanguageLabel(patient)}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                if (isGenerating) showStopDialog = true else onBack()
+                            },
+                            modifier = Modifier.heightIn(min = 48.dp)
+                        ) {
+                            Text("Back")
+                        }
                     }
                 }
             }
@@ -215,9 +229,7 @@ fun VisitScreen(
                                 }
                             )
                         }
-                        historySignal?.let { signal ->
-                            HistorySignalCard(signal = signal)
-                        }
+                        historySignal?.let { signal -> HistorySignalCard(signal = signal) }
                     }
                 }
             }
@@ -231,42 +243,10 @@ fun VisitScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text("Local Reasoning and Protocol", style = MaterialTheme.typography.titleMedium)
-                        Text("Active mode: $reasoningModeLabel")
-                        Text("Protocol pack: $protocolContextLabel")
-                        Text("Local patient memory + local protocol pack.")
-                        Text("Protocol-grounded referral support, not diagnosis.")
-                        Text("Real Gemma model: $realGemmaModelStatusLabel")
-                        Text("Engine: $realGemmaEngineStatusLabel")
-                        Text("Inference: $realGemmaInferenceLabel")
-                        realGemmaDeveloperWarning?.let { warning ->
-                            Text(warning, color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
-            }
-
-            item {
-                Text("Prior Visit History", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = "Recent confirmed local history used as context before generating the next note.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            if (history.isEmpty()) {
-                item {
-                    Text("No prior visits saved for this patient.")
-                }
-            } else {
-                items(history.take(2)) { visit ->
-                    HistoryCard(visit = visit)
-                }
-                if (history.size > 2) {
-                    item {
+                        Text("What to do now", fontWeight = FontWeight.SemiBold)
                         Text(
-                            text = "${history.size - 2} older visit(s) kept in local memory.",
-                            style = MaterialTheme.typography.labelLarge
+                            "Speak or type today's visit observation. Smriti will prepare a note for review.",
+                            style = MaterialTheme.typography.bodyLarge
                         )
                     }
                 }
@@ -281,102 +261,92 @@ fun VisitScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text("Transcript Input", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            text = "Use the sample, type the observation, or try Android offline speech. Direct Gemma 4 audio remains blocked and documented.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
                         Button(
-                            onClick = {
-                                if (isRecordingVoiceNote) {
-                                    stopVoiceNote()
-                                } else {
-                                    startVoiceNote()
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                            onClick = { tryOfflineSpeech() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp),
+                            enabled = !isListeningOfflineSpeech && !isGenerating
                         ) {
-                            Text(if (isRecordingVoiceNote) "Stop voice note" else "Start voice note")
+                            Text(if (isListeningOfflineSpeech) "Listening..." else "Speak observation")
                         }
-                        Text(
-                            text = "Status: ${voiceNoteStatus.label}",
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                        Text(
-                            text = "Elapsed: ${elapsedSeconds}s / ${AudioRecorder.MAX_DURATION_SECONDS}s",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = if (isRecordingVoiceNote) {
-                                "Listening locally... 30-second max chunk"
-                            } else {
-                                "Ready for local app-private audio storage"
+                        OutlinedButton(
+                            onClick = {
+                                observationText = VisitSampleTranscripts.forPatient(patient)
+                                inlineError = null
+                                offlineSpeechStatus = null
                             },
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        savedVoiceNote?.let { voiceNote ->
-                            Text(
-                                text = "Saved locally: ${voiceNote.fileName} (${voiceNote.audioDurationSeconds}s)",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp),
+                            enabled = !isGenerating
+                        ) {
+                            Text("Use sample visit transcript")
                         }
-                        voiceNoteError?.let { message ->
-                            Text(message, color = MaterialTheme.colorScheme.error)
+                        OutlinedTextField(
+                            value = observationText,
+                            onValueChange = {
+                                observationText = it
+                                inlineError = null
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 150.dp),
+                            label = { Text("Visit observation") },
+                            placeholder = { Text("Type today's visit observation here") },
+                            minLines = 5
+                        )
+                        inlineError?.let { message ->
+                            Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge)
+                        }
+                        offlineSpeechStatus?.let { message ->
+                            Text(message, style = MaterialTheme.typography.bodyLarge)
+                        }
+                        Button(
+                            onClick = { requestGenerate() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp),
+                            enabled = !isGenerating
+                        ) {
+                            Text(if (isGenerating) "Preparing note..." else "Generate visit note")
+                        }
+                        OutlinedButton(
+                            onClick = onScanPaperNote,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp),
+                            enabled = !isGenerating && !isReadingPaperNote
+                        ) {
+                            Text("Scan paper note")
+                        }
+                        OutlinedButton(
+                            onClick = onUseSamplePaperNote,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp),
+                            enabled = !isGenerating && !isReadingPaperNote
+                        ) {
+                            Text("Use sample paper note")
                         }
                     }
                 }
             }
 
-            item {
-                OutlinedButton(
-                    onClick = {
-                        observationText = SampleDangerSignTranscript
-                        offlineSpeechStatus = null
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Use sample danger-sign transcript")
-                }
-            }
-
-            item {
-                OutlinedButton(
-                    onClick = { tryOfflineSpeech() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isListeningOfflineSpeech && !isGenerating && !isRecordingVoiceNote
-                ) {
-                    Text(if (isListeningOfflineSpeech) "Listening Offline..." else "Try Offline Speech")
-                }
-                offlineSpeechStatus?.let { message ->
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (message.startsWith("Offline speech unavailable") || message.startsWith("Offline speech error")) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onBackground
-                        },
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
-                }
-            }
-
-            item {
-                OutlinedTextField(
-                    value = observationText,
-                    onValueChange = { observationText = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 160.dp),
-                    label = { Text("Editable transcript") },
-                    placeholder = { Text("Type the CHW's spoken observation here") },
-                    minLines = 5
-                )
-            }
-
-            errorMessage?.let { message ->
+            if (isReadingPaperNote) {
                 item {
-                    Text(message, color = MaterialTheme.colorScheme.error)
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text("Reading paper note...", fontWeight = FontWeight.SemiBold)
+                            Text(paperNoteStatusMessage ?: "Extracting visit details...", style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
                 }
             }
 
@@ -390,20 +360,64 @@ fun VisitScreen(
                             modifier = Modifier.padding(14.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text("RealGemma reasoning", fontWeight = FontWeight.SemiBold)
-                            Text(generationStatusMessage ?: "Running on-device Gemma 4 reasoning...")
+                            Text(loadingMessages[loadingStep], fontWeight = FontWeight.SemiBold)
+                            Text(generationStatusMessage ?: "This may take a few seconds.", style = MaterialTheme.typography.bodyLarge)
+                            Text("This may take a few seconds.", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
+
+            errorMessage?.let {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("Note could not be prepared", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "On-device reasoning was unavailable. Please check the model is installed, then try again.",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            OutlinedButton(
+                                onClick = { requestGenerate() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp),
+                                enabled = !isGenerating
+                            ) {
+                                Text("Try again")
+                            }
                         }
                     }
                 }
             }
 
             item {
-                Button(
-                    onClick = { onGenerate(observationText, savedVoiceNote) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = observationText.isNotBlank() && !isGenerating
+                PriorHistorySection(
+                    history = history,
+                    expanded = showHistory,
+                    onToggle = { showHistory = !showHistory }
+                )
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (isGenerating) "Generating Local Visit Note..." else "Generate Local Visit Note")
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Offline setup ready", fontWeight = FontWeight.SemiBold)
+                        Text("On-device Gemma: ${if (modelReady) "ready" else "Setup needed"}")
+                        Text("Local guidance available")
+                    }
                 }
             }
         }
@@ -417,7 +431,7 @@ private fun MissedFollowUpCard(
     onNoteOngoing: () -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE3B0)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -425,15 +439,25 @@ private fun MissedFollowUpCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text("Missed follow-up", fontWeight = FontWeight.SemiBold)
-            Text(alert.message, style = MaterialTheme.typography.bodyMedium)
-            Text("Protocol basis: ${alert.protocolCitation}", style = MaterialTheme.typography.labelMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onMarkConfirmed, modifier = Modifier.weight(1f)) {
-                    Text("Mark Confirmed")
-                }
-                OutlinedButton(onClick = onNoteOngoing, modifier = Modifier.weight(1f)) {
-                    Text("Note as Ongoing")
-                }
+            Text(
+                "Referred to health facility ${alert.daysOverdue} days ago. Outcome unknown. Confirm before today's visit.",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Button(
+                onClick = onMarkConfirmed,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+            ) {
+                Text("Mark confirmed")
+            }
+            OutlinedButton(
+                onClick = onNoteOngoing,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+            ) {
+                Text("Note as ongoing")
             }
         }
     }
@@ -442,19 +466,57 @@ private fun MissedFollowUpCard(
 @Composable
 private fun HistorySignalCard(signal: HistorySignal) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE3B0)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(signal.title, fontWeight = FontWeight.SemiBold)
-            Text(signal.message, style = MaterialTheme.typography.bodyMedium)
+            Text("History signal", fontWeight = FontWeight.SemiBold)
+            Text(
+                "BP readings have increased across recent visits. Review and monitor per local health guidance.",
+                style = MaterialTheme.typography.bodyLarge
+            )
             Text(
                 text = "Recent BP readings: ${signal.readings.joinToString(" -> ") { it.label }}",
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.bodyMedium
             )
+        }
+    }
+}
+
+@Composable
+private fun PriorHistorySection(
+    history: List<VisitLog>,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Patient history", style = MaterialTheme.typography.titleMedium)
+        if (history.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("No prior visits recorded.", fontWeight = FontWeight.SemiBold)
+                    Text("This is the first visit for this patient.", style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        } else {
+            val visibleHistory = if (expanded) history else history.take(2)
+            visibleHistory.forEach { visit -> HistoryCard(visit = visit) }
+            if (history.size > 2) {
+                OutlinedButton(
+                    onClick = onToggle,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                ) {
+                    Text(if (expanded) "Show less history" else "Show patient history")
+                }
+            }
         }
     }
 }
@@ -470,10 +532,10 @@ private fun HistoryCard(visit: VisitLog) {
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(formatDate(visit.visitDateMillis), fontWeight = FontWeight.SemiBold)
-            Text(visit.structuredNote, style = MaterialTheme.typography.bodyMedium)
+            Text(visit.structuredNote, style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = "Citation: ${visit.protocolCitation}",
-                style = MaterialTheme.typography.labelMedium
+                text = "Health guidance used: ${visit.protocolCitation}",
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
@@ -481,14 +543,4 @@ private fun HistoryCard(visit: VisitLog) {
 
 private fun formatDate(millis: Long): String {
     return SimpleDateFormat("MMM d, yyyy", Locale.US).format(Date(millis))
-}
-
-private const val SampleDangerSignTranscript =
-    "Meena is 28 years old and 7 months pregnant. She reports severe headache and blurred vision. Blood pressure is 150 over 95. She has reduced fetal movement today."
-
-private enum class VoiceNoteStatus(val label: String) {
-    Idle("Idle"),
-    RecordingLocally("Recording locally"),
-    SavedLocally("Saved locally"),
-    Error("Error")
 }

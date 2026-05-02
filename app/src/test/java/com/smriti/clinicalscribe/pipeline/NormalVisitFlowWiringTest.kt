@@ -41,22 +41,20 @@ class NormalVisitFlowWiringTest {
     fun visitScreenKeepsSampleManualAndOfflineSpeechTranscriptPaths() {
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
 
-        assertTrue(visitScreen.contains("Use sample danger-sign transcript"))
-        assertTrue(visitScreen.contains("onValueChange = { observationText = it }"))
-        assertTrue(visitScreen.contains("Try Offline Speech"))
+        assertTrue(visitScreen.contains("Use sample visit transcript"))
+        assertTrue(visitScreen.contains("onValueChange = {"))
+        assertTrue(visitScreen.contains("Speak observation"))
         assertTrue(visitScreen.contains("offlineSpeechClient.transcribeLiveSpeech()"))
         assertTrue(visitScreen.contains("observationText = speechResult.transcript"))
-        assertTrue(visitScreen.contains("Review and edit before generating"))
-        assertTrue(visitScreen.contains("Offline speech unavailable"))
-        assertTrue(visitScreen.contains("Android offline speech"))
-        assertTrue(visitScreen.contains("Direct Gemma 4 audio remains blocked and documented"))
+        assertTrue(visitScreen.contains("Speech added. Please review before generating."))
+        assertTrue(visitScreen.contains("Speech is not available on this device. Please type manually."))
+        assertTrue(visitScreen.contains("No speech detected. Please try again or type manually."))
         assertFalse(visitScreen.contains("Real Gemma 4 audio integration comes next"))
-        assertTrue(visitScreen.contains("Local Reasoning and Protocol"))
-        assertTrue(visitScreen.contains("Active mode: \$reasoningModeLabel"))
-        assertTrue(visitScreen.contains("Protocol pack: \$protocolContextLabel"))
-        assertTrue(visitScreen.contains("Protocol-grounded referral support, not diagnosis."))
-        assertTrue(visitScreen.contains("Engine: \$realGemmaEngineStatusLabel"))
-        assertTrue(visitScreen.contains("Output language: \${PatientLanguages.forPatient(patient).displayLabel}"))
+        assertTrue(visitScreen.contains("What to do now"))
+        assertTrue(visitScreen.contains("Offline setup ready"))
+        assertTrue(visitScreen.contains("On-device Gemma:"))
+        assertTrue(visitScreen.contains("Local guidance available"))
+        assertTrue(visitScreen.contains("Output language: \${PatientVisitUiText.outputLanguageLabel(patient)}"))
     }
 
     @Test
@@ -65,24 +63,25 @@ class NormalVisitFlowWiringTest {
         val reviewScreen = appSourceFile("ui/ReviewScreen.kt").readText()
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
 
-        assertTrue(patientListScreen.contains("Local patient memory + local protocol pack."))
-        assertTrue(patientListScreen.contains("Output language: \${PatientLanguages.forPatient(patient).displayLabel}"))
-        assertTrue(patientListScreen.contains("Works offline; no cloud API required for core runtime."))
-        assertTrue(reviewScreen.contains("Protocol-grounded referral support, not diagnosis."))
-        assertTrue(reviewScreen.contains("Routine / No referral flag"))
-        assertTrue(reviewScreen.contains("No danger-sign referral flag was generated."))
-        assertTrue(reviewScreen.contains("CHW reviews and confirms before saving."))
-        assertTrue(reviewScreen.contains("Safety Gate"))
+        assertTrue(patientListScreen.contains("Offline health visit assistant"))
+        assertTrue(patientListScreen.contains("Output language: \${PatientVisitUiText.outputLanguageLabel(patient)}"))
+        assertTrue(patientListScreen.contains("Check offline setup"))
+        assertFalse(patientListScreen.contains("Protocol-grounded"))
+        assertTrue(reviewScreen.contains("Smriti does not diagnose. Review before saving."))
+        assertTrue(reviewScreen.contains("No referral flag"))
+        assertTrue(reviewScreen.contains("No urgent danger signs were flagged from this note."))
+        assertTrue(reviewScreen.contains("How was this prepared?"))
+        assertFalse(reviewScreen.contains("Protocol-grounded"))
         assertTrue(summaryScreen.contains("Confirmed local data only"))
-        assertTrue(summaryScreen.contains("Raw Local Supervisor Data"))
+        assertTrue(summaryScreen.contains("Today's priority list"))
     }
 
     @Test
-    fun reviewScreenOnlyShowsReferralSupportWhenReferralFlagExists() {
+    fun reviewScreenOnlyShowsReferralSuggestedWhenReferralFlagExists() {
         val reviewScreen = appSourceFile("ui/ReviewScreen.kt").readText()
-        val referralSupportIndex = reviewScreen.indexOf("Text(\"Referral Support\"")
+        val referralSupportIndex = reviewScreen.indexOf("Text(\"Referral suggested\"")
         val referralGuardIndex = reviewScreen.indexOf("if (referralFlag != null)")
-        val routineCardIndex = reviewScreen.indexOf("Text(\"Routine / No referral flag\"")
+        val routineCardIndex = reviewScreen.indexOf("Text(\"No referral flag\"")
 
         assertTrue(referralGuardIndex >= 0)
         assertTrue(referralSupportIndex > referralGuardIndex)
@@ -93,9 +92,9 @@ class NormalVisitFlowWiringTest {
     fun rosterUsesReadableFullWidthActionsAndCompactProof() {
         val patientListScreen = appSourceFile("ui/PatientListScreen.kt").readText()
 
-        assertTrue(patientListScreen.contains("Text(\"Add Patient\")"))
-        assertTrue(patientListScreen.contains("Text(\"End-of-Day Summary\")"))
-        assertTrue(patientListScreen.contains("Text(if (isImportingSupervisorRegister) \"Importing...\" else \"Import Supervisor Register\")"))
+        assertTrue(patientListScreen.contains("Text(\"Add patient\")"))
+        assertTrue(patientListScreen.contains("Text(\"End-of-day summary\")"))
+        assertTrue(patientListScreen.contains("Text(if (isImportingSupervisorRegister) \"Importing...\" else \"Import register\")"))
         assertTrue(patientListScreen.contains(".heightIn(min = 48.dp)"))
         assertTrue(patientListScreen.contains("OfflineProofCard(status = offlineProofStatus, compact = true)"))
         assertFalse(patientListScreen.contains("Load Demo Supervisor Register"))
@@ -107,22 +106,24 @@ class NormalVisitFlowWiringTest {
 
         val alertIndex = visitScreen.indexOf("MissedFollowUpCard(")
         val signalIndex = visitScreen.indexOf("HistorySignalCard(signal = signal)")
-        val historyIndex = visitScreen.indexOf("Text(\"Prior Visit History\"")
-        val transcriptIndex = visitScreen.indexOf("Text(\"Transcript Input\"")
+        val instructionIndex = visitScreen.indexOf("Text(\"What to do now\"")
+        val transcriptIndex = visitScreen.indexOf("Text(if (isListeningOfflineSpeech) \"Listening...\" else \"Speak observation\")")
+        val historyIndex = visitScreen.indexOf("PriorHistorySection(")
 
         assertTrue(alertIndex >= 0)
         assertTrue(signalIndex >= 0)
-        assertTrue(historyIndex > alertIndex)
-        assertTrue(transcriptIndex > historyIndex)
-        assertTrue(visitScreen.contains("items(history.take(2))"))
-        assertTrue(visitScreen.contains("older visit(s) kept in local memory"))
+        assertTrue(instructionIndex > alertIndex)
+        assertTrue(transcriptIndex > instructionIndex)
+        assertTrue(historyIndex > transcriptIndex)
+        assertTrue(visitScreen.contains("history.take(2)"))
+        assertTrue(visitScreen.contains("Show patient history"))
     }
 
     @Test
     fun offlineSpeechHookDoesNotGenerateOrSaveVisit() {
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
         val speechBlockStart = visitScreen.indexOf("fun tryOfflineSpeech()")
-        val speechBlockEnd = visitScreen.indexOf("LaunchedEffect", startIndex = speechBlockStart)
+        val speechBlockEnd = visitScreen.indexOf("fun requestGenerate", startIndex = speechBlockStart)
         val speechBlock = visitScreen.substring(speechBlockStart, speechBlockEnd)
 
         assertTrue(speechBlockStart >= 0)
@@ -154,16 +155,13 @@ class NormalVisitFlowWiringTest {
     @Test
     fun sampleTranscriptButtonStillFillsEditableTranscript() {
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
-        val sampleButtonStart = visitScreen.indexOf("Text(\"Use sample danger-sign transcript\")")
+        val sampleButtonStart = visitScreen.indexOf("Text(\"Use sample visit transcript\")")
         assertTrue(sampleButtonStart >= 0)
         val outlinedButtonStart = visitScreen.lastIndexOf("OutlinedButton(", startIndex = sampleButtonStart)
         assertTrue(outlinedButtonStart >= 0)
-        val sampleButtonBlock = visitScreen.substring(
-            outlinedButtonStart,
-            sampleButtonStart
-        )
+        val sampleButtonBlock = visitScreen.substring(outlinedButtonStart, sampleButtonStart)
 
-        assertTrue(sampleButtonBlock.contains("observationText = SampleDangerSignTranscript"))
+        assertTrue(sampleButtonBlock.contains("observationText = VisitSampleTranscripts.forPatient(patient)"))
         assertTrue(sampleButtonBlock.contains("offlineSpeechStatus = null"))
     }
 
@@ -171,8 +169,10 @@ class NormalVisitFlowWiringTest {
     fun generateStillUsesEditableTranscriptText() {
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
 
-        assertTrue(visitScreen.contains("onGenerate(observationText, savedVoiceNote)"))
-        assertTrue(visitScreen.contains("enabled = observationText.isNotBlank() && !isGenerating"))
+        assertTrue(visitScreen.contains("onGenerate(observationText, null)"))
+        assertTrue(visitScreen.contains("enabled = !isGenerating"))
+        assertTrue(visitScreen.contains("Please speak or type today's visit observation first."))
+        assertTrue(visitScreen.contains("This observation is very short."))
     }
 
     @Test
@@ -220,13 +220,13 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
-    fun summaryScreenCanDisplayRealGemmaPriorityQueueAndFallbackMessage() {
+    fun summaryScreenCanDisplayPriorityQueueAndFallbackMessage() {
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
 
-        assertTrue(summaryScreen.contains("RealGemma Priority Follow-Up Queue"))
+        assertTrue(summaryScreen.contains("Today's priority list"))
         assertTrue(summaryScreen.contains("priorityUnavailableMessage"))
         assertTrue(summaryScreen.contains("priorityQueue"))
-        assertTrue(summaryScreen.contains("Raw Local Supervisor Data"))
+        assertTrue(summaryScreen.contains("Local visit counts are shown below."))
         assertFalse(summaryScreen.contains("deterministic local summary"))
     }
 

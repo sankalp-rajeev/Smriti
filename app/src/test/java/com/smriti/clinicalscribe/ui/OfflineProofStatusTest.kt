@@ -17,17 +17,18 @@ class OfflineProofStatusTest {
 
         assertEquals(
             listOf(
-                "Network required" to "No",
-                "Patient data" to "Local Room/SQLite",
-                "Protocol source" to "Local JSON; country-aware retrieval",
-                "Active reasoning mode" to "RealGemmaAgent",
-                "Cloud API" to "No",
-                "RealGemma text mode" to "Setup required",
-                "Submission mode" to "Required; build flag missing",
-                "Real Gemma model" to "Not found",
-                "Engine" to "Loads on demand",
-                "Inference" to "Unavailable/setup required",
-                "Direct Gemma audio" to "Blocked by current public LiteRT-LM Android/Kotlin path; using offline speech/transcript fallback"
+                "Patient memory" to "Room/SQLite local storage",
+                "Health guidance" to "Local JSON pack: 46 chunks, 6 countries",
+                "Model file" to "Setup needed",
+                "Engine state" to "manual only",
+                "Transcript source" to "offline speech or manual typing",
+                "Paper note scan" to "Available",
+                "Vision support" to "Uses local Gemma vision",
+                "Scan review" to "Review required before save",
+                "Cloud OCR" to "none",
+                "Languages" to "EN, HI, ES, SW",
+                "Cloud APIs" to "none",
+                "Direct Gemma audio" to "not used"
             ),
             status.lines
         )
@@ -44,12 +45,13 @@ class OfflineProofStatusTest {
 
         assertEquals(
             listOf(
-                "Network" to "No",
-                "Patient data" to "Local Room/SQLite",
-                "Protocols" to "Local JSON, country-aware",
-                "Active mode" to "RealGemmaAgent",
-                "RealGemma text" to "Setup required",
-                "Direct Gemma audio" to "Blocked; transcript fallback"
+                "Works offline after setup" to "",
+                "Patient memory" to "saved on this device",
+                "Health guidance" to "stored on this device",
+                "On-device Gemma" to "Setup needed",
+                "Paper note scan" to "setup needed",
+                "Cloud APIs" to "none",
+                "Direct Gemma audio" to "not used"
             ),
             status.compactLines
         )
@@ -67,12 +69,9 @@ class OfflineProofStatusTest {
             realGemmaDeveloperWarning = "Developer-only RealGemma text mode. Not default demo mode. Output must be reviewed before saving."
         )
 
-        assertEquals(
-            "Developer warning" to "Developer-only RealGemma text mode. Not default demo mode. Output must be reviewed before saving.",
-            status.lines.last()
-        )
-        assertEquals("Real Gemma model" to "Found", status.lines[7])
-        assertEquals("Engine" to "Loads on demand", status.lines[8])
+        assertEquals("Direct Gemma audio" to "not used", status.lines.last())
+        assertEquals("Model file" to "ready", status.lines[2])
+        assertEquals("Engine state" to "ready for use", status.lines[3])
     }
 
     @Test
@@ -85,8 +84,7 @@ class OfflineProofStatusTest {
             realGemmaInferenceLabel = "Enabled; on-device RealGemma text reasoning"
         )
 
-        assertEquals("Real Gemma model" to "Found", status.lines[7])
-        assertEquals("Engine" to "Loaded", status.lines[8])
-        assertEquals("Inference" to "Enabled; on-device RealGemma text reasoning", status.lines[9])
+        assertEquals("Model file" to "ready", status.lines[2])
+        assertEquals("Engine state" to "ready for use", status.lines[3])
     }
 }

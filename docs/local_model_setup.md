@@ -314,6 +314,24 @@ View the manual audio inference output:
 adb logcat -s SmritiLiteRtAudioInference:I "*:S"
 ```
 
+## Manual Vision Probe
+
+Current status: the `litertlm-android-0.10.2` AAR/classes.jar exposes `Content.ImageBytes`, `Content.ImageFile`, `InputData.Image`, `EngineConfig.visionBackend`, and `EngineConfig.maxNumImages`, but no public prompt-template, media-placeholder, multimodal-template, image-preprocessor, or `preprocess(...)` API was found. The manual probe passed on emulator with a sideloaded app-private model: the engine accepted `Conversation` image input and local Gemma 4 vision extracted structured JSON from the synthetic paper note.
+
+Smriti now exposes a narrow paper-note scan flow for data entry only. It requires CHW review before local save, does not save image bytes, and does not generate diagnosis or referral advice from the image.
+
+The probe uses only the synthetic androidTest asset `sample_paper_visit_note.png` and reads it from instrumentation context assets, not target app assets.
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaVisionProbeInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualVisionInference=true"
+```
+
+Logcat:
+
+```powershell
+adb logcat -s SmritiRealGemmaVision:I "*:S"
+```
+
 Normal validation should continue to use:
 
 ```powershell

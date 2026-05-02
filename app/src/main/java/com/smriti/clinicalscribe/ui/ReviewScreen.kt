@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
@@ -33,6 +34,7 @@ fun ReviewScreen(
     patient: Patient,
     result: VisitReasoningResult,
     voiceNote: VoiceNoteMetadata?,
+    priorVisitCount: Int,
     isSaving: Boolean,
     ttsStatusMessage: String?,
     exportVisitPath: String?,
@@ -44,60 +46,42 @@ fun ReviewScreen(
     val initialSections = remember(result) { ReviewNoteSections.from(result.structuredNote) }
     var observationText by remember(result) { mutableStateOf(initialSections.observation) }
     var historyText by remember(result) { mutableStateOf(initialSections.relevantHistory) }
-    var supportText by remember(result) { mutableStateOf(initialSections.protocolSupport) }
+    var supportText by remember(result) { mutableStateOf(initialSections.guidanceSupport) }
     var followUpText by remember(result) { mutableStateOf(result.suggestedFollowUp) }
+    var showSourceDetails by remember(result) { mutableStateOf(false) }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Column {
-                        Text("Review and Confirm Visit Note", style = MaterialTheme.typography.headlineSmall)
-                        Text("CHW reviews and confirms before saving.", style = MaterialTheme.typography.labelLarge)
-                        Text(patient.displayLabel(), style = MaterialTheme.typography.bodyMedium)
-                    }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Review visit note", style = MaterialTheme.typography.headlineSmall)
+                    Text("Smriti does not diagnose. Review before saving.", style = MaterialTheme.typography.bodyLarge)
+                    Text(patient.displayLabel(), style = MaterialTheme.typography.bodyLarge)
                     OutlinedButton(
                         onClick = onBack,
                         enabled = !isSaving,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                     ) {
-                        Text("Edit Observation")
+                        Text("Back to visit")
                     }
                 }
             }
 
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text("Safety Gate", fontWeight = FontWeight.SemiBold)
-                        Text("Protocol-grounded referral support, not diagnosis.")
-                        Text("CHW reviews and confirms before saving.")
-                    }
-                }
-            }
-
-            if (result.uncertain && result.clarificationPrompt != null) {
+            result.clarificationPrompt?.takeIf { it.isNotBlank() }?.let { question ->
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE3B0)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text("Needs Confirmation", fontWeight = FontWeight.SemiBold)
-                            Text(result.clarificationPrompt)
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("More information needed", fontWeight = FontWeight.SemiBold)
+                            Text(question, style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 }
@@ -107,26 +91,27 @@ fun ReviewScreen(
             if (referralFlag != null) {
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Referral Support", fontWeight = FontWeight.SemiBold)
-                            Text("Protocol-grounded referral support, not diagnosis.")
-                            Text("CHW confirmation and clinical referral judgment are required.")
-                            Text("Urgency: ${referralFlag.urgency}")
-                            Text(referralFlag.reason)
-                            Text("Danger signs: ${referralFlag.dangerSigns}")
-                            Text("Protocol citation: ${referralFlag.protocolBasis}")
-                            Text("Facility: ${referralFlag.recommendedFacility}")
+                            Text("Referral suggested", fontWeight = FontWeight.SemiBold)
+                            Text(referralFlag.reason, style = MaterialTheme.typography.bodyLarge)
+                            if (referralFlag.dangerSigns.isNotBlank()) {
+                                Text("Danger signs: ${referralFlag.dangerSigns}", style = MaterialTheme.typography.bodyLarge)
+                            }
+                            Text("Health guidance used:", fontWeight = FontWeight.SemiBold)
+                            Text(result.protocolChunk?.title ?: referralFlag.protocolBasis, style = MaterialTheme.typography.bodyLarge)
                             OutlinedButton(
                                 onClick = onReadReferralSuggestion,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
                             ) {
-                                Text("Read referral suggestion aloud")
+                                Text("Read note aloud")
                             }
                         }
                     }
@@ -134,37 +119,55 @@ fun ReviewScreen(
             } else if (!result.uncertain) {
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFDCEEDB)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier.padding(14.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text("Routine / No referral flag", fontWeight = FontWeight.SemiBold)
-                            Text("No danger-sign referral flag was generated.")
-                            Text("CHW reviews and confirms before saving.")
+                            Text("No referral flag", fontWeight = FontWeight.SemiBold)
+                            Text("No urgent danger signs were flagged from this note.", style = MaterialTheme.typography.bodyLarge)
+                            Text(followUpText, style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 }
             }
 
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.fillMaxWidth()
+                OutlinedButton(
+                    onClick = { showSourceDetails = !showSourceDetails },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    Text("How was this prepared?")
+                }
+                if (showSourceDetails) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
                     ) {
-                        Text("Locally Saved Voice Note", fontWeight = FontWeight.SemiBold)
-                        if (voiceNote == null) {
-                            Text("No real audio attached. Transcript source: SIMULATED")
-                        } else {
-                            Text("File: ${voiceNote.fileName}")
-                            Text("Duration: ${voiceNote.audioDurationSeconds}s")
-                            Text("Transcript source: REAL_ASR_PENDING")
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text("This note was prepared using:", fontWeight = FontWeight.SemiBold)
+                            Text("• Today's visit observation")
+                            if (priorVisitCount > 0) {
+                                Text("• Patient history from $priorVisitCount prior visits")
+                            } else {
+                                Text("• No prior visit history (first visit)")
+                            }
+                            val localSource = patient.country.ifBlank { "this country" }
+                            Text("• Local health guidance for $localSource")
+                            Text("• On-device Gemma 4 reasoning (no internet used)")
+                            if (result.protocolChunk == null) {
+                                Text("• Global health guidance (no local guidance for this country yet)")
+                            }
+                            Text("Raw guidance ID: ${result.protocolCitation}", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
@@ -201,7 +204,7 @@ fun ReviewScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 130.dp),
-                    label = { Text("Protocol-grounded support") },
+                    label = { Text("Local guidance support") },
                     minLines = 4
                 )
             }
@@ -211,31 +214,22 @@ fun ReviewScreen(
                     value = followUpText,
                     onValueChange = { followUpText = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Suggested follow-up with citation") },
+                    label = { Text("Follow-up plan") },
                     minLines = 2
                 )
             }
 
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text("Protocol Citation", fontWeight = FontWeight.SemiBold)
-                        Text(result.protocolCitation)
-                        result.protocolChunk?.let { Text(it.text) }
-                    }
+            voiceNote?.let { note ->
+                item {
+                    Text(
+                        "Local voice note attached: ${note.audioDurationSeconds}s",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
 
             ttsStatusMessage?.let { message ->
-                item {
-                    Text(message, style = MaterialTheme.typography.bodyMedium)
-                }
+                item { Text(message, style = MaterialTheme.typography.bodyLarge) }
             }
 
             item {
@@ -245,21 +239,35 @@ fun ReviewScreen(
                             buildStructuredNote(
                                 observation = observationText,
                                 relevantHistory = historyText,
-                                protocolSupport = supportText
+                                guidanceSupport = supportText
                             ),
                             followUpText
                         )
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
                 ) {
-                    Text("Export Visit JSON")
+                    Text("Export visit data")
                 }
                 exportVisitPath?.let { path ->
                     Text(
                         text = "Export saved locally: $path",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(top = 6.dp)
                     )
+                }
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp),
+                    enabled = !isSaving
+                ) {
+                    Text("Edit note")
                 }
             }
 
@@ -270,15 +278,17 @@ fun ReviewScreen(
                             buildStructuredNote(
                                 observation = observationText,
                                 relevantHistory = historyText,
-                                protocolSupport = supportText
+                                guidanceSupport = supportText
                             ),
                             followUpText
                         )
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 52.dp),
                     enabled = observationText.isNotBlank() && supportText.isNotBlank() && !isSaving
                 ) {
-                    Text(if (isSaving) "Saving Confirmed Visit..." else "Confirm CHW Review and Save")
+                    Text(if (isSaving) "Saving..." else "Confirm and save")
                 }
             }
         }
@@ -288,25 +298,38 @@ fun ReviewScreen(
 private data class ReviewNoteSections(
     val observation: String,
     val relevantHistory: String,
-    val protocolSupport: String
+    val guidanceSupport: String
 ) {
     companion object {
         fun from(note: String): ReviewNoteSections {
             return ReviewNoteSections(
                 observation = extractSection(note, "Observation:", "Relevant history:"),
-                relevantHistory = extractSection(note, "Relevant history:", "Protocol-grounded support:"),
-                protocolSupport = extractSection(note, "Protocol-grounded support:", null)
+                relevantHistory = extractSection(note, "Relevant history:", listOf("Local guidance support:")),
+                guidanceSupport = extractSection(note, listOf("Local guidance support:"), null)
             )
         }
 
         private fun extractSection(note: String, start: String, end: String?): String {
-            val startIndex = note.indexOf(start)
-            if (startIndex < 0) return note.trim()
+            return extractSection(note, listOf(start), end?.let { listOf(it) })
+        }
 
-            val contentStart = startIndex + start.length
-            val contentEnd = end
-                ?.let { note.indexOf(it, startIndex = contentStart) }
-                ?.takeIf { it >= 0 }
+        private fun extractSection(note: String, start: String, end: List<String>?): String {
+            return extractSection(note, listOf(start), end)
+        }
+
+        private fun extractSection(note: String, starts: List<String>, ends: List<String>?): String {
+            val startMatch = starts
+                .mapNotNull { marker ->
+                    val index = note.indexOf(marker)
+                    if (index >= 0) marker to index else null
+                }
+                .minByOrNull { it.second }
+                ?: return note.trim()
+
+            val contentStart = startMatch.second + startMatch.first.length
+            val contentEnd = ends
+                ?.mapNotNull { marker -> note.indexOf(marker, startIndex = contentStart).takeIf { it >= 0 } }
+                ?.minOrNull()
                 ?: note.length
 
             return note.substring(contentStart, contentEnd).trim()
@@ -317,11 +340,11 @@ private data class ReviewNoteSections(
 private fun buildStructuredNote(
     observation: String,
     relevantHistory: String,
-    protocolSupport: String
+    guidanceSupport: String
 ): String {
     return listOf(
         "Observation:\n${observation.trim()}",
         "Relevant history:\n${relevantHistory.trim()}",
-        "Protocol-grounded support:\n${protocolSupport.trim()}"
+        "Local guidance support:\n${guidanceSupport.trim()}"
     ).joinToString(separator = "\n\n")
 }
