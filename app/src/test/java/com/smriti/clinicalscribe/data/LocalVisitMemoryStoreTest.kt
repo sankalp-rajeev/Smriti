@@ -208,6 +208,40 @@ class LocalVisitMemoryStoreTest {
     }
 
     @Test
+    fun unavailableRealGemmaParserFailureCannotBeSaved() = runBlocking {
+        val store = fakeStore()
+        store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)
+        val invalidRealGemmaResult = VisitReasoningResult(
+            patientId = patient.id,
+            observationText = "Meena reports severe headache and blurred vision.",
+            structuredNote = "Observation:\nMeena reports severe headache.\n\nProtocol-grounded support:\nExperimental Real Gemma output rejected: Output missed required field: referralFlag. This is not a diagnosis. CHW confirmation required.",
+            referralFlag = null,
+            protocolCitation = protocolChunk.citation,
+            suggestedFollowUp = "RealGemma reasoning is unavailable. Ask the CHW to review manually and retry after setup.",
+            protocolChunk = protocolChunk,
+            uncertain = true,
+            clarificationPrompt = "Real Gemma output was rejected safely: Output missed required field: referralFlag."
+        )
+
+        try {
+            store.saveConfirmedVisit(
+                result = invalidRealGemmaResult,
+                editedNote = invalidRealGemmaResult.structuredNote,
+                editedFollowUp = invalidRealGemmaResult.suggestedFollowUp,
+                voiceNote = null,
+                nowMillis = RETURN_VISIT_TIME
+            )
+            throw AssertionError("Expected invalid RealGemma output save to fail.")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message!!.contains("cannot be saved"))
+        }
+
+        val snapshot = store.refresh()
+        assertEquals(3, store.historyForPatient(snapshot, patient.id).size)
+        assertEquals(emptyList<ReferralFlag>(), snapshot.referrals)
+    }
+
+    @Test
     fun resetDemoDataClearsSavedVisitsAndRestoresSeededMeenaHistory() = runBlocking {
         val store = fakeStore()
         store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)

@@ -94,16 +94,18 @@ class ManualRealGemmaVisitJsonInstrumentedTest {
                     Log.i(TAG, "Parsed protocol citation: ${result.protocolCitation}")
                     Log.i(TAG, "Parsed uncertain: ${result.uncertain}")
                     Log.i(TAG, "Parsed referral present: ${result.referralFlag != null}")
+                    assertTrue("Meena danger-sign RealGemma output should set referralFlag=true.", result.referralFlag != null)
+                    assertTrue("Meena danger-sign RealGemma output should include at least one citation.", result.protocolCitation.isNotBlank())
                     assertNonDiagnosticAndSafetyWorded(result)
+                    Log.i(TAG, "Manual test does not save parsed RealGemma output to Room.")
                 }
                 is RealGemmaParseResult.Rejected -> {
                     Log.w(TAG, "Parser result: REJECTED")
                     Log.w(TAG, "Fallback reason: ${parseResult.reason}")
                     Log.w(TAG, "Fallback structured note: ${parseResult.fallback.structuredNote}")
-                    Log.w(
-                        TAG,
-                        "Parsing rejection is expected early model-behavior signal; " +
-                            "the manual test passes because inference returned non-empty text."
+                    throw AssertionError(
+                        "Manual Meena RealGemma output was rejected by the hardened parser: ${parseResult.reason}. " +
+                            "The app correctly rejects unsafe/invalid output and does not save it."
                     )
                 }
             }
@@ -157,7 +159,7 @@ class ManualRealGemmaVisitJsonInstrumentedTest {
     }
 
     private companion object {
-        const val TAG = "SmritiRealGemmaJsonTest"
+        const val TAG = "SmritiRealGemma"
         const val ARG_ALLOW_MANUAL_TEXT_INFERENCE = "allowManualTextInference"
         const val TIMEOUT_MILLIS = 120_000L
         const val LOG_CHUNK_SIZE = 3_000
@@ -168,8 +170,10 @@ class ManualRealGemmaVisitJsonInstrumentedTest {
         const val STRICT_JSON_REMINDER = """
 
             Manual test reminder:
-            Return only the required JSON object. Use supplied protocol citations only.
-            This is not a diagnosis. CHW confirmation is required before saving.
+            Return only exact JSON with summary, referralFlag, referralReason, dangerSigns,
+            followUpPlan, clarificationQuestion, citations, confidence, and safetyNote.
+            referralFlag must be true for the Meena danger-sign case.
+            Use supplied protocol citations only. This is not a diagnosis. CHW confirmation is required before saving.
         """
     }
 }

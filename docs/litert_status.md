@@ -1,4 +1,4 @@
-# LiteRT-LM Status
+﻿# LiteRT-LM Status
 
 This document is the current judge-facing status of Smriti's LiteRT-LM integration.
 
@@ -7,18 +7,18 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
 - LiteRT-LM dependency is pinned in `app/build.gradle.kts`:
   `com.google.ai.edge.litertlm:litertlm-android:0.10.2`
 - Room annotation processing uses KSP `2.3.7`; KAPT is no longer applied in the app module.
-- `MockGemmaAgent` remains the default app mode.
-- `RealGemmaAgent` remains experimental and is disabled for the default demo path.
+- `RealGemmaAgent` is the app-facing reasoning engine.
+- If RealGemma setup is missing or inference fails, the UI shows setup/retry messaging instead of mock output.
 - The app checks for the expected model path:
   `filesDir/models/gemma-4-E2B-it-int4.litertlm`
 - If the model is absent, Offline Proof says `Real Gemma model: Not found`.
-- If a model is present, Offline Proof says `Found, not loaded`.
+- If a model is present, Offline Proof says `Real Gemma model: Found`, `Engine: Loads on demand`, and `Inference: Enabled; on-device RealGemma text reasoning` when gates are active. After a successful generation in the app session, engine status can show `Loaded`.
 - Direct LiteRT-LM API types now compile through a passive type probe:
   `Engine`, `EngineConfig`, `Backend`, `Content.Text`, `Content.AudioBytes`, `Content.AudioFile`, `InputData.Audio`, `Conversation`, `ConversationConfig`, `ToolCall`, and `OpenApiTool`.
 - `LiteRtEngineConfigFactory` constructs a real `EngineConfig` with `Backend.CPU()` only when the model file is found.
 - `LiteRtEngineInitializationChecker` can initialize and immediately close `Engine` only when an explicit manual-test flag is true.
 - `LiteRtGemmaTextClient.generateTextManual(...)` can run one text-only `sendMessage` call only when an explicit manual inference flag is true.
-- Developer-only RealGemma text UI mode can call the same text path only when both the disabled-by-default build gate and the app-private local gate are enabled.
+- RealGemma text UI mode can call the same text path only when the submission build gate, app-private local gate, and app-private model are present.
 - `ManualLiteRtTextInferenceInstrumentedTest` is the only developer harness for the first real text inference attempt with a sideloaded model.
 - `ManualRealGemmaBenchmarkInstrumentedTest` is the manual benchmark harness for real text inference reliability and latency.
 - `ManualRealGemmaMemoryStressInstrumentedTest` is the manual 10/20/40 prior-visit context stress harness.
@@ -29,18 +29,18 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
 
 ## Manual-Only Engine Work
 
-Smriti still does not run LiteRT inference in default normal app behavior:
+Smriti runs LiteRT text inference only when required local setup is complete:
 
 - No `.litertlm` model loading.
 - No `Engine` instantiation during app startup or normal UI flow.
 - No `Engine.initialize()` during app startup or normal UI flow.
 - No Conversation creation during app startup or normal UI flow.
-- No inference or message sending during app startup or normal UI flow.
+- No inference or message sending unless the CHW taps Generate and local setup is complete.
 - No Hugging Face or model download code.
 
 The manual checker requires all of the following before it touches `Engine`: a found app-private model file, a prepared `EngineConfig`, and `allowManualEngineInitialization = true`. `Engine` implements `AutoCloseable`, so the checker uses `use { initialize() }` to close it immediately after initialization. This path is not wired into Patient Roster, Visit, Review, Summary, or any visible app toggle.
 
-Manual text inference is similarly explicit: `LiteRtGemmaTextClient.generateText(...)` still returns unavailable by default, while `generateTextManual(...)` requires a found model, prepared `EngineConfig`, and `allowManualTextInference = true`. The manual path initializes `Engine`, creates one `Conversation`, sends one text prompt, extracts `Content.Text`, and closes both Conversation and Engine. Developer-only RealGemma text UI mode reuses this path only after both local developer gates and the app-private model are present. It is not the default demo flow and has no public CHW-facing toggle.
+Manual text inference is similarly explicit: `LiteRtGemmaTextClient.generateText(...)` still returns unavailable by default, while `generateTextManual(...)` requires a found model, prepared `EngineConfig`, and `allowManualTextInference = true`. The manual path initializes `Engine`, creates one `Conversation`, sends one text prompt, extracts `Content.Text`, and closes both Conversation and Engine. The RealGemma-required app-facing path reuses this manual text path only after the submission build flag, app-private sentinel, and app-private model are present.
 
 ## Function Calling Status
 
@@ -108,28 +108,22 @@ Phase 2 is complete for the submission-ready local core flow:
 - Local transcript path works through manual/sample input.
 - Android offline speech fallback is attempted safely and falls back to manual/sample text when unavailable.
 - `VisitReasoningPipeline` is integrated into the normal Generate Local Visit Note action.
-- Local protocol retrieval grounds `MockGemmaAgent` visit-note/referral output.
+- Local protocol retrieval grounds RealGemma visit-note/referral prompts.
 - CHW review/confirm remains the only save path.
 - Confirmed local visits and referral flags persist and appear in later patient history.
 - Supervisor summary reads fresh confirmed local data and reports concise latest-per-patient urgent cases.
 - Reset Demo Data clears saved visits/referrals and restores seeded Meena history.
-- `MockGemmaAgent` remains default; RealGemma and LiteRT-LM inference remain disabled by default.
-- Developer-only RealGemma text mode is available only when both local developer gates are enabled; `MockGemmaAgent` remains the default.
+- `RealGemmaAgent` is required for app-facing reasoning; missing setup shows retry/setup messaging.
+- No app-facing mock fallback is shown as clinical output.
 
-## Developer-Only RealGemma Text UI Mode
+## RealGemma Required Text Mode
 
-Activation requires both gates:
+Activation requires local setup:
 
-- Build-time gate: build debug with `-Psmriti.realGemmaDevMode=true`.
+- Build-time gate: build debug with `-Psmriti.realGemmaSubmissionMode=true`.
 - Local/internal gate: create `files/dev/enable_real_gemma_text_mode` in app-private storage.
 
-When both gates are enabled, VisitScreen shows `RealGemmaAgent / Developer-only / Experimental`, model status, inference status, CPU backend, and the warning:
-
-```text
-Developer-only RealGemma text mode. Not default demo mode. Output must be reviewed before saving.
-```
-
-If the model is present, VisitScreen generation uses `RealGemmaAgent` through `VisitReasoningPipeline`, then shows the output on ReviewScreen. CHW review/confirm/save is still required. If the model is missing, inference fails, times out, or output is rejected, the result is safe/uncertain and nothing is saved automatically.
+When setup is complete, VisitScreen generation uses `RealGemmaAgent` through `VisitReasoningPipeline`, then shows the output on ReviewScreen. CHW review/confirm/save is still required. If the model is missing, inference fails, times out, or output is rejected, the app shows retry/setup messaging and nothing is saved automatically.
 
 The instrumentation harness uses the debug application ID `com.smriti.clinicalscribe`, the app-private path `filesDir/models/gemma-4-E2B-it-int4.litertlm`, and the non-clinical prompt `Reply with exactly: SMRITI_LITERT_OK`. It must be run explicitly with:
 
@@ -154,7 +148,7 @@ JDK 21 is required for direct LiteRT-LM API compile work.
 `RealGemmaReadinessEvaluator` is the safety gate. It reports judge-readable readiness while keeping:
 
 - model loading disallowed in normal app flow,
-- inference disallowed by default,
+- inference allowed only when local setup is complete,
 - engine creation false,
 - engine initialization false,
 - conversation creation false,
@@ -162,6 +156,7 @@ JDK 21 is required for direct LiteRT-LM API compile work.
 
 ## Demo Position
 
-The current hackathon demo proves the offline product flow and safety model. EngineConfig is constructed when the app-private model is present. Runtime Engine initialization and inference remain manual-only or developer-gated. The normal submission demo still uses MockGemmaAgent.
+The current hackathon demo proves the offline product flow and safety model with RealGemma required for app-facing reasoning. EngineConfig is constructed when the app-private model is present. Runtime text inference is attempted only after local setup is complete and the CHW requests generation.
 
 GPU backend probing has not been added for the final video pass because the existing stable manual path is CPU-oriented and adding a new backend path would expand the pre-video test surface. CPU backend is retained for the stable demo; GPU backend benchmarking remains future work.
+

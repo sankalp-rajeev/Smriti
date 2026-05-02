@@ -50,10 +50,12 @@ fun VisitScreen(
     patient: Patient,
     history: List<VisitLog>,
     isGenerating: Boolean,
+    generationStatusMessage: String?,
     audioPermissionGranted: Boolean,
     errorMessage: String?,
     reasoningModeLabel: String,
     realGemmaModelStatusLabel: String,
+    realGemmaEngineStatusLabel: String,
     realGemmaInferenceLabel: String,
     realGemmaDeveloperWarning: String?,
     protocolContextLabel: String,
@@ -235,6 +237,7 @@ fun VisitScreen(
                         Text("Local patient memory + local protocol pack.")
                         Text("Protocol-grounded referral support, not diagnosis.")
                         Text("Real Gemma model: $realGemmaModelStatusLabel")
+                        Text("Engine: $realGemmaEngineStatusLabel")
                         Text("Inference: $realGemmaInferenceLabel")
                         realGemmaDeveloperWarning?.let { warning ->
                             Text(warning, color = MaterialTheme.colorScheme.error)
@@ -374,6 +377,23 @@ fun VisitScreen(
             errorMessage?.let { message ->
                 item {
                     Text(message, color = MaterialTheme.colorScheme.error)
+                }
+            }
+
+            if (isGenerating) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text("RealGemma reasoning", fontWeight = FontWeight.SemiBold)
+                            Text(generationStatusMessage ?: "Running on-device Gemma 4 reasoning...")
+                        }
+                    }
                 }
             }
 

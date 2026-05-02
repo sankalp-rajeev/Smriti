@@ -53,7 +53,7 @@ Command:
 Logcat:
 
 ```powershell
-adb logcat -s SmritiRealGemmaJsonTest:I "*:S"
+adb logcat -s SmritiRealGemma:I "*:S"
 ```
 
 ## RealGemmaAgent Path

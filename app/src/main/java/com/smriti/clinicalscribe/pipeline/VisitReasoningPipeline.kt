@@ -6,6 +6,7 @@ import com.smriti.clinicalscribe.rag.ProtocolChunk
 import com.smriti.clinicalscribe.rag.ProtocolRetrievalContext
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import com.smriti.clinicalscribe.reasoning.GemmaAgent
+import com.smriti.clinicalscribe.reasoning.SmritiLatencyLogger
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import com.smriti.clinicalscribe.transcript.SpeechToTextClient
 import com.smriti.clinicalscribe.transcript.TranscriptMetadata
@@ -30,7 +31,9 @@ class VisitReasoningPipeline(
             )
         }
 
-        val protocolChunks = protocolRetriever.retrieve(transcript.text, input.protocolContext)
+        val protocolChunks = SmritiLatencyLogger.measure("protocolRetrieval", input.patient.id) {
+            protocolRetriever.retrieve(transcript.text, input.protocolContext)
+        }
         val reasoningResult = gemmaAgent.generateVisitNote(
             patient = input.patient,
             visitHistory = input.priorVisits,

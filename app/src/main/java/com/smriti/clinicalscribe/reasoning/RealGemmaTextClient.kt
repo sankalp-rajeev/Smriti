@@ -10,10 +10,10 @@ interface RealGemmaTextClient {
     suspend fun generateText(prompt: String): TextGenerationResult
 }
 
-class UnavailableGemmaTextClient : RealGemmaTextClient {
+class UnavailableGemmaTextClient(
+    private val status: String = "RealGemma reasoning unavailable. Complete local model setup and retry."
+) : RealGemmaTextClient {
     override suspend fun generateText(prompt: String): TextGenerationResult {
-        return TextGenerationResult.Unavailable(
-            status = "Experimental Real Gemma path unavailable. No diagnosis generated. CHW confirmation required."
-        )
+        return TextGenerationResult.Unavailable(status = status)
     }
 }

@@ -229,8 +229,9 @@ class ManualRealGemmaAgentInstrumentedTest {
         const val STRICT_JSON_REMINDER = """
 
             Manual RealGemmaAgent test reminder:
-            Return only the required JSON object. Use supplied protocol citations only.
-            This is not a diagnosis. CHW confirmation is required before saving.
+            Return only exact JSON with summary, referralFlag, referralReason, dangerSigns,
+            followUpPlan, clarificationQuestion, citations, confidence, and safetyNote.
+            Use supplied protocol citations only. This is not a diagnosis. CHW confirmation is required before saving.
         """
     }
 }

@@ -1,7 +1,7 @@
 package com.smriti.clinicalscribe.reasoning
 
 enum class RealGemmaReadinessStatus {
-    MOCK_ACTIVE,
+    MOCK_FIXTURE_REQUESTED,
     EXPERIMENTAL_DISABLED,
     MODEL_NOT_FOUND,
     MODEL_FOUND_CONFIG_READY_ENGINE_DISABLED,
@@ -32,9 +32,9 @@ class RealGemmaReadinessEvaluator {
     ): RealGemmaReadinessSummary {
         if (agentMode == AgentMode.MOCK) {
             return summary(
-                status = RealGemmaReadinessStatus.MOCK_ACTIVE,
-                judgeLabel = "Mock active",
-                developerReason = "Normal app mode is MOCK; experimental RealGemma is not active.",
+                status = RealGemmaReadinessStatus.MOCK_FIXTURE_REQUESTED,
+                judgeLabel = "Legacy test fixture requested",
+                developerReason = "Explicit MOCK mode is reserved for deterministic tests and legacy fixtures; app-facing reasoning requires RealGemma.",
                 engineConfigPreparation = engineConfigPreparation
             )
         }

@@ -12,9 +12,17 @@ No public audio preprocessing API was found in the local AAR inspection. The cur
 
 The current Kotlin API path also does not expose prompt-template customization needed for multimodal placeholder injection. Direct Gemma 4 audio through the public LiteRT-LM Android/Kotlin path remains blocked by upstream artifact/API limits.
 
-## RealGemma Is Not Default
+## RealGemma Local Setup Required
 
-`MockGemmaAgent` remains default. `RealGemmaAgent` is scaffolded, manually testable, and available only through a developer-only text mode guarded by both a build-time flag and an app-private local gate. It has no public CHW-facing toggle.
+`RealGemmaAgent` is the app-facing reasoning engine. It requires a local submission build flag, an app-private sentinel, and a sideloaded app-private `.litertlm` model. If setup is missing or inference fails, the app shows setup/retry messaging and does not show mock clinical output.
+
+## RealGemma Schema Adherence
+
+RealGemma can load and return text on the emulator, but output schema adherence is still being tuned. A recent RealGemma response omitted the required `referralFlag` field, so the app rejected it as invalid output. This is expected safe behavior: invalid RealGemma output is not saved, is not shown as a clinical result, and does not trigger a mock fallback.
+
+The hardened prompt requires exact JSON only with `summary`, boolean `referralFlag`, `referralReason`, `dangerSigns`, `followUpPlan`, `clarificationQuestion`, `citations`, `confidence`, and `safetyNote`. The parser can recover valid JSON from markdown fences or surrounding text and accepts safe aliases, but still rejects prose-only output, diagnostic language, missing referral equivalents, and referral output without valid supplied protocol citations.
+
+Debug/dev builds log the first 1500 characters of raw rejected RealGemma output and the parser reason under `SmritiRealGemma`; CHW-facing UI shows only concise retry/setup messaging.
 
 ## Offline SpeechRecognizer Dependency
 

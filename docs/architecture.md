@@ -1,8 +1,8 @@
 # Architecture
 
-This document shows the current architecture at the end of Phase 2.
+This document shows the current RealGemma-required app architecture.
 
-## Normal Mock UI Flow
+## RealGemma-Required UI Flow
 
 ```text
 MainActivity / SmritiApp
@@ -12,7 +12,7 @@ MainActivity / SmritiApp
 -> Generate Local Visit Note
 -> VisitReasoningPipeline
 -> ProtocolRetriever with ProtocolRetrievalContext
--> MockGemmaAgent
+-> RealGemmaAgent
 -> ReviewScreen
 -> CHW confirm/save
 -> LocalVisitMemoryStore
@@ -21,10 +21,10 @@ MainActivity / SmritiApp
 
 Important boundaries:
 
-- `AgentConfig.DEFAULT_MODE = AgentMode.MOCK`.
-- `GemmaAgentFactory.create()` returns `MockGemmaAgent` by default.
-- RealGemma text is exposed only through developer-only mode when both gates are enabled.
-- Offline Proof shows readiness/status but does not enable inference.
+- `AgentConfig.DEFAULT_MODE = AgentMode.REAL_GEMMA_REQUIRED`.
+- App-facing visit and supervisor reasoning attempt `RealGemmaAgent`.
+- If the submission build flag, app-private sentinel, or app-private model is missing, the app shows setup/retry messaging instead of mock clinical output.
+- Offline Proof shows RealGemma setup/readiness status.
 - The normal Meena demo uses `countryCode=IN` and `region=INDIA`, with `GLOBAL_CORE` fallback.
 
 ## Manual RealGemma Instrumentation Flow
@@ -42,24 +42,24 @@ developer-run androidTest
 -> logged result
 ```
 
-Manual tests do not write to Room and are not called by app startup or visible screens.
+Manual tests do not write to Room and are not called by app startup.
 
-## Developer-Only RealGemma Text UI Flow
+## RealGemma Text UI Flow
 
 ```text
-debug build with -Psmriti.realGemmaDevMode=true
+debug build with -Psmriti.realGemmaSubmissionMode=true
 -> app-private files/dev/enable_real_gemma_text_mode
 -> app-private .litertlm model status check
--> VisitScreen shows developer warning and model/inference status
+-> VisitScreen shows model/inference status
 -> VisitReasoningPipeline
 -> RealGemmaAgent
--> RealGemmaDeveloperTextClient
+-> LiteRT text client
 -> LiteRtGemmaTextClient.generateTextManual(...)
 -> ReviewScreen
 -> CHW confirm/save gate
 ```
 
-If either gate is missing, the normal `MockGemmaAgent` visit path is used. If both gates are enabled but the model is missing or inference fails, RealGemma returns a safe uncertain result and does not save.
+If any required gate or model file is missing, generation is blocked with clear setup/retry messaging. If inference fails or output is rejected, the transcript remains editable and nothing is saved automatically.
 
 ## Transcript And Audio Fallback Flow
 
@@ -110,29 +110,11 @@ AppDatabase
 -> ProtocolChunkDao
 ```
 
-`LocalVisitMemoryStore` owns:
-
-- seed demo data,
-- save confirmed visit,
-- save confirmed referral flag,
-- refresh snapshot,
-- reset demo data,
-- patient history filtering.
+`LocalVisitMemoryStore` owns seed demo data, confirmed visit saves, confirmed referral saves, snapshot refresh, reset demo data, and patient history filtering.
 
 Only Review confirm/save writes generated visit data.
 
 ## Safety And Citation Enforcement Flow
-
-Normal mock path:
-
-```text
-ProtocolRetriever
--> MockGemmaAgent
--> cited VisitReasoningResult
--> ReviewScreen CHW confirmation
-```
-
-Manual RealGemma path:
 
 ```text
 RealGemmaPromptBuilder
@@ -140,7 +122,7 @@ RealGemmaPromptBuilder
 -> RealGemmaOutputParser
 -> ProtocolCitationValidator
 -> RealGemmaSafetyPostProcessor
--> VisitReasoningResult or safe uncertain fallback
+-> VisitReasoningResult or visible unavailable/retry state
 ```
 
 Safety rules:

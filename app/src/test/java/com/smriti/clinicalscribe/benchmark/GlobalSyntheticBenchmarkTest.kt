@@ -115,7 +115,7 @@ class GlobalSyntheticBenchmarkTest {
     }
 
     @Test
-    fun mockGemmaRemainsDefaultAndRealGemmaDeveloperModeRemainsGated() {
+    fun realGemmaRequiredIsDefaultAndNoDeveloperGateFallsBackToMock() {
         val filesDir = Files.createTempDirectory("smriti-benchmark-missing-model").toFile()
         val modelStatus = ModelAvailability.fromFilesDir(filesDir).check()
 
@@ -130,11 +130,11 @@ class GlobalSyntheticBenchmarkTest {
             modelStatus = modelStatus
         )
 
-        assertEquals(AgentMode.MOCK, AgentConfig.DEFAULT_MODE)
-        assertEquals(AgentMode.MOCK, defaultStatus.activeAgentMode)
-        assertEquals(AgentMode.MOCK, oneGateStatus.activeAgentMode)
-        assertFalse(defaultStatus.usesRealGemmaVisitAgent)
-        assertFalse(oneGateStatus.usesRealGemmaVisitAgent)
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, AgentConfig.DEFAULT_MODE)
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, defaultStatus.activeAgentMode)
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, oneGateStatus.activeAgentMode)
+        assertTrue(defaultStatus.usesRealGemmaVisitAgent)
+        assertTrue(oneGateStatus.usesRealGemmaVisitAgent)
     }
 
     private fun assetCorpusJson(): String {

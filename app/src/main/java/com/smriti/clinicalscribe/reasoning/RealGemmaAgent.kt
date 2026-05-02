@@ -23,31 +23,40 @@ class RealGemmaAgent(
         observationText: String,
         protocolChunks: List<ProtocolChunk>
     ): VisitReasoningResult {
+        val scenario = patient.id
+        val promptProtocolChunks = protocolChunks.take(MAX_PROMPT_PROTOCOL_CHUNKS)
         val prompt = try {
-            promptBuilder.buildVisitReasoningPrompt(
-                patient = patient,
-                visitHistory = visitHistory,
-                observationText = observationText,
-                protocolChunks = protocolChunks
-            )
+            SmritiLatencyLogger.measure("promptBuild", scenario) {
+                promptBuilder.buildVisitReasoningPrompt(
+                    patient = patient,
+                    visitHistory = visitHistory.take(MAX_PROMPT_HISTORY_VISITS),
+                    observationText = observationText,
+                    protocolChunks = promptProtocolChunks
+                )
+            }
         } catch (_: RuntimeException) {
             return safeUncertainResult(
                 patient = patient,
                 visitHistory = visitHistory,
                 observationText = observationText,
-                protocolChunks = protocolChunks,
+                protocolChunks = promptProtocolChunks,
                 status = "Experimental Real Gemma path unavailable: prompt construction failed."
             )
         }
 
         val generation = try {
-            textClient.generateText(prompt)
+            var result: TextGenerationResult? = null
+            val duration = kotlin.system.measureTimeMillis {
+                result = textClient.generateText(prompt)
+            }
+            SmritiLatencyLogger.log("realGemmaGenerateCall", duration, scenario)
+            result ?: TextGenerationResult.Failed("Text generation returned no result.")
         } catch (_: RuntimeException) {
             return safeUncertainResult(
                 patient = patient,
                 visitHistory = visitHistory,
                 observationText = observationText,
-                protocolChunks = protocolChunks,
+                protocolChunks = promptProtocolChunks,
                 status = "Experimental Real Gemma path unavailable: text generation failed safely."
             )
         }
@@ -58,20 +67,20 @@ class RealGemmaAgent(
                 patient = patient,
                 visitHistory = visitHistory,
                 observationText = observationText,
-                protocolChunks = protocolChunks
+                protocolChunks = promptProtocolChunks
             )
             is TextGenerationResult.Unavailable -> safeUncertainResult(
                 patient = patient,
                 visitHistory = visitHistory,
                 observationText = observationText,
-                protocolChunks = protocolChunks,
+                protocolChunks = promptProtocolChunks,
                 status = generation.status
             )
             is TextGenerationResult.Failed -> safeUncertainResult(
                 patient = patient,
                 visitHistory = visitHistory,
                 observationText = observationText,
-                protocolChunks = protocolChunks,
+                protocolChunks = promptProtocolChunks,
                 status = "Experimental Real Gemma path unavailable: ${generation.error}"
             )
         }
@@ -85,20 +94,36 @@ class RealGemmaAgent(
         protocolChunks: List<ProtocolChunk>
     ): VisitReasoningResult {
         return try {
-            when (val parsed = outputParser.parseVisitReasoning(rawOutput, patient, observationText, protocolChunks)) {
+            var parsed: RealGemmaParseResult? = null
+            val duration = kotlin.system.measureTimeMillis {
+                parsed = outputParser.parseVisitReasoning(rawOutput, patient, observationText, protocolChunks)
+            }
+            SmritiLatencyLogger.log("parseSafetyCitationValidation", duration, patient.id)
+            val parseResult = parsed ?: error("Parser returned no result.")
+            when (parseResult) {
                 is RealGemmaParseResult.Success -> safetyPostProcessor.enforce(
-                    result = parsed.result,
+                    result = parseResult.result,
                     languageCode = patient.preferredLanguage
                 )
-                is RealGemmaParseResult.Rejected -> safeUncertainResult(
-                    patient = patient,
-                    visitHistory = visitHistory,
-                    observationText = observationText,
-                    protocolChunks = protocolChunks,
-                    status = "Experimental Real Gemma output rejected: ${parsed.reason}"
-                )
+                is RealGemmaParseResult.Rejected -> {
+                    RealGemmaDebugLogger.logParserFailure(
+                        rawOutput = rawOutput,
+                        reason = parseResult.reason
+                    )
+                    safeUncertainResult(
+                        patient = patient,
+                        visitHistory = visitHistory,
+                        observationText = observationText,
+                        protocolChunks = protocolChunks,
+                        status = "Experimental Real Gemma output rejected: ${parseResult.reason}"
+                    )
+                }
             }
-        } catch (_: RuntimeException) {
+        } catch (error: RuntimeException) {
+            RealGemmaDebugLogger.logParserFailure(
+                rawOutput = rawOutput,
+                reason = error.message ?: "parser threw an exception"
+            )
             safeUncertainResult(
                 patient = patient,
                 visitHistory = visitHistory,
@@ -139,10 +164,10 @@ class RealGemmaAgent(
             },
             referralFlag = null,
             protocolCitation = citation,
-            suggestedFollowUp = "Use MockGemmaAgent fallback or ask the CHW to review manually. Protocol citation required before recommendation. Protocol citation: $citation",
+            suggestedFollowUp = "RealGemma reasoning is unavailable. Ask the CHW to review manually and retry after setup. Protocol citation required before recommendation. Protocol citation: $citation",
             protocolChunk = protocolChunks.firstOrNull(),
             uncertain = true,
-            clarificationPrompt = "$status Continue with mock fallback for demo-safe protocol support."
+            clarificationPrompt = "$status Complete local RealGemma setup or retry; no mock clinical output was generated."
         )
     }
 
@@ -161,13 +186,17 @@ class RealGemmaAgent(
         referrals: List<ReferralFlag>
     ): SupervisorSummary {
         // TODO LiteRT-LM integration: generate a structured supervisor summary through Gemma function-call parsing.
-        // TODO LiteRT-LM integration: apply timeout/error fallback to MockGemmaAgent for end-of-day summary generation.
         return SupervisorSummary(
             totalVisits = visits.size,
             referralsFlagged = referrals.size,
             urgentCases = emptyList(),
             followUpsDue = emptyList(),
-            narrative = "Real Gemma unavailable. LiteRT-LM model support is not initialized, so supervisor summary generation requires MockGemmaAgent fallback."
+            narrative = "RealGemma supervisor reasoning unavailable. Complete local model setup and retry."
         )
+    }
+
+    private companion object {
+        const val MAX_PROMPT_HISTORY_VISITS = 3
+        const val MAX_PROMPT_PROTOCOL_CHUNKS = 2
     }
 }

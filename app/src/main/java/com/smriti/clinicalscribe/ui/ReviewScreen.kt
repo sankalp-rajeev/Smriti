@@ -103,30 +103,47 @@ fun ReviewScreen(
                 }
             }
 
-            result.referralFlag?.let { flag ->
+            val referralFlag = result.referralFlag
+            if (referralFlag != null) {
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             Text("Referral Support", fontWeight = FontWeight.SemiBold)
                             Text("Protocol-grounded referral support, not diagnosis.")
                             Text("CHW confirmation and clinical referral judgment are required.")
-                            Text("Urgency: ${flag.urgency}")
-                            Text(flag.reason)
-                            Text("Danger signs: ${flag.dangerSigns}")
-                            Text("Protocol citation: ${flag.protocolBasis}")
-                            Text("Facility: ${flag.recommendedFacility}")
+                            Text("Urgency: ${referralFlag.urgency}")
+                            Text(referralFlag.reason)
+                            Text("Danger signs: ${referralFlag.dangerSigns}")
+                            Text("Protocol citation: ${referralFlag.protocolBasis}")
+                            Text("Facility: ${referralFlag.recommendedFacility}")
                             OutlinedButton(
                                 onClick = onReadReferralSuggestion,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text("Read referral suggestion aloud")
                             }
+                        }
+                    }
+                }
+            } else if (!result.uncertain) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text("Routine / No referral flag", fontWeight = FontWeight.SemiBold)
+                            Text("No danger-sign referral flag was generated.")
+                            Text("CHW reviews and confirms before saving.")
                         }
                     }
                 }

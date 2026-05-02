@@ -1,47 +1,75 @@
 # Judge Evidence
 
-This page is the concise evidence ledger for Smriti's current hackathon state. It separates what works in the normal judge demo, what is developer-only, what is blocked, and what is not claimed.
+This page is the concise evidence ledger for Smriti's current hackathon state. The app-facing reasoning path now requires RealGemma text reasoning; mock output is not shown when RealGemma is unavailable.
 
 For the filmed/live runbook, use `docs/final_demo_checklist.md`.
 
-## Normal Demo
+## RealGemma-Required Demo
 
-The normal demo path is offline and mock-backed by default:
+The filmed/local submission path is offline and RealGemma-backed:
 
 ```text
 Patient Roster
--> Meena visit screen
+-> VisitScreen
 -> editable/sample transcript or offline speech fallback
 -> VisitReasoningPipeline
 -> ProtocolRetriever
--> MockGemmaAgent
+-> RealGemmaAgent
 -> ReviewScreen
 -> CHW confirm/save
 -> LocalVisitMemoryStore
--> Supervisor Summary
+-> Raw local counts + RealGemma priority queue attempt
 ```
 
 Evidence:
 
-- `AgentConfig.DEFAULT_MODE = AgentMode.MOCK`.
-- `MockGemmaAgent` is the default reasoning agent.
+- `AgentConfig.DEFAULT_MODE = AgentMode.REAL_GEMMA_REQUIRED`.
+- App-facing visit generation uses `RealGemmaAgent`.
+- App-facing supervisor priority generation attempts RealGemma.
+- Missing model, missing gate, timeout, failed inference, invalid JSON, or citation/safety rejection displays setup/retry messaging and does not save.
+- RealGemma has loaded and returned output on the emulator. The most recent observed failure mode was schema adherence: output omitted required `referralFlag`, so the hardened parser rejected it safely.
+- When the gated model is present, Smriti starts a background RealGemma preload and keeps the shared engine/client warm for subsequent patient generations and supervisor priority attempts. The first RealGemma call may still be slower because model/session initialization is expensive; later calls should avoid repeated cold loads when memory allows.
+- Confirm/save is a local Room/SQLite write only. It never invokes RealGemma, never re-runs retrieval, and never auto-exports JSON; the CHW confirm/save gate remains required.
+- `SmritiLatency` logs timing markers for readiness, preload/init, protocol retrieval, history formatting, prompt build, generation, parser/safety/citation validation, ReviewScreen navigation, local save, and summary refresh without logging transcripts or raw clinical text.
+- Measured emulator/local setup timing evidence from `SmritiLatency`: RealGemma preload/init 1.885 s; Meena RealGemma generation 21.726 s; Meena validation 31 ms; Meena Room save 49 ms; Meena summary refresh 5 ms; Lucia RealGemma generation after preload/reuse 14.434 s; Lucia validation 4 ms; protocol retrieval 1-2 ms; prompt build 1-3 ms. Device performance may vary.
+- Timing interpretation: RealGemma inference dominates latency. Local retrieval, prompt build, parser/safety/citation validation, Room save, and summary refresh are negligible by comparison. The second generation was faster after preload/engine reuse.
+- The visit prompt now asks for exact JSON only: `summary`, boolean `referralFlag`, `referralReason`, `dangerSigns`, `followUpPlan`, `clarificationQuestion`, `citations`, `confidence`, and `safetyNote`.
+- The parser extracts close JSON from markdown fences/surrounding text and accepts safe aliases, but still rejects missing referral equivalents, diagnostic wording, invented/missing referral citations, and prose-only output.
+- `MockGemmaAgent` may remain in tests/fixtures only; app screens do not use it for clinical/visit/supervisor output.
 - Local patient roster and history use Room/SQLite.
 - Local protocol retrieval uses JSON assets with country-aware ranking.
 - Generated notes and referral support go to ReviewScreen before saving.
 - CHW confirm/save is required before visits or referral flags persist.
-- Supervisor Summary reads confirmed local data.
-- Offline Proof is visible in the app and reports local/offline status.
+- Raw local counts and saved urgent flags can remain visible as local data.
+- Offline Proof reports local/offline status, RealGemma model status, setup state, and blocked direct audio.
 - The core runtime does not require a cloud API.
+
+## Required Local Setup
+
+RealGemma inference requires:
+
+```powershell
+.\gradlew.bat assembleDebug -Psmriti.realGemmaSubmissionMode=true
+adb shell run-as com.smriti.clinicalscribe mkdir -p files/dev
+adb shell run-as com.smriti.clinicalscribe touch files/dev/enable_real_gemma_text_mode
+adb shell run-as com.smriti.clinicalscribe ls -lh files/models/gemma-4-E2B-it-int4.litertlm
+```
+
+The model must be sideloaded outside git to:
+
+```text
+filesDir/models/gemma-4-E2B-it-int4.litertlm
+```
+
+No model file is committed, bundled, downloaded at runtime, or fetched from a cloud API.
 
 ## Phase B Patient Memory Intelligence
 
-Phase B adds deterministic local intelligence without diagnosis:
-
 - Amara has an overdue incomplete follow-up in seeded local data, so opening her VisitScreen shows a missed follow-up alert before transcript input.
-- `Mark Confirmed` updates the prior visit's follow-up completion state; `Note as Ongoing` dismisses only for the current screen session when no notes field is available.
+- `Mark Confirmed` updates the prior visit's follow-up completion state; `Note as Ongoing` dismisses only for the current screen session.
 - Fatima has a rising BP history signal from prior readings `118/76 -> 125/80 -> 132/84 -> 138/88`.
 - Grace's routine history does not trigger the rising BP signal.
-- These cards are local logic over Room visit history. Gemma is not required.
+- These cards are deterministic local logic over Room visit history. They are not diagnosis or prediction.
 
 ## Protocol Pack
 
@@ -56,64 +84,9 @@ This is a protocol scaffold for the demo. It is not clinical validation.
 
 ## Synthetic Benchmark Evidence
 
-The synthetic benchmark suite has 10 cases covering:
+The synthetic benchmark suite still exists as a deterministic fixture suite over `MockGemmaAgent`. It is retained for retrieval and local protocol-scaffold regression testing only. It is not app-facing reasoning and should not be described as the live demo engine.
 
-- India ANC danger-sign case.
-- India normal ANC follow-up.
-- Bangladesh maternal danger-sign case.
-- Ethiopia maternal danger-sign case.
-- Africa-region fallback case.
-- South America-region fallback case.
-- `GLOBAL_CORE` fallback case.
-- Vague/incomplete observation requiring clarification.
-- No-danger-sign routine visit.
-- Return visit with prior history relevance.
-
-Covered country/region contexts include `IN`, `BD`, `ET`, `KE`, `PE`, `NP`, plus the required protocol region tags.
-
-Runner:
-
-```text
-ProtocolRetriever -> VisitReasoningPipeline -> MockGemmaAgent
-```
-
-The tests verify retrieval level, citation expectations, referral behavior, uncertainty/clarification, Meena demo preservation, `MockGemmaAgent` default mode, and RealGemma developer gating. These are synthetic protocol-scaffold tests, not clinical validation.
-
-## RealGemma Manual And Developer-Only Evidence
-
-RealGemma text inference has been manually validated, but it is not the default demo mode.
-
-Current RealGemma paths:
-
-- Manual instrumentation tests with a sideloaded app-private `.litertlm` model.
-- Developer-only UI text mode guarded by all of:
-  - debug/build-time gate: `-Psmriti.realGemmaDevMode=true`,
-  - app-private local gate: `files/dev/enable_real_gemma_text_mode`,
-  - app-private model file: `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
-- Output still appears on ReviewScreen.
-- CHW confirm/save remains required.
-- Missing model, timeout, failed inference, invalid JSON, or rejected citation returns a safe unavailable/uncertain result.
-- Recorded-demo submission mode is separate and requires all of: `-Psmriti.realGemmaSubmissionMode=true`, `files/dev/enable_real_gemma_text_mode`, and `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
-- When submission mode is fully active, visit generation uses `RealGemmaAgent` through `VisitReasoningPipeline`; if unavailable, the app shows `On-device reasoning unavailable — please retry.` and does not silently show mock output as RealGemma.
-- SummaryScreen can show a `RealGemma Priority Follow-Up Queue` from today's confirmed visits, referral flags, missed follow-ups, history signals, patient context, and supplied protocol citations.
-- If RealGemma priority generation fails, the deterministic local supervisor summary remains visible as the fallback evidence.
-
-Phase C multilingual evidence:
-
-- Smriti demonstrates selected patient-specific local-language output: English, Hindi, Swahili, and Spanish.
-- `Patient.preferredLanguage` controls the RealGemma visit-note output language in fully gated submission mode.
-- Patient mapping is Meena/Priya -> Hindi, Grace -> Swahili, Lucia -> Spanish, and Fatima/Amara -> English.
-- Lucia is Peru/Spanish; Brazil is not used for her Spanish-language demo.
-- Protocol citation IDs remain stable in English and are not translated.
-- No cloud translation API is used.
-- Manual multilingual RealGemma validation is required before filming or claiming a language in the video.
-- The architecture can extend to more Gemma-supported languages as protocol packs and UI translations are added.
-
-Manual multilingual harness:
-
-```powershell
-.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaMultilingualInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
-```
+## RealGemma Manual Evidence
 
 Accepted manual RealGemma benchmark:
 
@@ -128,39 +101,30 @@ Accepted manual RealGemma benchmark:
 
 The 15.8s average latency reflects real on-device Gemma 4 E2B text inference on CPU backend; in the CHW field workflow, this is positioned as protocol-grounded reasoning support replacing manual paper/protocol lookup, not instant chat.
 
-Manual memory stress:
+Latency tuning note: the app now preloads and reuses the RealGemma engine where supported, compacts visit prompts to recent history plus top protocol chunks, and keeps save latency separate from generation latency. The measured emulator/local setup showed preload/init at 1.885 s, a first Meena generation at 21.726 s, and a later Lucia generation at 14.434 s after preload/reuse. This is performance evidence only, not clinical validation.
 
-- Context sizes: 10, 20, and 40 compact prior visits.
-- `parserSuccessCount=3/3`.
+Current schema-hardening note: if manual RealGemma output still fails the strict parser, the app treats that as a safe rejection, preserves the transcript for retry, logs raw output only in debug/dev Logcat under `SmritiRealGemma`, and does not fall back to mock clinical output.
 
-Manual function calling:
+## Phase C Multilingual Evidence
 
-- Native `log_visit` tool was manually executed once.
-- Tool arguments included `patientId`, `observationText`, `protocolCitation`, and `referralRequired`.
-- The tool returned `savedToRoom=false`.
-- Native function calling is not wired into the normal UI.
+- Smriti demonstrates selected patient-specific local-language output: English, Hindi, Swahili, and Spanish.
+- `Patient.preferredLanguage` controls the RealGemma visit-note output language.
+- Patient mapping is Meena/Priya -> Hindi, Grace -> Swahili, Lucia -> Spanish, and Fatima/Amara -> English.
+- Lucia is Peru/Spanish; Brazil is not used for her Spanish-language demo.
+- Protocol citation IDs remain stable in English and are not translated.
+- No cloud translation API is used.
+- Manual multilingual RealGemma validation is required before filming or claiming a language in the video.
+- The architecture can extend to more Gemma-supported languages as protocol packs and UI translations are added.
 
-GPU backend probe:
+Manual multilingual harness:
 
-- Not attempted for the final video pass because the stable manual RealGemma path is CPU-backed and adding GPU would require a new isolated backend path.
-- CPU backend is retained for the stable demo; GPU backend benchmarking remains future work.
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaMultilingualInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
+```
 
 ## Audio Status
 
-Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin path.
-
-Evidence:
-
-- LiteRT-LM Android `0.10.2` exposes audio containers such as `Content.AudioBytes`, `Content.AudioFile`, `InputData.Audio`, and `InputData.Text`.
-- Runtime audio attempt failed with:
-
-```text
-Audio must be preprocessed before being used in SessionAdvanced.
-```
-
-- Local AAR inspection found no public `AudioPreprocessor`, `AudioProcessor`, `Preprocessor`, or `preprocess(...)` API.
-- The current Kotlin API path does not expose prompt-template customization needed for multimodal placeholder injection.
-- Smriti therefore uses offline speech/editable transcript fallback into text reasoning.
+Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin path. Smriti uses offline speech/editable transcript fallback into RealGemma text reasoning.
 
 Do not claim direct Gemma 4 audio works.
 
@@ -173,13 +137,13 @@ Smriti does not claim:
 - autonomous treatment,
 - direct Gemma 4 audio transcription,
 - cloud runtime,
-- RealGemma as default,
+- mock output as RealGemma,
 - model files bundled or downloaded by the app,
 - real patient/PHI data in the repository.
 
 ## Validation
 
-Latest local validation commands:
+Required local validation commands:
 
 ```powershell
 .\gradlew.bat testDebugUnitTest
@@ -187,6 +151,4 @@ Latest local validation commands:
 .\gradlew.bat :app:compileDebugAndroidTestKotlin
 ```
 
-Latest status: all three passed on April 29, 2026. The sandboxed Gradle wrapper can hit a user-cache lock-file issue; normal-cache reruns pass.
-
-Phase C status: multilingual code/tests were added for English, Hindi, Swahili, and Spanish. Manual multilingual RealGemma results must be collected on the sideloaded-model device before updating video claims.
+Manual RealGemma validation requires a connected target and sideloaded app-private model.

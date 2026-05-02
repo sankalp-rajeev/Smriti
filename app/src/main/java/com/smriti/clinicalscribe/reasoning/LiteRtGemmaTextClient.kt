@@ -1,6 +1,7 @@
 package com.smriti.clinicalscribe.reasoning
 
 import com.google.ai.edge.litertlm.Content
+import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import kotlinx.coroutines.Dispatchers
@@ -72,11 +73,14 @@ class LiteRtGemmaTextClient(
         return try {
             val text = withTimeout(timeoutMillis) {
                 withContext(Dispatchers.IO) {
+                    SmritiLatencyLogger.mark("realGemmaGenerateCallStart")
                     modelLoadAttempted = true
                     engineInitializationAttempted = true
                     conversationCreated = true
                     inferenceAttempted = true
-                    manualInferenceRunner.generateText(prepared.engineConfig, prompt)
+                    val text = manualInferenceRunner.generateText(prepared.engineConfig, prompt)
+                    SmritiLatencyLogger.mark("realGemmaGenerateCallEnd")
+                    text
                 }
             }
             TextGenerationResult.Success(text)
@@ -89,18 +93,93 @@ class LiteRtGemmaTextClient(
         }
     }
 
+    suspend fun preloadManual(
+        allowManualTextInference: Boolean,
+        timeoutMillis: Long = DEFAULT_MANUAL_TIMEOUT_MILLIS
+    ): RealGemmaPreloadResult {
+        if (!allowManualTextInference) {
+            return RealGemmaPreloadResult.Unavailable("Manual LiteRT-LM preload skipped: allowManualTextInference=false.")
+        }
+
+        val status = modelStatus
+            ?: return RealGemmaPreloadResult.Unavailable("Manual LiteRT-LM preload unavailable: model status not provided.")
+
+        if (status.kind != ModelStatusKind.FOUND_NOT_LOADED) {
+            return RealGemmaPreloadResult.Unavailable("Manual LiteRT-LM preload unavailable: model not found.")
+        }
+
+        val prepared = engineConfigFactory.prepare(status) as? LiteRtEngineConfigPreparation.Prepared
+            ?: return RealGemmaPreloadResult.Unavailable("Manual LiteRT-LM preload unavailable: EngineConfig not ready.")
+
+        return try {
+            withTimeout(timeoutMillis) {
+                withContext(Dispatchers.IO) {
+                    val duration = kotlin.system.measureTimeMillis {
+                        modelLoadAttempted = true
+                        engineInitializationAttempted = true
+                        conversationCreated = true
+                        manualInferenceRunner.preload(prepared.engineConfig)
+                    }
+                    SmritiLatencyLogger.log("realGemmaEnginePreloadInit", duration)
+                }
+            }
+            RealGemmaPreloadResult.Ready
+        } catch (_: TimeoutCancellationException) {
+            RealGemmaPreloadResult.Failed("Manual LiteRT-LM preload timed out after ${timeoutMillis}ms.")
+        } catch (error: RuntimeException) {
+            RealGemmaPreloadResult.Failed(error.message ?: error::class.java.simpleName)
+        } catch (error: LinkageError) {
+            RealGemmaPreloadResult.Failed(error.message ?: error::class.java.simpleName)
+        }
+    }
+
     fun interface ManualTextInferenceRunner {
         fun generateText(engineConfig: EngineConfig, prompt: String): String
+
+        fun preload(engineConfig: EngineConfig) {
+            // Default test runners can remain generation-only.
+        }
     }
 
     private object RealManualTextInferenceRunner : ManualTextInferenceRunner {
+        private var cachedEngine: Engine? = null
+        private var cachedConversation: Conversation? = null
+        private var cachedModelPath: String? = null
+
+        @Synchronized
+        override fun preload(engineConfig: EngineConfig) {
+            ensureConversation(engineConfig)
+        }
+
+        @Synchronized
         override fun generateText(engineConfig: EngineConfig, prompt: String): String {
-            Engine(engineConfig).use { engine ->
-                engine.initialize()
-                engine.createConversation().use { conversation ->
-                    return conversation.sendMessage(prompt).extractText()
-                }
+            val conversation = ensureConversation(engineConfig)
+            return conversation.sendMessage(prompt).extractText()
+        }
+
+        private fun ensureConversation(engineConfig: EngineConfig): Conversation {
+            val modelPath = engineConfig.modelPath
+            val existing = cachedConversation
+            if (existing != null && cachedModelPath == modelPath) {
+                return existing
             }
+
+            closeCached()
+            val engine = Engine(engineConfig)
+            engine.initialize()
+            val conversation = engine.createConversation()
+            cachedEngine = engine
+            cachedConversation = conversation
+            cachedModelPath = modelPath
+            return conversation
+        }
+
+        private fun closeCached() {
+            runCatching { cachedConversation?.close() }
+            runCatching { cachedEngine?.close() }
+            cachedConversation = null
+            cachedEngine = null
+            cachedModelPath = null
         }
 
         private fun com.google.ai.edge.litertlm.Message.extractText(): String {

@@ -1,0 +1,25 @@
+1. Set paths
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"$MODEL = "C:\Umich\Projects\Models\gemma-4-E2B-it.litertlm"
+2. Verify device + model file
+& $adb devicesTest-Path $MODELGet-Item $MODEL | Select-Object FullName,Length
+Test-Path should print True.
+3. Create app-private folders and enable RealGemma
+& $adb shell run-as com.smriti.clinicalscribe mkdir -p files/models& $adb shell run-as com.smriti.clinicalscribe mkdir -p files/dev& $adb shell run-as com.smriti.clinicalscribe touch files/dev/enable_real_gemma_text_mode
+4. Push model to emulator temp storage
+& $adb push $MODEL /data/local/tmp/gemma-4-E2B-it.litertlm& $adb shell chmod 644 /data/local/tmp/gemma-4-E2B-it.litertlm
+5. Copy model into app-private storage using the filename the app expects
+Your file is named:
+gemma-4-E2B-it.litertlm
+But the app may expect:
+gemma-4-E2B-it-int4.litertlm
+So copy it into app storage under both names to be safe:
+& $adb shell run-as com.smriti.clinicalscribe cp /data/local/tmp/gemma-4-E2B-it.litertlm files/models/gemma-4-E2B-it.litertlm& $adb shell run-as com.smriti.clinicalscribe cp /data/local/tmp/gemma-4-E2B-it.litertlm files/models/gemma-4-E2B-it-int4.litertlm
+6. Verify model and sentinel exist
+& $adb shell run-as com.smriti.clinicalscribe ls -lh files/models& $adb shell run-as com.smriti.clinicalscribe ls -lh files/dev
+You should see:
+gemma-4-E2B-it.litertlmgemma-4-E2B-it-int4.litertlmenable_real_gemma_text_mode
+7. Force-stop and reopen app
+& $adb shell am force-stop com.smriti.clinicalscribe& $adb shell monkey -p com.smriti.clinicalscribe 1
+Now check Offline Proof in the app. It should show something like:
+Active mode: RealGemmaAgentReal Gemma model: FoundInference: Enabled
+Do not run pm clear after this, because it will delete the sideloaded model.

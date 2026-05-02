@@ -2,6 +2,7 @@ package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.rag.ProtocolChunk
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -22,9 +23,13 @@ class RealGemmaPromptBuilderTest {
         assertTrue(prompt.contains("patient-meena"))
         assertTrue(prompt.contains("Meena Sharma, 28F"))
         assertTrue(prompt.contains("Prior visit history"))
-        assertTrue(prompt.contains(history.first().structuredNote.take(40)))
+        assertTrue(prompt.contains(history.maxBy { it.visitDateMillis }.structuredNote.take(40)))
         assertTrue(prompt.contains("Meena reports severe headache and blurred vision."))
         assertTrue(prompt.contains(protocol.citation))
+        assertTrue(prompt.contains("ALLOWED CITATIONS:"))
+        assertTrue(prompt.contains("Use only citation IDs from the supplied protocol chunks"))
+        assertTrue(prompt.contains("If referralFlag is false and no protocol-specific recommendation is needed, citations may be empty"))
+        assertTrue(prompt.contains("Routine follow-up wording is allowed for no-danger-sign cases"))
         assertTrue(prompt.contains("This is not a diagnosis"))
         assertTrue(prompt.contains("CHW confirmation is required"))
         assertTrue(prompt.contains("Generate all user-facing output in Hindi"))
@@ -34,13 +39,20 @@ class RealGemmaPromptBuilderTest {
         assertTrue(prompt.contains("Protocol citation IDs may remain in English"))
         assertTrue(prompt.contains("If uncertain, ask for clarification."))
         assertTrue(prompt.contains("preferred output language: Hindi (hi)"))
-        assertTrue(prompt.contains("Return compact JSON only"))
+        assertTrue(prompt.contains("Return exact JSON only"))
         assertTrue(prompt.contains("Output exactly one JSON object and nothing else"))
         assertTrue(prompt.contains("The first character must be { and the last character must be }"))
-        assertTrue(prompt.contains("protocolCitation must be exactly one supplied citation string"))
-        assertTrue(prompt.contains("choose the single most urgent or primary citation"))
+        assertTrue(prompt.contains("Do not wrap in ```json"))
+        assertTrue(prompt.contains("\"referralFlag\":true|false"))
+        assertTrue(prompt.contains("\"citations\":[\"exact supplied citation\"]"))
+        assertTrue(prompt.contains("referralFlag must always be present as a boolean"))
+        assertTrue(prompt.contains("citations must always be an array"))
+        assertTrue(prompt.contains("confidence must be exactly HIGH, MEDIUM, or LOW"))
+        assertTrue(prompt.contains("safetyNote must include the required non-diagnostic"))
+        assertTrue(prompt.contains("put the single most urgent or primary citation first"))
         assertTrue(prompt.contains("Do not join citations with semicolons"))
-        assertTrue(prompt.contains("same exact supplied citation as protocolCitation"))
+        assertTrue(prompt.contains("For routine visits with no danger signs, set referralFlag=false, dangerSigns=[], and provide a brief routine follow-up plan"))
+        assertTrue(prompt.contains("Example valid output for this Meena danger-sign case"))
     }
 
     @Test
@@ -82,10 +94,10 @@ class RealGemmaPromptBuilderTest {
         )
 
         assertTrue(prompt.contains("No protocol chunk was supplied"))
-        assertTrue(prompt.contains("Set protocolCitation to \"\""))
-        assertTrue(prompt.contains("Set uncertain to true"))
-        assertTrue(prompt.contains("Set referralFlag to null"))
-        assertTrue(prompt.contains("Do not write \"No matching protocol citation\""))
+        assertTrue(prompt.contains("Set citations to []"))
+        assertTrue(prompt.contains("Set referralFlag to false"))
+        assertTrue(prompt.contains("Set confidence to LOW"))
+        assertTrue(prompt.contains("Do not write \"No matching protocol citation\" anywhere"))
     }
 
     @Test
@@ -142,6 +154,44 @@ class RealGemmaPromptBuilderTest {
         assertTrue(prompt.contains("V03: date="))
         assertTrue(prompt.contains("issue=Visit"))
         assertTrue(prompt.contains("citation=WHO ANC Contact schedule"))
+    }
+
+    @Test
+    fun defaultPromptLimitsPriorVisitsAndProtocolChunksForLatency() {
+        val patient = DemoSeedData.patients.first { it.id == "patient-meena" }
+        val history = (1..5).map { index ->
+            DemoSeedData.initialVisitLogs(nowMillis = 1_700_000_000_000L)
+                .first()
+                .copy(
+                    visitDateMillis = 1_700_000_000_000L - index,
+                    structuredNote = "Latency limited visit $index summary."
+                )
+        }
+        val chunks = (1..4).map { index ->
+            protocolChunk().copy(
+                id = "chunk-$index",
+                title = "Protocol $index",
+                text = "Protocol guidance $index",
+                section = "Section $index"
+            )
+        }
+
+        val prompt = RealGemmaPromptBuilder().buildVisitReasoningPrompt(
+            patient = patient,
+            visitHistory = history,
+            observationText = "Meena reports severe headache and blurred vision.",
+            protocolChunks = chunks
+        )
+
+        assertTrue(prompt.contains("Latency limited visit 1 summary."))
+        assertTrue(prompt.contains("Latency limited visit 3 summary."))
+        assertFalse(prompt.contains("Latency limited visit 4 summary."))
+        assertTrue(prompt.contains("id=chunk-1"))
+        assertTrue(prompt.contains("id=chunk-2"))
+        assertFalse(prompt.contains("id=chunk-3"))
+        assertTrue(prompt.contains("\"referralFlag\":true|false"))
+        assertTrue(prompt.contains("\"safetyNote\""))
+        assertTrue(prompt.contains("ALLOWED CITATIONS:"))
     }
 
     private fun protocolChunk() = ProtocolChunk(

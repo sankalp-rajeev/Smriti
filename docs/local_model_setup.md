@@ -1,6 +1,6 @@
 # Local Model Setup
 
-Smriti is prepared for manual Gemma `.litertlm` sideloading, but the normal app does not load or run a model. The only real text inference entry points are developer-run instrumentation tests.
+Smriti is prepared for manual Gemma `.litertlm` sideloading. In fully gated RealGemma submission mode, the app can preload and run the sideloaded app-private model for local text reasoning. Manual instrumentation tests remain available for direct developer validation.
 
 ## Safety Rules
 
@@ -34,26 +34,30 @@ There is currently no debug `applicationIdSuffix`, so `run-as com.smriti.clinica
 
 - The app checks whether the expected app-private model file exists.
 - If missing, Offline Proof reports the Real Gemma model as not found and inference disabled.
-- If present, the app reports the model as found but not loaded.
+- If present, the app reports the model as found. Engine status says `Loads on demand`, `Preparing`, `Ready`, `Failed`, or `Loaded`; it should not say `Found, not loaded`.
 - The LiteRT layer constructs `EngineConfig` with `Backend.CPU()` only when the model is found.
 - Passive direct LiteRT API type references compile after the Room KSP migration.
-- Engine initialization is manual-only and requires an explicit test flag.
-- Normal app startup and UI screens do not create `Engine`.
-- Normal app startup and UI screens do not create a conversation.
-- Normal app startup and UI screens do not run inference.
+- With all RealGemma gates active, app startup/Patient Roster can start a non-blocking background preload. It initializes the RealGemma engine/session without generating clinical output and reuses that shared client for visit reasoning and supervisor priority attempts.
+- If preload fails, the UI reports `Engine: Failed` and generation still follows the existing RealGemma unavailable/retry path; the app must not crash or fall back to mock output.
+- The first RealGemma call may be slower because model initialization is expensive. Subsequent Meena, Grace, Lucia, Priya, and supervisor priority calls should be faster when the process keeps the engine alive.
 - Manual text inference requires `allowManualTextInference=true`.
-- Developer-only RealGemma text UI mode requires both `-Psmriti.realGemmaDevMode=true` at build time and an app-private sentinel file at `files/dev/enable_real_gemma_text_mode`.
+- RealGemma text UI mode requires `-Psmriti.realGemmaSubmissionMode=true` at build time and an app-private sentinel file at `files/dev/enable_real_gemma_text_mode`.
 - Recorded-demo RealGemma visit-note prompts use the selected patient's `preferredLanguage` for English, Hindi, Swahili, or Spanish output; citation IDs remain English/stable.
-- `MockGemmaAgent` remains the safe default.
+- `RealGemmaAgent` is the app-facing reasoning engine; missing setup returns unavailable/retry messaging instead of mock clinical output.
+- Confirm/save is local Room/SQLite only. It does not call RealGemma, rebuild protocol retrieval, or automatically export JSON.
+- `SmritiLatency` logs readiness, preload/init, retrieval, prompt, generation, validation, navigation, save, and summary-refresh timings without transcript text or PHI.
+- Latest measured emulator/local setup timings from `SmritiLatency`: preload/init 1.885 s; Meena RealGemma generation 21.726 s; Meena parser/safety/citation validation 31 ms; Meena Room save 49 ms; Meena summary refresh 5 ms; Lucia RealGemma generation after preload/reuse 14.434 s; Lucia validation 4 ms; protocol retrieval 1-2 ms; prompt build 1-3 ms. Device performance may vary.
+- Interpretation: RealGemma inference is the main latency cost. Local protocol retrieval, prompt build, validation, and save are milliseconds. The second generation was faster after preload/engine reuse.
+- Generation options note: the current app path calls LiteRT-LM through `Conversation.sendMessage(prompt)` and does not have a wired, tested API for temperature or max-output-token settings. Smriti constrains output with compact prompts, a strict JSON schema, and parser/safety/citation validation rather than inventing unsupported API calls.
 
-## Developer-Only RealGemma Text UI Mode
+## RealGemma Text UI Mode
 
-This mode is for local developer validation only. It is not the default demo mode and has no public CHW-facing toggle.
+This is the local submission path for app-facing RealGemma text reasoning. It has no public CHW-facing toggle; it is controlled by the build flag, app-private sentinel, and app-private model file.
 
-Build with the disabled-by-default build gate enabled:
+Build with the submission build gate enabled:
 
 ```powershell
-.\gradlew.bat assembleDebug -Psmriti.realGemmaDevMode=true
+.\gradlew.bat assembleDebug -Psmriti.realGemmaSubmissionMode=true
 ```
 
 Create the app-private local gate after installing the debug build:
@@ -63,9 +67,9 @@ adb shell run-as com.smriti.clinicalscribe mkdir -p files/dev
 adb shell run-as com.smriti.clinicalscribe touch files/dev/enable_real_gemma_text_mode
 ```
 
-With both gates enabled and the app-private model present, VisitScreen generation uses `RealGemmaAgent` through `VisitReasoningPipeline`. The output still appears on ReviewScreen and must be confirmed before saving. If the model is missing or inference fails, the generated result is safe/uncertain and nothing is saved automatically.
+With both gates enabled and the app-private model present, VisitScreen generation uses `RealGemmaAgent` through `VisitReasoningPipeline`. The output still appears on ReviewScreen and must be confirmed before saving. If the model is missing or inference fails, the app shows setup/retry messaging, preserves the transcript, and does not save or display mock clinical output.
 
-Remove the local gate to return that install to mock mode:
+Remove the local gate to force RealGemma setup-required behavior:
 
 ```powershell
 adb shell run-as com.smriti.clinicalscribe rm files/dev/enable_real_gemma_text_mode
@@ -118,9 +122,9 @@ After the simple text test works, run the structured visit JSON harness:
 app/src/androidTest/java/com/smriti/clinicalscribe/reasoning/ManualRealGemmaVisitJsonInstrumentedTest.kt
 ```
 
-It builds a realistic Meena ANC prompt with `RealGemmaPromptBuilder`, demo prior history, supplied local protocol chunks, JSON-only instructions, non-diagnostic wording rules, protocol-citation requirements, and CHW-confirmation language. It calls `LiteRtGemmaTextClient.generateTextManual(...)`, logs raw model output, and runs `RealGemmaOutputParser`.
+It builds a realistic Meena ANC prompt with `RealGemmaPromptBuilder`, demo prior history, supplied local protocol chunks, exact-JSON schema instructions, non-diagnostic wording rules, protocol-citation requirements, and CHW-confirmation language. It calls `LiteRtGemmaTextClient.generateTextManual(...)`, logs raw model output, and runs `RealGemmaOutputParser`.
 
-The JSON test fails if the model is missing, inference fails, or output is empty. Parser rejection does not fail the test yet; it is logged as early model-behavior signal.
+The JSON test fails if the model is missing, inference fails, output is empty, parser rejection occurs, referral support is absent for the Meena danger-sign case, citation is absent, or safety wording is missing. If parser rejection happens, the app behavior is still safe: invalid output is rejected and not saved.
 
 Run only the manual JSON instrumentation test:
 
@@ -131,12 +135,12 @@ Run only the manual JSON instrumentation test:
 View the manual JSON test output:
 
 ```powershell
-adb logcat -s SmritiRealGemmaJsonTest:I "*:S"
+adb logcat -s SmritiRealGemma:I "*:S"
 ```
 
 ## Manual RealGemmaAgent End-to-End Test
 
-After the structured JSON harness works, run the full experimental agent path:
+After the structured JSON harness works, run the full RealGemma agent path:
 
 ```text
 app/src/androidTest/java/com/smriti/clinicalscribe/reasoning/ManualRealGemmaAgentInstrumentedTest.kt
@@ -328,7 +332,7 @@ Normal validation should continue to use:
 
 It does not create a Conversation and does not call `sendMessage`.
 
-`LiteRtGemmaTextClient.generateTextManual(...)` is the separate text-inference helper. It requires a found model, prepared `EngineConfig`, and `allowManualTextInference=true`. It creates one Conversation, sends one text prompt, extracts text, and closes Conversation and Engine. It is used by manual instrumentation tests and by the developer-only RealGemma text UI mode only when both local gates and the app-private model are present. It is not part of the default demo path.
+`LiteRtGemmaTextClient.generateTextManual(...)` is the separate text-inference helper. It requires a found model, prepared `EngineConfig`, and `allowManualTextInference=true`. It creates one Conversation, sends one text prompt, extracts text, and closes Conversation and Engine. It is used by manual instrumentation tests and by the RealGemma-required app-facing path only when the submission build flag, local gate, and app-private model are present.
 
 ## Development Note
 

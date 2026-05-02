@@ -11,20 +11,20 @@ data class RealGemmaDeveloperModeStatus(
     val activeAgentMode: AgentMode = if (developerModeRequested) {
         AgentMode.REAL_GEMMA_EXPERIMENTAL
     } else {
-        AgentMode.MOCK
+        AgentMode.REAL_GEMMA_REQUIRED
     }
-    val usesRealGemmaVisitAgent: Boolean = developerModeRequested
+    val usesRealGemmaVisitAgent: Boolean = true
     val inferenceEnabled: Boolean = developerModeRequested &&
         modelStatus.kind == ModelStatusKind.FOUND_NOT_LOADED
     val reasoningModeLabel: String = if (developerModeRequested) {
         "RealGemmaAgent / Developer-only / Experimental"
     } else {
-        "MockGemmaAgent"
+        "RealGemmaAgent / Setup required"
     }
     val inferenceStatusLabel: String = when {
         inferenceEnabled -> "Enabled for developer text mode; CPU backend"
         developerModeRequested -> "Disabled; local model missing or not ready"
-        else -> "Disabled by default; manual-only"
+        else -> "Setup required; RealGemma is required for app reasoning"
     }
     val gateStatusLabel: String = "Build gate: ${gateLabel(buildTimeGateEnabled)}; local gate: ${gateLabel(localGateEnabled)}"
     val developerWarning: String? = if (developerModeRequested) {
@@ -65,10 +65,14 @@ object RealGemmaDeveloperAgentFactory {
         status: RealGemmaDeveloperModeStatus,
         modelStatus: ModelStatus
     ): GemmaAgent {
-        return if (status.usesRealGemmaVisitAgent) {
+        return if (status.inferenceEnabled) {
             RealGemmaAgent(textClient = RealGemmaDeveloperTextClient(modelStatus))
         } else {
-            GemmaAgentFactory.create(AgentConfig.DEFAULT_MODE)
+            RealGemmaAgent(
+                textClient = UnavailableGemmaTextClient(
+                    status = "RealGemma setup required: build flag, local gate, and app-private model must be present."
+                )
+            )
         }
     }
 }
@@ -76,7 +80,7 @@ object RealGemmaDeveloperAgentFactory {
 class RealGemmaDeveloperTextClient(
     private val liteRtClient: LiteRtGemmaTextClient,
     private val timeoutMillis: Long = LiteRtGemmaTextClient.DEFAULT_MANUAL_TIMEOUT_MILLIS
-) : RealGemmaTextClient {
+) : RealGemmaTextClient, RealGemmaPreloadable {
     constructor(
         modelStatus: ModelStatus,
         timeoutMillis: Long = LiteRtGemmaTextClient.DEFAULT_MANUAL_TIMEOUT_MILLIS
@@ -88,6 +92,13 @@ class RealGemmaDeveloperTextClient(
     override suspend fun generateText(prompt: String): TextGenerationResult {
         return liteRtClient.generateTextManual(
             prompt = prompt,
+            allowManualTextInference = true,
+            timeoutMillis = timeoutMillis
+        )
+    }
+
+    override suspend fun preload(): RealGemmaPreloadResult {
+        return liteRtClient.preloadManual(
             allowManualTextInference = true,
             timeoutMillis = timeoutMillis
         )

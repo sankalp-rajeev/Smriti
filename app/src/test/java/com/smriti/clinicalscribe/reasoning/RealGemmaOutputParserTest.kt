@@ -11,6 +11,7 @@ import org.junit.Test
 class RealGemmaOutputParserTest {
     private val parser = RealGemmaOutputParser()
     private val patient = DemoSeedData.patients.first { it.id == "patient-meena" }
+    private val grace = DemoSeedData.patients.first { it.id == "patient-grace" }
     private val protocol = ProtocolChunk(
         id = "danger-headache",
         title = "Maternal danger signs",
@@ -19,6 +20,15 @@ class RealGemmaOutputParserTest {
         text = "Severe headache with blurred vision requires same-day referral support.",
         keywords = "headache, blurred vision",
         referralLevel = "SAME_DAY"
+    )
+    private val routineProtocol = ProtocolChunk(
+        id = "routine-anc",
+        title = "Routine antenatal follow-up",
+        source = "Smriti Demo Maternal Health Protocol",
+        section = "Routine ANC",
+        text = "Routine ANC follow-up documentation should note current concern, danger-sign screen, counseling, and next contact.",
+        keywords = "routine, anc, follow-up",
+        referralLevel = "NONE"
     )
 
     @Test
@@ -39,6 +49,173 @@ class RealGemmaOutputParserTest {
     }
 
     @Test
+    fun validExactCurrentSchemaParsesSuccessfully() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = validCurrentJson(),
+            patient = patient,
+            originalObservationText = "Meena reports severe headache and blurred vision.",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertTrue("Expected current schema to parse, got: ${result.describe()}", result is RealGemmaParseResult.Success)
+        val visit = (result as RealGemmaParseResult.Success).result
+        assertEquals(patient.id, visit.patientId)
+        assertEquals(protocol.citation, visit.protocolCitation)
+        assertNotNull(visit.referralFlag)
+        assertEquals(protocol.citation, visit.referralFlag!!.protocolBasis)
+        assertTrue(visit.structuredNote.contains("Safety note:"))
+    }
+
+    @Test
+    fun aliasReferralRequiredParsesToReferralFlag() {
+        val aliasJson = validCurrentJson()
+            .replace("\"referralFlag\":true", "\"referral_required\":true")
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = aliasJson,
+            patient = patient,
+            originalObservationText = "Meena reports severe headache and blurred vision.",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertTrue("Expected referral_required alias to parse, got: ${result.describe()}", result is RealGemmaParseResult.Success)
+        assertNotNull((result as RealGemmaParseResult.Success).result.referralFlag)
+    }
+
+    @Test
+    fun markdownFencedJsonIsExtractedAndParsed() {
+        val fenced = "```json\n${validCurrentJson()}\n```"
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = fenced,
+            patient = patient,
+            originalObservationText = "Meena reports severe headache and blurred vision.",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertTrue("Expected fenced JSON to parse, got: ${result.describe()}", result is RealGemmaParseResult.Success)
+    }
+
+    @Test
+    fun surroundingTextJsonIsExtractedAndParsed() {
+        val surrounded = "Here is the result:\n${validCurrentJson()}\nDone."
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = surrounded,
+            patient = patient,
+            originalObservationText = "Meena reports severe headache and blurred vision.",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertTrue("Expected embedded JSON to parse, got: ${result.describe()}", result is RealGemmaParseResult.Success)
+    }
+
+    @Test
+    fun missingReferralFlagAndAliasesIsRejected() {
+        val missingReferral = validCurrentJson()
+            .replace("\"referralFlag\":true,", "")
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = missingReferral,
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertRejected(result, "referralFlag")
+    }
+
+    @Test
+    fun currentSchemaReferralWithoutCitationIsRejected() {
+        val noCitation = validCurrentJson()
+            .replace("\"citations\":[\"${protocol.citation}\"]", "\"citations\":[]")
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = noCitation,
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertRejected(result, "Referral output must include")
+    }
+
+    @Test
+    fun currentSchemaDiagnosticLanguageIsRejected() {
+        val unsafe = validCurrentJson(
+            summary = "Patient has preeclampsia.",
+            referralReason = "Protocol-grounded referral support requested."
+        )
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = unsafe,
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertRejected(result, "diagnostic language")
+    }
+
+    @Test
+    fun graceRoutineNoDangerSignOutputWithEmptyCitationsParsesWithoutReferral() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = routineCurrentJson(citations = "[]"),
+            patient = grace,
+            originalObservationText = "Grace has routine ANC follow-up. Normal vitals and no danger signs.",
+            protocolChunks = listOf(routineProtocol)
+        )
+
+        assertTrue("Expected Grace routine output to parse, got: ${result.describe()}", result is RealGemmaParseResult.Success)
+        val visit = (result as RealGemmaParseResult.Success).result
+        assertNull(visit.referralFlag)
+        assertEquals("", visit.protocolCitation)
+        assertNull(visit.protocolChunk)
+        assertTrue(visit.suggestedFollowUp.contains("routine", ignoreCase = true))
+        assertTrue(visit.structuredNote.contains("Hii si utambuzi wa ugonjwa"))
+    }
+
+    @Test
+    fun graceRoutineNoDangerSignOutputWithSuppliedCitationParsesWithoutReferral() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = routineCurrentJson(citations = "[\"${routineProtocol.citation}\"]"),
+            patient = grace,
+            originalObservationText = "Grace has routine ANC follow-up. Normal vitals and no danger signs.",
+            protocolChunks = listOf(routineProtocol)
+        )
+
+        assertTrue("Expected Grace routine cited output to parse, got: ${result.describe()}", result is RealGemmaParseResult.Success)
+        val visit = (result as RealGemmaParseResult.Success).result
+        assertNull(visit.referralFlag)
+        assertEquals(routineProtocol.citation, visit.protocolCitation)
+    }
+
+    @Test
+    fun graceRoutineOutputWithInventedCitationIsRejected() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = routineCurrentJson(citations = "[\"Invented Routine ANC Citation\"]"),
+            patient = grace,
+            originalObservationText = "Grace has routine ANC follow-up. Normal vitals and no danger signs.",
+            protocolChunks = listOf(routineProtocol)
+        )
+
+        assertRejected(result, "not grounded in a supplied protocol citation")
+    }
+
+    @Test
+    fun currentSchemaReferralWithSuppliedCitationParses() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = validCurrentJson(),
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertTrue("Expected referral with supplied citation to parse, got: ${result.describe()}", result is RealGemmaParseResult.Success)
+        assertNotNull((result as RealGemmaParseResult.Success).result.referralFlag)
+    }
+
+    @Test
     fun invalidJsonIsRejectedSafely() {
         val result = parser.parseVisitReasoning(
             rawOutput = "not json",
@@ -47,7 +224,7 @@ class RealGemmaOutputParserTest {
             protocolChunks = listOf(protocol)
         )
 
-        assertRejected(result, "not a single compact JSON")
+        assertRejected(result, "not JSON")
     }
 
     @Test
@@ -286,6 +463,45 @@ class RealGemmaOutputParserTest {
               "uncertain":$uncertain,
               "clarificationPrompt":null,
               "referralFlag":$referralFlag
+            }
+        """.trimIndent()
+    }
+
+    private fun validCurrentJson(
+        summary: String = "Severe headache, blurred vision, BP 150/95, and reduced fetal movement noted.",
+        referralReason: String = "Danger signs in pregnancy need same-day referral support.",
+        safetyNote: String = "This is not a diagnosis. CHW confirmation is required before saving."
+    ): String {
+        return """
+            {
+              "summary":"$summary",
+              "referralFlag":true,
+              "referralReason":"$referralReason",
+              "dangerSigns":["severe headache","blurred vision","reduced fetal movement"],
+              "followUpPlan":["Arrange same-day referral support and document CHW confirmation."],
+              "clarificationQuestion":"",
+              "citations":["${protocol.citation}"],
+              "confidence":"HIGH",
+              "safetyNote":"$safetyNote"
+            }
+        """.trimIndent()
+    }
+
+    private fun routineCurrentJson(
+        citations: String,
+        safetyNote: String = "Hii si utambuzi wa ugonjwa. Uthibitisho wa mfanyakazi wa afya unahitajika."
+    ): String {
+        return """
+            {
+              "summary":"Routine ANC follow-up with normal vitals and no danger signs reported.",
+              "referralFlag":false,
+              "referralReason":"",
+              "dangerSigns":[],
+              "followUpPlan":["Continue routine ANC follow-up and routine monitoring."],
+              "clarificationQuestion":"",
+              "citations":$citations,
+              "confidence":"MEDIUM",
+              "safetyNote":"$safetyNote"
             }
         """.trimIndent()
     }

@@ -32,7 +32,7 @@ class ModelAvailabilityTest {
     }
 
     @Test
-    fun existingExpectedModelReturnsFoundNotLoadedWithSize() {
+    fun existingExpectedModelReturnsFoundWithSizeAndDemandLoadWording() {
         val filesDir = Files.createTempDirectory("smriti-model-found").toFile()
         val modelFile = LiteRtModelPaths.expectedModelFile(filesDir)
         modelFile.parentFile!!.mkdirs()
@@ -43,6 +43,6 @@ class ModelAvailabilityTest {
         assertEquals(ModelStatusKind.FOUND_NOT_LOADED, status.kind)
         assertEquals(modelFile.absolutePath, status.expectedPath)
         assertEquals(2048L, status.fileSizeBytes)
-        assertEquals("Found, not loaded", status.proofLabel)
+        assertEquals("Found", status.proofLabel)
     }
 }

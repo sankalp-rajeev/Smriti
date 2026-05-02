@@ -262,6 +262,11 @@ class ManualRealGemmaBenchmarkInstrumentedTest {
     }
 
     private fun String.extractProtocolCitation(): String {
+        val currentSchemaMatch = Regex("\"citations\"\\s*:\\s*\\[\\s*\"((?:\\\\.|[^\"])*)\"")
+            .find(this)
+        if (currentSchemaMatch != null) {
+            return currentSchemaMatch.groupValues[1].replace("\\\"", "\"").trim()
+        }
         val match = Regex("\"protocolCitation\"\\s*:\\s*\"((?:\\\\.|[^\"])*)\"")
             .find(this)
             ?: return "<missing>"
@@ -318,8 +323,9 @@ class ManualRealGemmaBenchmarkInstrumentedTest {
         const val STRICT_JSON_REMINDER = """
 
             Manual benchmark reminder:
-            Return only the required JSON object. Use supplied protocol citations only.
-            This is not a diagnosis. CHW confirmation is required before saving.
+            Return only exact JSON with summary, referralFlag, referralReason, dangerSigns,
+            followUpPlan, clarificationQuestion, citations, confidence, and safetyNote.
+            Use supplied protocol citations only. This is not a diagnosis. CHW confirmation is required before saving.
         """
     }
 }

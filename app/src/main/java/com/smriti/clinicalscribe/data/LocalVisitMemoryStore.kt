@@ -2,6 +2,7 @@ package com.smriti.clinicalscribe.data
 
 import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.rag.ProtocolChunk
+import com.smriti.clinicalscribe.reasoning.RealGemmaUnavailableResult
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 
 class LocalVisitMemoryStore(
@@ -81,6 +82,9 @@ class LocalVisitMemoryStore(
         voiceNote: VoiceNoteMetadata?,
         nowMillis: Long = System.currentTimeMillis()
     ): VisitMemorySnapshot {
+        require(!RealGemmaUnavailableResult.isUnavailable(result)) {
+            "Invalid or unavailable RealGemma output cannot be saved."
+        }
         val visitId = visitLogDao.insert(
             VisitLog(
                 patientId = result.patientId,

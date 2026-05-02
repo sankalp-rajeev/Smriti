@@ -11,7 +11,7 @@ class RealGemmaReadinessEvaluatorTest {
     private val configFactory = LiteRtEngineConfigFactory()
 
     @Test
-    fun defaultAgentModeReturnsMockActive() {
+    fun defaultAgentModeReturnsRealGemmaModelNotFoundWhenMissingModel() {
         val modelStatus = missingModelStatus()
 
         val summary = evaluator.evaluate(
@@ -20,9 +20,9 @@ class RealGemmaReadinessEvaluatorTest {
             engineConfigPreparation = configFactory.prepare(modelStatus)
         )
 
-        assertEquals(AgentMode.MOCK, AgentConfig.DEFAULT_MODE)
-        assertEquals(RealGemmaReadinessStatus.MOCK_ACTIVE, summary.status)
-        assertEquals("Mock active", summary.judgeLabel)
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, AgentConfig.DEFAULT_MODE)
+        assertEquals(RealGemmaReadinessStatus.MODEL_NOT_FOUND, summary.status)
+        assertEquals("Model not found", summary.judgeLabel)
         assertSafeFlags(summary)
     }
 
@@ -36,7 +36,7 @@ class RealGemmaReadinessEvaluatorTest {
             engineConfigPreparation = configFactory.prepare(modelStatus)
         )
 
-        assertEquals(RealGemmaReadinessStatus.MOCK_ACTIVE, summary.status)
+        assertEquals(RealGemmaReadinessStatus.MOCK_FIXTURE_REQUESTED, summary.status)
         assertSafeFlags(summary)
     }
 

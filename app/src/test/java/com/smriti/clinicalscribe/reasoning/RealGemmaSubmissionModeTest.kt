@@ -1,4 +1,4 @@
-package com.smriti.clinicalscribe.reasoning
+﻿package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.BuildConfig
 import com.smriti.clinicalscribe.data.DemoSeedData
@@ -16,10 +16,10 @@ import org.junit.Test
 
 class RealGemmaSubmissionModeTest {
     @Test
-    fun normalBuildStillUsesMockDefaults() {
+    fun normalBuildStillRequiresRealGemmaDefaults() {
         assertFalse(BuildConfig.REAL_GEMMA_SUBMISSION_MODE)
-        assertEquals(AgentMode.MOCK, AgentConfig.DEFAULT_MODE)
-        assertTrue(GemmaAgentFactory.create() is MockGemmaAgent)
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, AgentConfig.DEFAULT_MODE)
+        assertTrue(GemmaAgentFactory.create() is RealGemmaAgent)
     }
 
     @Test
@@ -36,12 +36,12 @@ class RealGemmaSubmissionModeTest {
         assertTrue(active.isFullyActive)
         assertTrue(active.usesRealGemmaVisitAgent)
         assertEquals("RealGemmaAgent", active.reasoningModeLabel)
-        assertEquals("ACTIVE", active.realGemmaTextModeLabel)
-        assertEquals("ACTIVE", active.submissionModeLabel)
+        assertEquals("Active", active.realGemmaTextModeLabel)
+        assertEquals("Required", active.submissionModeLabel)
     }
 
     @Test
-    fun missingModelSubmissionRequestStaysMockAndDoesNotPretendRealGemma() {
+    fun missingModelSubmissionRequestStaysRealGemmaRequiredAndUnavailable() {
         val status = RealGemmaSubmissionMode.evaluate(
             buildTimeGateEnabled = true,
             localGateEnabled = true,
@@ -49,10 +49,10 @@ class RealGemmaSubmissionModeTest {
         )
 
         assertFalse(status.isFullyActive)
-        assertFalse(status.usesRealGemmaVisitAgent)
-        assertEquals("MockGemmaAgent", status.reasoningModeLabel)
-        assertEquals("Disabled", status.realGemmaTextModeLabel)
-        assertTrue(status.warning!!.contains("normal MockGemmaAgent behavior remains active"))
+        assertTrue(status.usesRealGemmaVisitAgent)
+        assertEquals("RealGemmaAgent", status.reasoningModeLabel)
+        assertEquals("Setup required", status.realGemmaTextModeLabel)
+        assertTrue(status.warning!!.contains("setup required"))
     }
 
     @Test
@@ -98,7 +98,8 @@ class RealGemmaSubmissionModeTest {
         )
 
         assertTrue(RealGemmaUnavailableResult.isUnavailable(result))
-        assertEquals("On-device reasoning unavailable — please retry.", RealGemmaUnavailableResult.RETRY_MESSAGE)
+        assertEquals("On-device RealGemma reasoning unavailable — please retry.", RealGemmaUnavailableResult.RETRY_MESSAGE)
+        assertTrue(RealGemmaUnavailableResult.retryMessageFor(result).contains("Experimental Real Gemma path unavailable"))
     }
 
     private class FakeTextClient(
@@ -132,3 +133,5 @@ class RealGemmaSubmissionModeTest {
         )
     }
 }
+
+

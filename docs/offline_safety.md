@@ -22,12 +22,12 @@ Smriti is designed so the core demo can run in airplane mode.
 
 ## RealGemma Safety Gate
 
-- `MockGemmaAgent` remains the default mode.
-- `RealGemmaAgent` is experimental and developer-gated.
+- `RealGemmaAgent` is the app-facing reasoning engine for visit notes and supervisor priority reasoning.
+- `MockGemmaAgent` may remain only as a deterministic test fixture, not as app-facing clinical output.
 - LiteRT-LM dependency and readiness checks are present.
-- Normal app startup does not load or run a model.
-- Developer-only RealGemma text mode requires both the build-time gate and app-private local gate.
-- A sideloaded app-private model is also required before developer-only text inference can run.
+- App startup does not run inference.
+- RealGemma text reasoning requires the submission build flag, app-private local gate, and sideloaded app-private model.
+- If setup is missing or inference fails, the app shows setup/retry messaging and does not save or display mock clinical output.
 - Direct Gemma 4 audio remains blocked by the public LiteRT-LM Android/Kotlin preprocessing path.
 
 ## Data Boundary

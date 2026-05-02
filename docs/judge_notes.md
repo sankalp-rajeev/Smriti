@@ -6,7 +6,7 @@ Smriti addresses a real last-mile health workflow: community health workers docu
 
 ## LiteRT Track Fit
 
-The app is structured for local Gemma 4 through LiteRT-LM behind a replaceable `GemmaAgent` interface. The LiteRT-LM dependency is pinned and readiness is visible in-app. Real model loading and inference are disabled by default; developer-only text mode requires explicit local gates and a sideloaded app-private model. The normal judge demo remains safe, mock-backed, and fully offline.
+The app is structured for local Gemma 4 through LiteRT-LM behind a replaceable `GemmaAgent` interface. The LiteRT-LM dependency is pinned and readiness is visible in-app. The filmed/local submission flow requires RealGemma text reasoning with explicit local gates and a sideloaded app-private model. If setup is missing or inference fails, the app shows setup/retry messaging instead of mock clinical output.
 
 ## Impact And Vision
 
@@ -29,16 +29,16 @@ The app is structured for local Gemma 4 through LiteRT-LM behind a replaceable `
 
 - Android native app with Kotlin, Jetpack Compose, Room/SQLite, local assets, Android TTS, and local JSON export.
 - `GemmaAgent` abstraction separates reasoning from UI.
-- `MockGemmaAgent` provides deterministic offline demo behavior.
+- `RealGemmaAgent` is the app-facing visit-note and supervisor-priority reasoning engine.
 - Real Gemma 4 LiteRT-LM text inference has been validated on-device through manual instrumentation with a sideloaded app-private model.
 - `ManualLiteRtTextInferenceInstrumentedTest` returned `SMRITI_LITERT_OK`.
 - The full RealGemmaAgent path has been validated: `RealGemmaPromptBuilder -> LiteRT sendMessage -> RealGemmaOutputParser -> RealGemmaSafetyPostProcessor -> VisitReasoningResult`.
 - Accepted manual RealGemma benchmark: `totalScenarios=3`, `successCount=3`, `parserSuccessCount=3`, `referralCount=1`, `citationCount=2`, `singleCitationContractCount=3`, `averageLatencyMs=15812`, and `maxLatencyMs=26272`.
 - Native LiteRT-LM function calling manually executed `log_visit` once with the expected `patientId`, `observationText`, `protocolCitation`, and `referralRequired` fields.
 - Memory stress passed 10/20/40 compact prior visits with `parserSuccessCount=3/3`.
-- Developer-only RealGemma text UI mode exists behind build-time and app-private local gates.
-- `MockGemmaAgent` remains default for the stable submission demo.
-- Tests guard default mock mode, RealGemma developer gating, readiness safety, and repo model-artifact safety.
+- RealGemma text UI mode exists behind build-time and app-private local gates.
+- `MockGemmaAgent` remains only for deterministic unit fixtures and legacy benchmark scaffolding.
+- Tests guard RealGemma-required app wiring, setup-required failure behavior, readiness safety, and repo model-artifact safety.
 
 ## Not A Generic Chatbot
 
@@ -48,14 +48,14 @@ Smriti is patient-contextual and workflow-bound. It starts from a selected patie
 
 Gemini Live can answer general questions when online. Smriti is designed for offline field operation with persistent local patient data, local protocol citations, structured visit/referral records, and end-of-day supervisor reporting. No core runtime feature requires cloud access.
 
-## Why The Mock Fallback Is Demo-Safe
+## RealGemma Failure Behavior
 
-`MockGemmaAgent` is deterministic, offline, and easy to inspect. It lets judges verify the product workflow, safety constraints, review/confirm requirement, and local data model while RealGemma remains developer-only and gated. This avoids making the filmed submission depend on sideloaded model setup or variable device performance.
+The app-facing flow no longer falls back to mock-generated clinical, visit, or supervisor output. Missing model setup, timeout, invalid JSON, rejected citation, or other RealGemma failure keeps the transcript editable, shows retry/setup messaging, and blocks saving until a valid RealGemma result is reviewed and confirmed.
 
 ## What Remains Experimental
 
-- Real Gemma `.litertlm` model loading in the default submission demo path.
-- LiteRT-LM `Engine` creation, initialization, conversation creation, and inference outside manual/developer-gated paths.
+- Product hardening for Real Gemma `.litertlm` model setup and device performance.
+- LiteRT-LM `Engine` creation, initialization, conversation creation, and inference outside the gated local submission path.
 - Native Gemma audio/ASR.
 - Productized function calling through LiteRT-LM.
 - GPU backend benchmarking and broader device performance characterization.

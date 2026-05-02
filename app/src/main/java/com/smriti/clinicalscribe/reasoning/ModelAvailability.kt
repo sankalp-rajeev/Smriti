@@ -15,7 +15,7 @@ data class ModelStatus(
     val proofLabel: String
         get() = when (kind) {
             ModelStatusKind.NOT_FOUND -> "Not found"
-            ModelStatusKind.FOUND_NOT_LOADED -> "Found, not loaded"
+            ModelStatusKind.FOUND_NOT_LOADED -> "Found"
         }
 }
 

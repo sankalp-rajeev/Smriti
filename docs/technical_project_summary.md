@@ -1,4 +1,4 @@
-# Smriti Technical Project Summary
+﻿# Smriti Technical Project Summary
 
 ## 1. Executive Summary
 
@@ -6,7 +6,7 @@ Smriti is an offline maternal-health visit copilot for community health workers 
 
 The central product idea is local patient memory plus a local protocol pack plus a structured documentation workflow. Smriti is not diagnostic AI. It provides protocol-grounded documentation and referral support only, and every generated record must be reviewed and confirmed by the CHW before it is persisted.
 
-The normal build uses `MockGemmaAgent` by default for deterministic offline behavior. Real Gemma 4 LiteRT-LM text inference has been validated through manual/developer-gated paths, and Phase B adds an optional recorded-demo submission mode that uses RealGemma only when all local gates and model readiness are satisfied. Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin artifact/API path and is not claimed as working.
+The filmed/local submission flow uses `RealGemmaAgent` as the app-facing reasoning engine. Real Gemma 4 LiteRT-LM text inference has been validated through manual paths, and app inference requires the submission build flag, app-private sentinel, and app-private model. Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin artifact/API path and is not claimed as working.
 
 ## 2. Problem And Use Case
 
@@ -42,7 +42,7 @@ The demo includes:
 - Local Room/SQLite persistence for confirmed visits and referral flags.
 - Return-visit history that shows newly confirmed visits.
 - End-of-day supervisor summary from confirmed local records.
-- Optional RealGemma priority follow-up queue in fully gated submission mode, with deterministic local summary retained as fallback evidence.
+- RealGemma priority follow-up queue attempt in the app-facing summary flow, with raw local counts retained when RealGemma supervisor reasoning is unavailable.
 - Reset Demo Data for repeatable filming/demo runs.
 - Local JSON export for visit and summary data.
 - Offline Proof display on the roster and summary screens.
@@ -55,7 +55,7 @@ Out of scope for the current submission:
 - Real patient data or PHI.
 - Full clinical guideline validation.
 - Direct Gemma 4 audio through the current public LiteRT-LM Android/Kotlin path.
-- Making RealGemma the default normal demo agent.
+- Bundling the RealGemma model or bypassing local setup gates.
 - Broad all-language support or untested Amharic, Oromo, or Bangla output.
 
 ## 4. System Architecture
@@ -86,8 +86,8 @@ Key modules:
 - `OfflineProofCard`: summarizes local/offline status, protocol source, active reasoning mode, RealGemma readiness, and direct-audio limitation.
 - `VisitReasoningPipeline`: coordinates transcript text or local audio path, protocol retrieval, and `GemmaAgent` invocation. It writes nothing to storage.
 - `ProtocolRetriever`: deterministic local keyword retrieval over JSON protocol chunks.
-- `MockGemmaAgent`: deterministic default reasoning agent for the submission demo.
-- `RealGemmaAgent`: developer-only/gated text reasoning agent backed by LiteRT-LM manual text inference when enabled.
+- `MockGemmaAgent`: deterministic test fixture only; not used for app-facing clinical/visit/supervisor output.
+- `RealGemmaAgent`: required app-facing text reasoning agent backed by LiteRT-LM when local setup is complete.
 - `LocalVisitMemoryStore`: persistence service for patients, confirmed visits, referral flags, reset, and supervisor-register import.
 - `DemoSupervisorRegisterImporter`: loads the local synthetic supervisor register asset; repeated imports upsert without duplicate history.
 - Room entities/DAOs: local patients, visits, referral flags, and protocol chunks.
@@ -122,11 +122,11 @@ The CHW confirm/save action is the only persistence gate. Speech input and note 
 
 Reasoning is behind the `GemmaAgent` interface.
 
-`MockGemmaAgent` is the deterministic submission default. It supports the complete demo flow offline and produces protocol-grounded note/referral output from local retrieved chunks. This keeps the filmed/live demo stable and avoids dependency on sideloaded model setup.
+`RealGemmaAgent` is the required app-facing reasoning engine. `MockGemmaAgent` may remain only as a deterministic unit-test fixture and must not be shown as clinical/visit/supervisor output.
 
-`RealGemmaAgent` is implemented as a developer-only/gated validation path. It builds prompts, calls a text client, parses strict JSON, validates citations, applies safety post-processing, and returns a `VisitReasoningResult`. It is not the default demo agent.
+`RealGemmaAgent` builds prompts, calls the local text client, parses strict JSON, validates citations, applies safety post-processing, and returns a `VisitReasoningResult`. If setup or inference fails, the app shows retry/setup messaging and does not save.
 
-Phase C adds selected multilingual output support for the recorded demo. `Patient.preferredLanguage` maps to English, Hindi, Swahili, or Spanish and is passed into `RealGemmaPromptBuilder` for visit-note prompts in fully gated submission mode. Protocol citation IDs remain stable in English. `RealGemmaSafetyPostProcessor` appends required safety wording in the requested demo language if the model omits it. The normal/default path remains `MockGemmaAgent`, with deterministic referral/citation behavior unchanged and simple patient-language safety wording for demo consistency. The architecture can extend to more Gemma-supported languages as protocol packs and UI translations are added.
+Phase C adds selected multilingual output support for the recorded demo. `Patient.preferredLanguage` maps to English, Hindi, Swahili, or Spanish and is passed into `RealGemmaPromptBuilder` for visit-note prompts in fully gated submission mode. Protocol citation IDs remain stable in English. `RealGemmaSafetyPostProcessor` appends required safety wording in the requested demo language if the model omits it. The architecture can extend to more Gemma-supported languages as protocol packs and UI translations are added.
 
 `VisitReasoningPipeline` takes patient context, observation text or local audio metadata, retrieves protocol chunks, calls the configured `GemmaAgent`, and returns a structured result. It does not write to Room. The Review screen remains the save gate.
 
@@ -149,9 +149,9 @@ Repository and runtime constraints:
 - No `.litertlm` model file is committed.
 - No model file is bundled in app assets.
 - No runtime model download code exists.
-- The normal default app path detects the model but does not load it.
+- The app path detects the model and only attempts inference after the submission build flag, local sentinel, and app-private model are present.
 - `EngineConfig` is constructed with `Backend.CPU()` only when the app-private model is present.
-- Runtime `Engine` initialization and text inference are disabled by default.
+- Runtime `Engine` initialization and text inference are blocked until local setup is complete.
 
 Manual text inference has been validated with a sideloaded app-private model. `ManualLiteRtTextInferenceInstrumentedTest` sent the non-clinical prompt `Reply with exactly: SMRITI_LITERT_OK` and returned the expected text.
 
@@ -165,19 +165,13 @@ RealGemmaPromptBuilder
 -> VisitReasoningResult
 ```
 
-Developer-only RealGemma text UI mode is gated by all of:
-
-- build flag: `-Psmriti.realGemmaDevMode=true`,
-- app-private sentinel file: `files/dev/enable_real_gemma_text_mode`,
-- app-private model presence at the expected `.litertlm` path.
-
-Recorded-demo RealGemma submission mode is gated by all of:
+RealGemma app-facing text mode is gated by all of:
 
 - build flag: `-Psmriti.realGemmaSubmissionMode=true`,
 - app-private sentinel file: `files/dev/enable_real_gemma_text_mode`,
 - app-private model presence at `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
 
-If submission gates are closed, the app uses `MockGemmaAgent`. If RealGemma is active but inference fails, times out, produces invalid JSON, or violates citation/safety rules, the app shows an unavailable/retry state, preserves the transcript, and does not save or silently show mock output as RealGemma.
+If submission gates are closed, the app shows RealGemma setup-required messaging. If inference fails, times out, produces invalid JSON, or violates citation/safety rules, the app shows an unavailable/retry state, preserves the transcript, and does not save or show mock output.
 
 Manual multilingual RealGemma validation is available through `ManualRealGemmaMultilingualInstrumentedTest`. It runs Meena/Hindi, Grace/Swahili, and Lucia/Spanish with the sideloaded app-private model, logs requested language, raw output preview, parser status, citation presence, safety wording, and a simple language heuristic. These results must pass before a language is claimed in the video.
 
@@ -253,7 +247,7 @@ Country/region contexts include `IN`, `BD`, `ET`, `KE`, `PE`, `NP`, plus global 
 Runner:
 
 ```text
-ProtocolRetriever -> VisitReasoningPipeline -> MockGemmaAgent
+ProtocolRetriever -> VisitReasoningPipeline -> RealGemmaAgent
 ```
 
 The suite verifies retrieval level, citation expectations, danger-sign referral behavior, routine no-false-referral behavior, uncertainty handling, clarification prompts, prior-history flow, and fallback retrieval. It proves scaffold behavior for the demo. It is not clinical validation.
@@ -311,8 +305,8 @@ RealGemma-specific safety:
 ```text
 This is not a diagnosis.
 CHW confirmation is required before saving.
-यह निदान नहीं है। CHW की पुष्टि आवश्यक है।
-Esto no es un diagnóstico. Se requiere confirmación de la trabajadora de salud.
+à¤¯à¤¹ à¤¨à¤¿à¤¦à¤¾à¤¨ à¤¨à¤¹à¥€à¤‚ à¤¹à¥ˆà¥¤ CHW à¤•à¥€ à¤ªà¥à¤·à¥à¤Ÿà¤¿ à¤†à¤µà¤¶à¥à¤¯à¤• à¤¹à¥ˆà¥¤
+Esto no es un diagnÃ³stico. Se requiere confirmaciÃ³n de la trabajadora de salud.
 Hii si utambuzi wa ugonjwa. Uthibitisho wa mfanyakazi wa afya unahitajika.
 ```
 
@@ -345,8 +339,8 @@ Repository safety scan findings:
 - No PHI or real patient data found.
 - No cloud runtime dependency added.
 - No runtime model download code.
-- `MockGemmaAgent` remains default.
-- RealGemma remains developer-only/gated.
+- `RealGemmaAgent` is the app-facing reasoning engine.
+- RealGemma requires local setup: build flag, app-private sentinel, and sideloaded model.
 - Docs do not claim direct Gemma audio works.
 - Docs do not claim clinical validation.
 
@@ -378,7 +372,7 @@ Avoid claiming:
 - autonomous treatment,
 - direct Gemma audio,
 - clinical validation,
-- RealGemma as the default normal demo mode,
+- missing RealGemma setup as a successful reasoning result,
 - cloud runtime.
 
 ## 15. Known Limitations / Future Work
@@ -386,7 +380,7 @@ Avoid claiming:
 - Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin audio preprocessing and prompt-template path.
 - Android offline speech depends on device/emulator recognizer support and installed offline language packs.
 - The protocol corpus is a scaffold, not a complete reviewed guideline library.
-- RealGemma text mode is developer-only/gated and not the submission default.
+- RealGemma text reasoning is required for app-facing output; missing setup shows retry/setup messaging.
 - GPU backend benchmarking is future work.
 - Clinical review is required before any real deployment.
 - RealGemma submission mode depends on a locally sideloaded model and should be smoke-tested before filming.
@@ -409,3 +403,4 @@ Primary entry points:
 - [docs/offline_safety.md](offline_safety.md): offline and safety constraints.
 - [docs/known_limitations.md](known_limitations.md): limitations and future work.
 - [docs/local_model_setup.md](local_model_setup.md): sideloaded model and manual RealGemma setup.
+

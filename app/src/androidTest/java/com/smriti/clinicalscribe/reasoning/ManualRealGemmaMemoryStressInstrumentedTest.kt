@@ -268,16 +268,15 @@ class ManualRealGemmaMemoryStressInstrumentedTest {
         const val STRICT_JSON_REMINDER = """
 
             Manual memory stress reminder:
-            Return exactly one compact JSON object and nothing else.
+            Return exact JSON with summary, referralFlag, referralReason, dangerSigns,
+            followUpPlan, clarificationQuestion, citations, confidence, and safetyNote.
             The first character must be { and the last character must be }.
             Do not use markdown, code fences, prefaces, explanations, repeated JSON objects, or bullet lists outside JSON.
             Do not add trailing commas or extra keys.
             Keep JSON string values short and single-line; avoid newline characters inside JSON string values.
             Keep measurements such as BP 150/95 inside strings; do not emit standalone JSON number fields.
-            Use null for missing clarificationPrompt or referralFlag. Use true/false booleans without quotes.
-            Use exactly one supplied protocol citation.
-            Keep the entire JSON under 700 characters. Use short strings and no repeated wording.
-            The final two characters should be }} when referralFlag is an object.
+            referralFlag must be true/false without quotes. citations, dangerSigns, and followUpPlan must be arrays.
+            Use supplied protocol citations only. Keep the entire JSON under 900 characters.
             This is not a diagnosis. CHW confirmation is required before saving.
         """
     }

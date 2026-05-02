@@ -14,7 +14,7 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
    - Start on the purpose line: `Offline CHW visit copilot`.
    - Point out `Local patient memory + local protocol pack.`
    - Point out the `Offline Proof` card.
-   - Key lines: `Network required: No`, `Patient data: Local Room/SQLite`, `Protocol source: Local JSON; country-aware retrieval`, `Active reasoning mode: MockGemmaAgent` or `RealGemmaAgent` only when fully gated, `Inference: Disabled by default` or enabled only in submission mode.
+   - Key lines: `Network required: No`, `Patient data: Local Room/SQLite`, `Protocol source: Local JSON; country-aware retrieval`, `Active reasoning mode: RealGemmaAgent`, `RealGemma text mode: Active` or `Setup required`.
    - Show the six synthetic patients and, if useful, tap `Import Supervisor Register` to demonstrate local asset import.
    - Point out patient output language labels: Meena/Priya Hindi, Grace Swahili, Lucia Spanish, Fatima/Amara English.
    - Optional: tap `Add Patient` to show offline speech registration prompts and manual fallback, then return to the roster.
@@ -35,7 +35,7 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
 
 5. **Generate Visit Note**
    - Tap the generate button.
-   - Explain that normal builds use `MockGemmaAgent` for deterministic offline reasoning; the recorded submission build can use RealGemma only when all local gates and model readiness are satisfied.
+   - Explain that the filmed/local submission flow uses RealGemma text reasoning. If setup is missing or output is invalid, the app shows retry/setup messaging instead of mock output.
    - If filming the gated RealGemma multilingual path, mention that `preferredLanguage` controls selected patient-specific output language and protocol citation IDs stay in English.
 
 6. **Review Referral Support**
@@ -58,7 +58,7 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
 
 9. **Show Offline Proof Again**
    - Confirm the same proof appears on Summary.
-   - Emphasize no network, local Room/SQLite data, local JSON protocol retrieval, mock active by default, RealGemma developer-only, and direct Gemma audio blocked with offline speech/transcript fallback.
+   - Emphasize no network, local Room/SQLite data, local JSON protocol retrieval, RealGemmaAgent required for reasoning, and direct Gemma audio blocked with offline speech/transcript fallback.
 
 10. **Optional Export**
    - Tap `Export Summary JSON`.
@@ -66,7 +66,7 @@ Use this for the live judge demo or screen recording. Reset Demo Data before fil
 
 11. **Optional Reset**
     - Tap `Reset Demo Data`.
-    - Confirm it clears saved mock visits/referrals and restores the clean six-patient synthetic roster.
+    - Confirm it clears saved visits/referrals and restores the clean six-patient synthetic roster.
 
 ## Closing Line
 
@@ -77,8 +77,7 @@ One phone, no signal, local patient memory, local protocols, CHW confirmation, a
 - Do not claim clinical validation.
 - Do not claim direct Gemma 4 audio works.
 - Do not imply autonomous diagnosis or treatment.
-- Do not present RealGemma text mode as the default demo path; it remains developer-only and gated.
-- Do not present Mock output as RealGemma output.
+- Do not present mock output as RealGemma output.
 - Do not claim broad all-language support.
 - Do not claim Amharic, Oromo, or Bangla output; Amara/Ethiopia and Fatima/Bangladesh remain English.
 - Do not present multilingual RealGemma output as video-ready until the manual multilingual harness passes for the filmed language.

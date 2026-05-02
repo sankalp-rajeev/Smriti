@@ -110,6 +110,62 @@ class LiteRtGemmaTextClientTest {
     }
 
     @Test
+    fun preloadMissingModelReturnsUnavailableWithoutInitializingRunner() = runBlocking {
+        var preloadCalled = false
+        val client = LiteRtGemmaTextClient(
+            modelStatus = missingModelStatus(),
+            manualInferenceRunner = object : LiteRtGemmaTextClient.ManualTextInferenceRunner {
+                override fun generateText(
+                    engineConfig: com.google.ai.edge.litertlm.EngineConfig,
+                    prompt: String
+                ): String = "should not run"
+
+                override fun preload(engineConfig: com.google.ai.edge.litertlm.EngineConfig) {
+                    preloadCalled = true
+                }
+            }
+        )
+
+        val result = client.preloadManual(allowManualTextInference = true)
+
+        assertTrue(result is RealGemmaPreloadResult.Unavailable)
+        assertFalse(preloadCalled)
+        assertFalse(client.modelLoadAttempted)
+        assertFalse(client.engineInitializationAttempted)
+        assertFalse(client.conversationCreated)
+        assertFalse(client.inferenceAttempted)
+    }
+
+    @Test
+    fun preloadFoundModelTransitionsThroughPreparingReadyPath() = runBlocking {
+        var preloadCount = 0
+        val client = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = object : LiteRtGemmaTextClient.ManualTextInferenceRunner {
+                override fun generateText(
+                    engineConfig: com.google.ai.edge.litertlm.EngineConfig,
+                    prompt: String
+                ): String = "generated text"
+
+                override fun preload(engineConfig: com.google.ai.edge.litertlm.EngineConfig) {
+                    preloadCount += 1
+                }
+            }
+        )
+
+        val result = client.preloadManual(allowManualTextInference = true)
+
+        assertEquals(RealGemmaPreloadResult.Ready, result)
+        assertEquals(1, preloadCount)
+        assertTrue(client.modelLoadAttempted)
+        assertTrue(client.engineInitializationAttempted)
+        assertTrue(client.conversationCreated)
+        assertFalse(client.inferenceAttempted)
+        assertEquals("Preparing", RealGemmaEnginePreloadState.PREPARING.label)
+        assertEquals("Ready", RealGemmaEnginePreloadState.READY.label)
+    }
+
+    @Test
     fun manualTextInferenceFakeSuccessReturnsGeneratedText() = runBlocking {
         val client = LiteRtGemmaTextClient(
             modelStatus = foundModelStatus(),
@@ -195,8 +251,8 @@ class LiteRtGemmaTextClientTest {
     }
 
     @Test
-    fun defaultModeStillUsesMockAgent() {
-        assertTrue(GemmaAgentFactory.create() is MockGemmaAgent)
+    fun defaultModeUsesRealGemmaAgent() {
+        assertTrue(GemmaAgentFactory.create() is RealGemmaAgent)
     }
 
     private fun missingModelStatus(): ModelStatus {

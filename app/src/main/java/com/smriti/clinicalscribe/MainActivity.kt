@@ -37,21 +37,21 @@ import com.smriti.clinicalscribe.export.JsonExporter
 import com.smriti.clinicalscribe.pipeline.VisitPipelineInput
 import com.smriti.clinicalscribe.pipeline.VisitReasoningPipeline
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
-import com.smriti.clinicalscribe.reasoning.AgentConfig
-import com.smriti.clinicalscribe.reasoning.GemmaAgentFactory
 import com.smriti.clinicalscribe.reasoning.LiteRtEngineConfigFactory
 import com.smriti.clinicalscribe.reasoning.ModelAvailability
 import com.smriti.clinicalscribe.reasoning.RealGemmaReadinessEvaluator
-import com.smriti.clinicalscribe.reasoning.RealGemmaDeveloperAgentFactory
 import com.smriti.clinicalscribe.reasoning.RealGemmaDeveloperMode
 import com.smriti.clinicalscribe.reasoning.SupervisorSummary
+import com.smriti.clinicalscribe.reasoning.SupervisorSummaryFormatter
 import com.smriti.clinicalscribe.reasoning.SupervisorPriorityQueue
-import com.smriti.clinicalscribe.reasoning.SupervisorPriorityQueueGenerator
 import com.smriti.clinicalscribe.reasoning.SupervisorPriorityQueueResult
-import com.smriti.clinicalscribe.reasoning.RealGemmaSubmissionMode
 import com.smriti.clinicalscribe.reasoning.RealGemmaUnavailableResult
+import com.smriti.clinicalscribe.reasoning.RealGemmaRequiredAgentFactory
+import com.smriti.clinicalscribe.reasoning.RealGemmaRequiredMode
 import com.smriti.clinicalscribe.reasoning.RealGemmaDeveloperTextClient
-import com.smriti.clinicalscribe.reasoning.RealGemmaAgent
+import com.smriti.clinicalscribe.reasoning.RealGemmaEnginePreloadState
+import com.smriti.clinicalscribe.reasoning.RealGemmaPreloadResult
+import com.smriti.clinicalscribe.reasoning.SmritiLatencyLogger
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import com.smriti.clinicalscribe.transcript.SimulatedTranscriptClient
 import com.smriti.clinicalscribe.tts.AndroidVoiceOutput
@@ -63,7 +63,9 @@ import com.smriti.clinicalscribe.ui.ReviewScreen
 import com.smriti.clinicalscribe.ui.SummaryScreen
 import com.smriti.clinicalscribe.ui.VisitScreen
 import java.util.Calendar
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,6 +87,27 @@ private fun startOfTodayMillis(): Long {
     }.timeInMillis
 }
 
+private fun buildRawLocalSummary(
+    summaryPatients: List<Patient>,
+    summaryVisits: List<VisitLog>,
+    summaryReferrals: List<ReferralFlag>
+): SupervisorSummary {
+    val patientNamesById = summaryPatients.associate { it.id to it.name }
+    val followUps = summaryVisits
+        .filter { it.confirmed && it.suggestedFollowUp.isNotBlank() }
+        .map { visit ->
+            val patientName = patientNamesById[visit.patientId] ?: visit.patientId
+            "$patientName: ${visit.suggestedFollowUp}"
+        }
+    return SupervisorSummary(
+        totalVisits = summaryVisits.count { it.confirmed },
+        referralsFlagged = summaryReferrals.size,
+        urgentCases = SupervisorSummaryFormatter.urgentCases(summaryPatients, summaryReferrals),
+        followUpsDue = followUps,
+        narrative = "Raw confirmed local counts and saved referral flags. RealGemma supervisor reasoning is required for prioritization."
+    )
+}
+
 private sealed interface SmritiScreen {
     data object PatientRoster : SmritiScreen
     data object AddPatient : SmritiScreen
@@ -104,8 +127,7 @@ private sealed interface SmritiScreen {
 @Composable
 private fun SmritiApp(
     database: AppDatabase,
-    realGemmaDevBuildGate: Boolean = BuildConfig.DEBUG && BuildConfig.REAL_GEMMA_DEV_BUILD_GATE,
-    realGemmaSubmissionBuildGate: Boolean = BuildConfig.REAL_GEMMA_SUBMISSION_MODE,
+    realGemmaRequiredBuildGate: Boolean = BuildConfig.REAL_GEMMA_SUBMISSION_MODE,
     realGemmaLocalGateOverride: Boolean? = null
 ) {
     val scope = rememberCoroutineScope()
@@ -115,31 +137,34 @@ private fun SmritiApp(
     val jsonExporter = remember { JsonExporter.appPrivate(context) }
     val voiceOutput = remember { AndroidVoiceOutput(context) }
     val modelAvailability = remember { ModelAvailability.fromFilesDir(context.filesDir) }
-    val modelStatus = remember { modelAvailability.check() }
-    val detectedRealGemmaLocalGate = remember { RealGemmaDeveloperMode.isLocalGateEnabled(context.filesDir) }
-    val realGemmaLocalGate = realGemmaLocalGateOverride ?: detectedRealGemmaLocalGate
-    val realGemmaDeveloperModeStatus = remember(realGemmaDevBuildGate, realGemmaLocalGate, modelStatus) {
-        RealGemmaDeveloperMode.evaluate(
-            buildTimeGateEnabled = realGemmaDevBuildGate,
-            localGateEnabled = realGemmaLocalGate,
-            modelStatus = modelStatus
-        )
-    }
-    val realGemmaSubmissionModeStatus = remember(realGemmaSubmissionBuildGate, realGemmaLocalGate, modelStatus) {
-        RealGemmaSubmissionMode.evaluate(
-            buildTimeGateEnabled = realGemmaSubmissionBuildGate,
-            localGateEnabled = realGemmaLocalGate,
-            modelStatus = modelStatus
-        )
-    }
-    val visitAgent = remember(realGemmaSubmissionModeStatus, realGemmaDeveloperModeStatus, modelStatus) {
-        when {
-            realGemmaSubmissionModeStatus.usesRealGemmaVisitAgent ->
-                RealGemmaAgent(textClient = RealGemmaDeveloperTextClient(modelStatus))
-            else -> RealGemmaDeveloperAgentFactory.createVisitAgent(realGemmaDeveloperModeStatus, modelStatus)
+    val modelStatus = remember {
+        SmritiLatencyLogger.measure("modelReadinessCheck") {
+            modelAvailability.check()
         }
     }
-    val summaryAgent = remember { GemmaAgentFactory.create(AgentConfig.DEFAULT_MODE) }
+    val detectedRealGemmaLocalGate = remember { RealGemmaDeveloperMode.isLocalGateEnabled(context.filesDir) }
+    val realGemmaLocalGate = realGemmaLocalGateOverride ?: detectedRealGemmaLocalGate
+    val realGemmaRequiredModeStatus = remember(realGemmaRequiredBuildGate, realGemmaLocalGate, modelStatus) {
+        RealGemmaRequiredMode.evaluate(
+            buildTimeGateEnabled = realGemmaRequiredBuildGate,
+            localGateEnabled = realGemmaLocalGate,
+            modelStatus = modelStatus
+        )
+    }
+    val sharedRealGemmaTextClient = remember(realGemmaRequiredModeStatus, modelStatus) {
+        if (realGemmaRequiredModeStatus.inferenceEnabled) {
+            RealGemmaDeveloperTextClient(modelStatus)
+        } else {
+            null
+        }
+    }
+    val visitAgent = remember(realGemmaRequiredModeStatus, modelStatus, sharedRealGemmaTextClient) {
+        RealGemmaRequiredAgentFactory.createVisitAgent(
+            status = realGemmaRequiredModeStatus,
+            modelStatus = modelStatus,
+            sharedTextClient = sharedRealGemmaTextClient
+        )
+    }
     val visitReasoningPipeline = remember(visitAgent, retriever) {
         VisitReasoningPipeline(
             protocolRetriever = retriever,
@@ -149,11 +174,9 @@ private fun SmritiApp(
     }
     val engineConfigFactory = remember { LiteRtEngineConfigFactory() }
     val readinessEvaluator = remember { RealGemmaReadinessEvaluator() }
-    val activeAgentMode = if (realGemmaSubmissionModeStatus.usesRealGemmaVisitAgent) {
-        com.smriti.clinicalscribe.reasoning.AgentMode.REAL_GEMMA_EXPERIMENTAL
-    } else {
-        realGemmaDeveloperModeStatus.activeAgentMode
-    }
+    val activeAgentMode = com.smriti.clinicalscribe.reasoning.AgentMode.REAL_GEMMA_REQUIRED
+    var hasSuccessfulRealGemmaGeneration by remember { mutableStateOf(false) }
+    var realGemmaPreloadState by remember { mutableStateOf(RealGemmaEnginePreloadState.LOADS_ON_DEMAND) }
     val realGemmaReadiness = remember(activeAgentMode, modelStatus) {
         readinessEvaluator.evaluate(
             agentMode = activeAgentMode,
@@ -161,46 +184,54 @@ private fun SmritiApp(
             engineConfigPreparation = engineConfigFactory.prepare(modelStatus)
         )
     }
-    val offlineProofStatus = remember(realGemmaDeveloperModeStatus, realGemmaSubmissionModeStatus, modelStatus, realGemmaReadiness) {
-        val submissionStatusVisible = realGemmaSubmissionModeStatus.isRequested
-        val inferenceLabel = if (submissionStatusVisible) {
-            realGemmaSubmissionModeStatus.inferenceStatusLabel
-        } else {
-            realGemmaDeveloperModeStatus.inferenceStatusLabel
-        }
-        val reasoningModeLabel = if (submissionStatusVisible) {
-            realGemmaSubmissionModeStatus.reasoningModeLabel
-        } else {
-            realGemmaDeveloperModeStatus.reasoningModeLabel
-        }
-        val warning = realGemmaSubmissionModeStatus.warning
-            ?: realGemmaDeveloperModeStatus.developerWarning
+    val realGemmaEngineStatusLabel = when {
+        hasSuccessfulRealGemmaGeneration -> "Loaded"
+        realGemmaPreloadState == RealGemmaEnginePreloadState.PREPARING -> "Preparing"
+        realGemmaPreloadState == RealGemmaEnginePreloadState.READY -> "Ready"
+        realGemmaPreloadState == RealGemmaEnginePreloadState.FAILED -> "Failed"
+        else -> "Loads on demand"
+    }
+    val offlineProofStatus = remember(
+        realGemmaRequiredModeStatus,
+        modelStatus,
+        realGemmaReadiness,
+        realGemmaEngineStatusLabel
+    ) {
         OfflineProofStatus(
-            reasoningModeLabel = reasoningModeLabel,
+            reasoningModeLabel = realGemmaRequiredModeStatus.reasoningModeLabel,
             realGemmaModelStatusLabel = modelStatus.proofLabel,
-            realGemmaReadinessLabel = if (realGemmaSubmissionModeStatus.isFullyActive) {
-                "Submission text inference enabled"
-            } else if (realGemmaDeveloperModeStatus.inferenceEnabled) {
-                "Developer text inference enabled"
-            } else {
-                realGemmaReadiness.judgeLabel
-            },
-            realGemmaInferenceLabel = inferenceLabel,
-            realGemmaGateLabel = if (submissionStatusVisible) {
-                realGemmaSubmissionModeStatus.gateStatusLabel
-            } else {
-                realGemmaDeveloperModeStatus.gateStatusLabel
-            },
-            realGemmaTextModeLabel = if (realGemmaSubmissionModeStatus.isFullyActive) {
-                realGemmaSubmissionModeStatus.realGemmaTextModeLabel
-            } else if (realGemmaDeveloperModeStatus.inferenceEnabled) {
-                "ACTIVE"
-            } else {
-                "Disabled"
-            },
-            realGemmaSubmissionModeLabel = realGemmaSubmissionModeStatus.submissionModeLabel,
-            realGemmaDeveloperWarning = warning
+            realGemmaReadinessLabel = realGemmaReadiness.judgeLabel,
+            realGemmaEngineStatusLabel = realGemmaEngineStatusLabel,
+            realGemmaInferenceLabel = realGemmaRequiredModeStatus.inferenceStatusLabel,
+            realGemmaGateLabel = realGemmaRequiredModeStatus.gateStatusLabel,
+            realGemmaTextModeLabel = realGemmaRequiredModeStatus.textModeLabel,
+            realGemmaSubmissionModeLabel = realGemmaRequiredModeStatus.submissionModeLabel,
+            realGemmaDeveloperWarning = realGemmaRequiredModeStatus.warning
         )
+    }
+
+    LaunchedEffect(sharedRealGemmaTextClient) {
+        val client = sharedRealGemmaTextClient
+        if (client == null) {
+            realGemmaPreloadState = RealGemmaEnginePreloadState.UNAVAILABLE
+            return@LaunchedEffect
+        }
+        realGemmaPreloadState = RealGemmaEnginePreloadState.PREPARING
+        SmritiLatencyLogger.mark("realGemmaPreloadStart")
+        when (val result = client.preload()) {
+            RealGemmaPreloadResult.Ready -> {
+                realGemmaPreloadState = RealGemmaEnginePreloadState.READY
+                SmritiLatencyLogger.mark("realGemmaPreloadReady")
+            }
+            is RealGemmaPreloadResult.Unavailable -> {
+                realGemmaPreloadState = RealGemmaEnginePreloadState.LOADS_ON_DEMAND
+                SmritiLatencyLogger.mark("realGemmaPreloadUnavailable:${result.reason.take(80)}")
+            }
+            is RealGemmaPreloadResult.Failed -> {
+                realGemmaPreloadState = RealGemmaEnginePreloadState.FAILED
+                SmritiLatencyLogger.mark("realGemmaPreloadFailed:${result.reason.take(80)}")
+            }
+        }
     }
     var audioPermissionGranted by remember {
         mutableStateOf(
@@ -219,6 +250,7 @@ private fun SmritiApp(
     var referrals by remember { mutableStateOf<List<ReferralFlag>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isGenerating by remember { mutableStateOf(false) }
+    var generationStatusMessage by remember { mutableStateOf<String?>(null) }
     var isSaving by remember { mutableStateOf(false) }
     var isResettingDemoData by remember { mutableStateOf(false) }
     var isImportingSupervisorRegister by remember { mutableStateOf(false) }
@@ -246,14 +278,7 @@ private fun SmritiApp(
         summaryVisits: List<VisitLog>,
         summaryReferrals: List<ReferralFlag>
     ): SmritiScreen.Summary {
-        val deterministicSummary = summaryAgent.generateSupervisorSummary(
-            summaryPatients,
-            summaryVisits,
-            summaryReferrals
-        )
-        if (!realGemmaSubmissionModeStatus.isFullyActive) {
-            return SmritiScreen.Summary(summary = deterministicSummary)
-        }
+        val rawLocalSummary = buildRawLocalSummary(summaryPatients, summaryVisits, summaryReferrals)
 
         val missedFollowUps = summaryPatients.flatMap { patient ->
             PatientMemoryInsights.missedFollowUpAlerts(
@@ -270,8 +295,10 @@ private fun SmritiApp(
         val todayVisits = summaryVisits.filter { visit ->
             visit.confirmed && visit.visitDateMillis >= startOfTodayMillis()
         }
-        val priorityGenerator = SupervisorPriorityQueueGenerator(
-            textClient = RealGemmaDeveloperTextClient(modelStatus)
+        val priorityGenerator = RealGemmaRequiredAgentFactory.createSupervisorPriorityGenerator(
+            status = realGemmaRequiredModeStatus,
+            modelStatus = modelStatus,
+            sharedTextClient = sharedRealGemmaTextClient
         )
         return when (val priority = priorityGenerator.generate(
             patients = summaryPatients,
@@ -281,11 +308,11 @@ private fun SmritiApp(
             historySignals = historySignals
         )) {
             is SupervisorPriorityQueueResult.Available -> SmritiScreen.Summary(
-                summary = deterministicSummary,
+                summary = rawLocalSummary,
                 priorityQueue = priority.queue
             )
             is SupervisorPriorityQueueResult.Unavailable -> SmritiScreen.Summary(
-                summary = deterministicSummary,
+                summary = rawLocalSummary,
                 priorityUnavailableMessage = priority.reason
             )
         }
@@ -377,87 +404,100 @@ private fun SmritiApp(
                         onBack = { currentScreen = SmritiScreen.PatientRoster }
                     )
 
-                    is SmritiScreen.Visit -> VisitScreen(
-                        patient = screen.patient,
-                        history = visitMemoryStore.historyForPatient(
-                            VisitMemorySnapshot(patients, visits, referrals),
-                            screen.patient.id
-                        ),
-                        isGenerating = isGenerating,
-                        audioPermissionGranted = audioPermissionGranted,
-                        errorMessage = errorMessage,
-                        reasoningModeLabel = offlineProofStatus.reasoningModeLabel,
-                        realGemmaModelStatusLabel = modelStatus.proofLabel,
-                        realGemmaInferenceLabel = offlineProofStatus.realGemmaInferenceLabel,
-                        realGemmaDeveloperWarning = offlineProofStatus.realGemmaDeveloperWarning,
-                        protocolContextLabel = screen.patient.protocolContextLabel(),
-                        missedFollowUpAlerts = PatientMemoryInsights.missedFollowUpAlerts(
-                            patientId = screen.patient.id,
-                            visits = visits
-                        ),
-                        historySignal = PatientMemoryInsights.risingBloodPressureSignal(
+                    is SmritiScreen.Visit -> {
+                        val visitMemorySnapshot = VisitMemorySnapshot(patients, visits, referrals)
+                        val visitHistory = remember(screen.patient.id, visits, referrals) {
+                            SmritiLatencyLogger.measure(
+                                label = "patientHistoryLoadFormat",
+                                scenario = screen.patient.id
+                            ) {
+                                visitMemoryStore.historyForPatient(
+                                    visitMemorySnapshot,
+                                    screen.patient.id
+                                )
+                            }
+                        }
+                        VisitScreen(
                             patient = screen.patient,
-                            visits = visits
-                        ),
-                        onRequestAudioPermission = {
-                            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        },
-                        onMarkFollowUpConfirmed = { visitId ->
-                            scope.launch {
-                                errorMessage = null
-                                runCatching {
-                                    visitMemoryStore.markFollowUpConfirmed(visitId)
-                                }.onSuccess { snapshot ->
-                                    applySnapshot(snapshot)
-                                }.onFailure { error ->
-                                    errorMessage = "Could not update follow-up status: ${error.message}"
+                            history = visitHistory,
+                            isGenerating = isGenerating,
+                            generationStatusMessage = generationStatusMessage,
+                            audioPermissionGranted = audioPermissionGranted,
+                            errorMessage = errorMessage,
+                            reasoningModeLabel = offlineProofStatus.reasoningModeLabel,
+                            realGemmaModelStatusLabel = modelStatus.proofLabel,
+                            realGemmaEngineStatusLabel = offlineProofStatus.realGemmaEngineStatusLabel,
+                            realGemmaInferenceLabel = offlineProofStatus.realGemmaInferenceLabel,
+                            realGemmaDeveloperWarning = offlineProofStatus.realGemmaDeveloperWarning,
+                            protocolContextLabel = screen.patient.protocolContextLabel(),
+                            missedFollowUpAlerts = PatientMemoryInsights.missedFollowUpAlerts(
+                                patientId = screen.patient.id,
+                                visits = visits
+                            ),
+                            historySignal = PatientMemoryInsights.risingBloodPressureSignal(
+                                patient = screen.patient,
+                                visits = visits
+                            ),
+                            onRequestAudioPermission = {
+                                audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            },
+                            onMarkFollowUpConfirmed = { visitId ->
+                                scope.launch {
+                                    errorMessage = null
+                                    runCatching {
+                                        visitMemoryStore.markFollowUpConfirmed(visitId)
+                                    }.onSuccess { snapshot ->
+                                        applySnapshot(snapshot)
+                                    }.onFailure { error ->
+                                        errorMessage = "Could not update follow-up status: ${error.message}"
+                                    }
                                 }
-                            }
-                        },
-                        onGenerate = { observation, voiceNote ->
-                            scope.launch {
-                                isGenerating = true
-                                errorMessage = null
-                                exportVisitPath = null
-                                ttsStatusMessage = null
-                                runCatching {
-                                    val history = visitMemoryStore.historyForPatient(
-                                        VisitMemorySnapshot(patients, visits, referrals),
-                                        screen.patient.id
-                                    )
-                                    val pipelineResult = visitReasoningPipeline.process(
-                                        VisitPipelineInput(
-                                            patient = screen.patient,
-                                            priorVisits = history,
-                                            transcriptText = observation,
-                                            protocolContext = screen.patient.protocolContext()
+                            },
+                            onGenerate = { observation, voiceNote ->
+                                scope.launch {
+                                    isGenerating = true
+                                    generationStatusMessage = "Using prepared local patient context..."
+                                    errorMessage = null
+                                    exportVisitPath = null
+                                    ttsStatusMessage = null
+                                    runCatching {
+                                        generationStatusMessage = "Retrieving local protocol guidance..."
+                                        generationStatusMessage = "Running on-device Gemma 4 reasoning..."
+                                        val pipelineResult = visitReasoningPipeline.process(
+                                            VisitPipelineInput(
+                                                patient = screen.patient,
+                                                priorVisits = visitHistory,
+                                                transcriptText = observation,
+                                                protocolContext = screen.patient.protocolContext()
+                                            )
                                         )
-                                    )
-                                    val reasoningResult = pipelineResult.reasoningResult ?: error(
-                                        pipelineResult.unavailableReason
-                                            ?: "Transcript text is required before visit reasoning."
-                                    )
-                                    if (
-                                        realGemmaSubmissionModeStatus.isFullyActive &&
-                                        RealGemmaUnavailableResult.isUnavailable(reasoningResult)
-                                    ) {
-                                        error(RealGemmaUnavailableResult.RETRY_MESSAGE)
+                                        val reasoningResult = pipelineResult.reasoningResult ?: error(
+                                            pipelineResult.unavailableReason
+                                                ?: "Transcript text is required before visit reasoning."
+                                        )
+                                        if (RealGemmaUnavailableResult.isUnavailable(reasoningResult)) {
+                                            error(RealGemmaUnavailableResult.retryMessageFor(reasoningResult))
+                                        }
+                                        generationStatusMessage = "Preparing CHW review note..."
+                                        reasoningResult
+                                    }.onSuccess { result ->
+                                        hasSuccessfulRealGemmaGeneration = true
+                                        SmritiLatencyLogger.mark("reviewScreenNavigation", screen.patient.id)
+                                        currentScreen = SmritiScreen.Review(screen.patient, result, voiceNote)
+                                    }.onFailure { error ->
+                                        errorMessage = if (error.message?.startsWith(RealGemmaUnavailableResult.RETRY_MESSAGE) == true) {
+                                            error.message
+                                        } else {
+                                            "Could not generate local visit note: ${error.message}"
+                                        }
                                     }
-                                    reasoningResult
-                                }.onSuccess { result ->
-                                    currentScreen = SmritiScreen.Review(screen.patient, result, voiceNote)
-                                }.onFailure { error ->
-                                    errorMessage = if (error.message == RealGemmaUnavailableResult.RETRY_MESSAGE) {
-                                        RealGemmaUnavailableResult.RETRY_MESSAGE
-                                    } else {
-                                        "Could not generate local visit note: ${error.message}"
-                                    }
+                                    isGenerating = false
+                                    generationStatusMessage = null
                                 }
-                                isGenerating = false
-                            }
-                        },
-                        onBack = { currentScreen = SmritiScreen.PatientRoster }
-                    )
+                            },
+                            onBack = { currentScreen = SmritiScreen.PatientRoster }
+                        )
+                    }
 
                     is SmritiScreen.Review -> ReviewScreen(
                         patient = screen.patient,
@@ -493,14 +533,35 @@ private fun SmritiApp(
                                 isSaving = true
                                 errorMessage = null
                                 runCatching {
-                                    val snapshot = visitMemoryStore.saveConfirmedVisit(
-                                        result = screen.result,
-                                        editedNote = editedNote,
-                                        editedFollowUp = editedFollowUp,
-                                        voiceNote = screen.voiceNote
+                                    val saveStarted = System.currentTimeMillis()
+                                    val snapshot = withContext(Dispatchers.IO) {
+                                        visitMemoryStore.saveConfirmedVisit(
+                                            result = screen.result,
+                                            editedNote = editedNote,
+                                            editedFollowUp = editedFollowUp,
+                                            voiceNote = screen.voiceNote
+                                        )
+                                    }
+                                    SmritiLatencyLogger.log(
+                                        label = "confirmSaveRoomWrite",
+                                        durationMillis = System.currentTimeMillis() - saveStarted,
+                                        scenario = screen.patient.id
                                     )
                                     applySnapshot(snapshot)
-                                    buildSummaryScreen(snapshot.patients, snapshot.visits, snapshot.referrals)
+                                    val summaryStarted = System.currentTimeMillis()
+                                    val summary = SmritiScreen.Summary(
+                                        summary = buildRawLocalSummary(
+                                            snapshot.patients,
+                                            snapshot.visits,
+                                            snapshot.referrals
+                                        )
+                                    )
+                                    SmritiLatencyLogger.log(
+                                        label = "summaryRefresh",
+                                        durationMillis = System.currentTimeMillis() - summaryStarted,
+                                        scenario = screen.patient.id
+                                    )
+                                    summary
                                 }.onSuccess { summary ->
                                     currentScreen = summary
                                 }.onFailure { error ->

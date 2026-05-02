@@ -35,10 +35,10 @@ class RealGemmaAgentTest {
 
         assertTrue(result.uncertain)
         assertNull(result.referralFlag)
-        assertTrue(result.structuredNote.contains("Experimental Real Gemma path unavailable"))
+        assertTrue(result.structuredNote.contains("RealGemma reasoning unavailable"))
         assertTrue(result.structuredNote.contains(PatientLanguages.Hindi.safetyWording))
         assertTrue(result.structuredNote.contains("Protocol citation required before recommendation"))
-        assertTrue(result.suggestedFollowUp.contains("MockGemmaAgent fallback"))
+        assertTrue(result.suggestedFollowUp.contains("RealGemma reasoning is unavailable"))
     }
 
     @Test
@@ -201,9 +201,9 @@ class RealGemmaAgentTest {
     }
 
     @Test
-    fun defaultAgentModeRemainsMock() {
-        assertEquals(AgentMode.MOCK, AgentConfig.DEFAULT_MODE)
-        assertTrue(GemmaAgentFactory.create() is MockGemmaAgent)
+    fun defaultAgentModeRequiresRealGemma() {
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, AgentConfig.DEFAULT_MODE)
+        assertTrue(GemmaAgentFactory.create() is RealGemmaAgent)
     }
 
     @Test
@@ -221,9 +221,93 @@ class RealGemmaAgentTest {
             protocolChunks = protocolChunks
         )
 
-        assertTrue(fakeClient.prompt.contains("Return compact JSON only"))
+        assertTrue(fakeClient.prompt.contains("Return exact JSON only"))
         assertFalse(result.uncertain)
         assertEquals(protocol.citation, result.protocolCitation)
+    }
+
+    @Test
+    fun realGemmaRequiredFactoryReusesSharedTextClientInstance() = runBlocking {
+        val protocol = protocolChunks.first()
+        val sharedClient = CountingTextClient(TextGenerationResult.Success(validJson(protocol.citation)))
+        val status = RealGemmaRequiredMode.evaluate(
+            buildTimeGateEnabled = true,
+            localGateEnabled = true,
+            modelStatus = foundModelStatus()
+        )
+        val firstAgent = RealGemmaRequiredAgentFactory.createVisitAgent(
+            status = status,
+            modelStatus = foundModelStatus(),
+            sharedTextClient = sharedClient
+        )
+        val secondAgent = RealGemmaRequiredAgentFactory.createVisitAgent(
+            status = status,
+            modelStatus = foundModelStatus(),
+            sharedTextClient = sharedClient
+        )
+
+        val first = firstAgent.generateVisitNote(
+            patient = patient,
+            visitHistory = history,
+            observationText = "Meena has severe headache and blurred vision. BP 150 over 95.",
+            protocolChunks = protocolChunks
+        )
+        val second = secondAgent.generateVisitNote(
+            patient = patient,
+            visitHistory = history,
+            observationText = "Meena has severe headache and blurred vision. BP 150 over 95.",
+            protocolChunks = protocolChunks
+        )
+
+        assertFalse(first.uncertain)
+        assertFalse(second.uncertain)
+        assertEquals(2, sharedClient.callCount)
+    }
+
+    @Test
+    fun currentSchemaWithEnglishSafetyNoteGetsHindiSafetyWordingAdded() = runBlocking {
+        val protocol = protocolChunks.first()
+        val fakeAgent = RealGemmaAgent(
+            textClient = StaticTextClient(
+                TextGenerationResult.Success(
+                    currentSchemaJson(
+                        protocolCitation = protocol.citation,
+                        safetyNote = "This is not a diagnosis. CHW confirmation is required before saving."
+                    )
+                )
+            )
+        )
+
+        val result = fakeAgent.generateVisitNote(
+            patient = patient,
+            visitHistory = history,
+            observationText = "Meena has severe headache and blurred vision. BP 150 over 95.",
+            protocolChunks = protocolChunks
+        )
+
+        assertFalse(result.uncertain)
+        assertNotNull(result.referralFlag)
+        assertTrue(result.structuredNote.contains("This is not a diagnosis"))
+        assertTrue(result.structuredNote.contains(PatientLanguages.Hindi.safetyWording))
+    }
+
+    @Test
+    fun parserFailurePreservesTranscriptForRetryWithoutReviewOutput() = runBlocking {
+        val transcript = "Meena has severe headache and blurred vision."
+
+        val result = RealGemmaAgent(
+            textClient = StaticTextClient(TextGenerationResult.Success("""{"summary":"missing referral flag"}"""))
+        ).generateVisitNote(
+            patient = patient,
+            visitHistory = history,
+            observationText = transcript,
+            protocolChunks = protocolChunks
+        )
+
+        assertSafeRejectedResult(result)
+        assertEquals(transcript, result.observationText)
+        assertTrue(RealGemmaUnavailableResult.isUnavailable(result))
+        assertFalse(result.structuredNote.contains("missing referral flag"))
     }
 
     @Test
@@ -234,8 +318,7 @@ class RealGemmaAgentTest {
             referrals = emptyList()
         )
 
-        assertTrue(summary.narrative.contains("Real Gemma unavailable"))
-        assertTrue(summary.narrative.contains("MockGemmaAgent fallback"))
+        assertTrue(summary.narrative.contains("RealGemma supervisor reasoning unavailable"))
         assertTrue(summary.urgentCases.isEmpty())
     }
 
@@ -270,6 +353,25 @@ class RealGemmaAgentTest {
         """.trimIndent()
     }
 
+    private fun currentSchemaJson(
+        protocolCitation: String,
+        safetyNote: String = "This is not a diagnosis. CHW confirmation is required before saving."
+    ): String {
+        return """
+            {
+              "summary":"Severe headache, blurred vision, BP 150/95, and reduced fetal movement noted.",
+              "referralFlag":true,
+              "referralReason":"Danger signs in pregnancy need same-day referral support.",
+              "dangerSigns":["severe headache","blurred vision","reduced fetal movement"],
+              "followUpPlan":["Arrange same-day referral support and document CHW confirmation."],
+              "clarificationQuestion":"",
+              "citations":["$protocolCitation"],
+              "confidence":"HIGH",
+              "safetyNote":"$safetyNote"
+            }
+        """.trimIndent()
+    }
+
     private fun String.countOccurrences(needle: String): Int {
         return split(needle).size - 1
     }
@@ -295,5 +397,23 @@ class RealGemmaAgentTest {
             this.prompt = prompt
             return result
         }
+    }
+
+    private class CountingTextClient(private val result: TextGenerationResult) : RealGemmaTextClient {
+        var callCount: Int = 0
+            private set
+
+        override suspend fun generateText(prompt: String): TextGenerationResult {
+            callCount += 1
+            return result
+        }
+    }
+
+    private fun foundModelStatus(): ModelStatus {
+        val filesDir = java.nio.file.Files.createTempDirectory("smriti-reuse-found").toFile()
+        val modelFile = LiteRtModelPaths.expectedModelFile(filesDir)
+        modelFile.parentFile!!.mkdirs()
+        modelFile.writeText("fake model placeholder for reuse test only")
+        return ModelAvailability.fromFilesDir(filesDir).check()
     }
 }

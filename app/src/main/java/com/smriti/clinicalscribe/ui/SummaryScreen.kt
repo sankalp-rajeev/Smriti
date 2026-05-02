@@ -70,7 +70,7 @@ fun SummaryScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Local Supervisor Brief", fontWeight = FontWeight.SemiBold)
+                        Text("Raw Local Supervisor Data", fontWeight = FontWeight.SemiBold)
                         Text(summary.narrative)
                         Text("Total visits: ${summary.totalVisits}", fontWeight = FontWeight.SemiBold)
                         Text("Referral flags: ${summary.referralsFlagged}", fontWeight = FontWeight.SemiBold)
@@ -91,7 +91,7 @@ fun SummaryScreen(
                         ) {
                             Text("RealGemma Priority Follow-Up Queue", fontWeight = FontWeight.SemiBold)
                             priorityUnavailableMessage?.let { message ->
-                                Text(message, style = MaterialTheme.typography.bodyMedium)
+                                Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
                             }
                             priorityQueue?.items?.takeIf { it.isNotEmpty() }?.forEachIndexed { index, item ->
                                 Text(
@@ -118,7 +118,7 @@ fun SummaryScreen(
                     onClick = onReadSummary,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Read supervisor summary aloud")
+                    Text("Read local counts aloud")
                 }
                 OutlinedButton(
                     onClick = onExportSummaryJson,
@@ -153,7 +153,7 @@ fun SummaryScreen(
                     Text(if (isResettingDemoData) "Resetting Demo Data..." else "Reset Demo Data")
                 }
                 Text(
-                    text = "Demo mode only: clears saved mock visits and referral flags, then restores the six-patient synthetic roster.",
+                    text = "Demo mode only: clears saved visits and referral flags, then restores the six-patient synthetic roster.",
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 6.dp)
                 )

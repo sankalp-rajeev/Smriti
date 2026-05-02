@@ -17,8 +17,8 @@ import org.junit.Test
 
 class RealGemmaDeveloperModeTest {
     @Test
-    fun defaultModeAndBuildGateRemainMockSafe() {
-        assertEquals(AgentMode.MOCK, AgentConfig.DEFAULT_MODE)
+    fun defaultModeRequiresRealGemmaWhileLegacyDevBuildGateStaysOff() {
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, AgentConfig.DEFAULT_MODE)
         assertFalse(BuildConfig.REAL_GEMMA_DEV_BUILD_GATE)
     }
 
@@ -31,17 +31,17 @@ class RealGemmaDeveloperModeTest {
         val localOnly = RealGemmaDeveloperMode.evaluate(false, true, modelStatus)
         val bothEnabled = RealGemmaDeveloperMode.evaluate(true, true, modelStatus)
 
-        assertEquals(AgentMode.MOCK, bothDisabled.activeAgentMode)
-        assertEquals(AgentMode.MOCK, buildOnly.activeAgentMode)
-        assertEquals(AgentMode.MOCK, localOnly.activeAgentMode)
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, bothDisabled.activeAgentMode)
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, buildOnly.activeAgentMode)
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, localOnly.activeAgentMode)
         assertEquals(AgentMode.REAL_GEMMA_EXPERIMENTAL, bothEnabled.activeAgentMode)
-        assertFalse(buildOnly.usesRealGemmaVisitAgent)
-        assertFalse(localOnly.usesRealGemmaVisitAgent)
+        assertTrue(buildOnly.usesRealGemmaVisitAgent)
+        assertTrue(localOnly.usesRealGemmaVisitAgent)
         assertTrue(bothEnabled.usesRealGemmaVisitAgent)
     }
 
     @Test
-    fun normalDeveloperModeStatusCreatesMockVisitAgent() {
+    fun normalDeveloperModeStatusCreatesUnavailableRealGemmaAgent() = runBlocking {
         val modelStatus = foundModelStatus()
         val status = RealGemmaDeveloperMode.evaluate(
             buildTimeGateEnabled = false,
@@ -51,7 +51,15 @@ class RealGemmaDeveloperModeTest {
 
         val agent = RealGemmaDeveloperAgentFactory.createVisitAgent(status, modelStatus)
 
-        assertTrue(agent is MockGemmaAgent)
+        assertTrue(agent is RealGemmaAgent)
+        val result = agent.generateVisitNote(
+            patient = DemoSeedData.patients.first { it.id == "patient-meena" },
+            visitHistory = DemoSeedData.initialVisitLogs(),
+            observationText = "Meena reports severe headache and blurred vision.",
+            protocolChunks = listOf(protocolChunk())
+        )
+        assertTrue(result.uncertain)
+        assertTrue(result.structuredNote.contains("RealGemma setup required"))
     }
 
     @Test
@@ -75,7 +83,7 @@ class RealGemmaDeveloperModeTest {
         assertFalse(status.inferenceEnabled)
         assertTrue(result.uncertain)
         assertEquals(null, result.referralFlag)
-        assertTrue(result.structuredNote.contains("model not found"))
+        assertTrue(result.structuredNote.contains("RealGemma setup required"))
         assertTrue(result.structuredNote.contains(PatientLanguages.Hindi.safetyWording))
     }
 
@@ -104,7 +112,7 @@ class RealGemmaDeveloperModeTest {
         assertEquals(AgentMode.REAL_GEMMA_EXPERIMENTAL, status.activeAgentMode)
         val reasoning = result.reasoningResult ?: throw AssertionError("Expected safe uncertain result")
         assertTrue(reasoning.uncertain)
-        assertTrue(reasoning.structuredNote.contains("model not found"))
+        assertTrue(reasoning.structuredNote.contains("RealGemma setup required"))
     }
 
     @Test

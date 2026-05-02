@@ -6,8 +6,13 @@ import org.junit.Test
 
 class AgentModeTest {
     @Test
-    fun mockIsDefaultAgentMode() {
-        assertEquals(AgentMode.MOCK, AgentConfig.DEFAULT_MODE)
-        assertTrue(GemmaAgentFactory.create() is MockGemmaAgent)
+    fun realGemmaRequiredIsDefaultAgentMode() {
+        assertEquals(AgentMode.REAL_GEMMA_REQUIRED, AgentConfig.DEFAULT_MODE)
+        assertTrue(GemmaAgentFactory.create() is RealGemmaAgent)
+    }
+
+    @Test
+    fun mockCanStillBeCreatedOnlyAsExplicitFixture() {
+        assertTrue(GemmaAgentFactory.create(AgentMode.MOCK) is MockGemmaAgent)
     }
 }

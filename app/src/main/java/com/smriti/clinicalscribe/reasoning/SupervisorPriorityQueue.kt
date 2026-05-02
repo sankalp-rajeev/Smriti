@@ -362,15 +362,22 @@ class SupervisorPriorityQueueGenerator(
         missedFollowUps: List<MissedFollowUpAlert>,
         historySignals: List<HistorySignal>
     ): SupervisorPriorityQueueResult {
-        val prompt = promptBuilder.buildPrompt(
-            patients = patients,
-            todayVisits = todayVisits,
-            referrals = referrals,
-            missedFollowUps = missedFollowUps,
-            historySignals = historySignals
-        )
+        val prompt = SmritiLatencyLogger.measure("supervisorPromptBuild", "supervisor") {
+            promptBuilder.buildPrompt(
+                patients = patients,
+                todayVisits = todayVisits,
+                referrals = referrals,
+                missedFollowUps = missedFollowUps,
+                historySignals = historySignals
+            )
+        }
         val generation = try {
-            textClient.generateText(prompt)
+            var result: TextGenerationResult? = null
+            val duration = kotlin.system.measureTimeMillis {
+                result = textClient.generateText(prompt)
+            }
+            SmritiLatencyLogger.log("realGemmaGenerateCall", duration, "supervisor")
+            result ?: TextGenerationResult.Failed("Supervisor generation returned no result.")
         } catch (_: RuntimeException) {
             return SupervisorPriorityQueueResult.Unavailable(UNAVAILABLE_MESSAGE)
         }
@@ -381,16 +388,28 @@ class SupervisorPriorityQueueGenerator(
             .filter { it.isNotBlank() && it != "No matching protocol citation" }
             .toSet()
         return when (generation) {
-            is TextGenerationResult.Success -> when (val parsed = parser.parse(generation.text, suppliedCitations)) {
-                is SupervisorPriorityParseResult.Success -> SupervisorPriorityQueueResult.Available(parsed.queue)
-                is SupervisorPriorityParseResult.Rejected -> SupervisorPriorityQueueResult.Unavailable(UNAVAILABLE_MESSAGE)
+            is TextGenerationResult.Success -> {
+                val parsed = SmritiLatencyLogger.measure("supervisorParseSafetyCitationValidation", "supervisor") {
+                    parser.parse(generation.text, suppliedCitations)
+                }
+                when (parsed) {
+                    is SupervisorPriorityParseResult.Success -> SupervisorPriorityQueueResult.Available(parsed.queue)
+                    is SupervisorPriorityParseResult.Rejected -> SupervisorPriorityQueueResult.Unavailable(
+                        "$UNAVAILABLE_MESSAGE Invalid or uncited RealGemma priority output."
+                    )
+                }
             }
-            is TextGenerationResult.Unavailable -> SupervisorPriorityQueueResult.Unavailable(UNAVAILABLE_MESSAGE)
-            is TextGenerationResult.Failed -> SupervisorPriorityQueueResult.Unavailable(UNAVAILABLE_MESSAGE)
+            is TextGenerationResult.Unavailable -> SupervisorPriorityQueueResult.Unavailable(
+                "$UNAVAILABLE_MESSAGE ${generation.status}"
+            )
+            is TextGenerationResult.Failed -> SupervisorPriorityQueueResult.Unavailable(
+                "$UNAVAILABLE_MESSAGE ${generation.error}"
+            )
         }
     }
 
     private companion object {
-        const val UNAVAILABLE_MESSAGE = "On-device summary unavailable — deterministic local summary shown below."
+        const val UNAVAILABLE_MESSAGE = "On-device RealGemma supervisor reasoning unavailable — please retry."
     }
 }
+

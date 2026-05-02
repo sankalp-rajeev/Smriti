@@ -21,11 +21,20 @@ class NormalVisitFlowWiringTest {
         val mainActivity = appSourceFile("MainActivity.kt").readText()
 
         val confirmIndex = mainActivity.indexOf("onConfirmSave")
-        val confirmationBlock = mainActivity.substring(confirmIndex)
+        val confirmationEnd = mainActivity.indexOf("onBack = { currentScreen = SmritiScreen.Visit", startIndex = confirmIndex)
+        val confirmationBlock = mainActivity.substring(confirmIndex, confirmationEnd)
 
         assertTrue(confirmIndex >= 0)
+        assertTrue(confirmationEnd > confirmIndex)
         assertTrue(confirmationBlock.contains("visitMemoryStore.saveConfirmedVisit"))
+        assertTrue(confirmationBlock.contains("withContext(Dispatchers.IO)"))
         assertTrue(confirmationBlock.contains("applySnapshot(snapshot)"))
+        assertTrue(confirmationBlock.contains("buildRawLocalSummary"))
+        assertTrue(confirmationBlock.contains("confirmSaveRoomWrite"))
+        assertFalse(confirmationBlock.contains("buildSummaryScreen"))
+        assertFalse(confirmationBlock.contains("visitReasoningPipeline.process"))
+        assertFalse(confirmationBlock.contains("RealGemma"))
+        assertFalse(confirmationBlock.contains("jsonExporter.exportVisit"))
     }
 
     @Test
@@ -46,6 +55,7 @@ class NormalVisitFlowWiringTest {
         assertTrue(visitScreen.contains("Active mode: \$reasoningModeLabel"))
         assertTrue(visitScreen.contains("Protocol pack: \$protocolContextLabel"))
         assertTrue(visitScreen.contains("Protocol-grounded referral support, not diagnosis."))
+        assertTrue(visitScreen.contains("Engine: \$realGemmaEngineStatusLabel"))
         assertTrue(visitScreen.contains("Output language: \${PatientLanguages.forPatient(patient).displayLabel}"))
     }
 
@@ -59,10 +69,24 @@ class NormalVisitFlowWiringTest {
         assertTrue(patientListScreen.contains("Output language: \${PatientLanguages.forPatient(patient).displayLabel}"))
         assertTrue(patientListScreen.contains("Works offline; no cloud API required for core runtime."))
         assertTrue(reviewScreen.contains("Protocol-grounded referral support, not diagnosis."))
+        assertTrue(reviewScreen.contains("Routine / No referral flag"))
+        assertTrue(reviewScreen.contains("No danger-sign referral flag was generated."))
         assertTrue(reviewScreen.contains("CHW reviews and confirms before saving."))
         assertTrue(reviewScreen.contains("Safety Gate"))
         assertTrue(summaryScreen.contains("Confirmed local data only"))
-        assertTrue(summaryScreen.contains("Local Supervisor Brief"))
+        assertTrue(summaryScreen.contains("Raw Local Supervisor Data"))
+    }
+
+    @Test
+    fun reviewScreenOnlyShowsReferralSupportWhenReferralFlagExists() {
+        val reviewScreen = appSourceFile("ui/ReviewScreen.kt").readText()
+        val referralSupportIndex = reviewScreen.indexOf("Text(\"Referral Support\"")
+        val referralGuardIndex = reviewScreen.indexOf("if (referralFlag != null)")
+        val routineCardIndex = reviewScreen.indexOf("Text(\"Routine / No referral flag\"")
+
+        assertTrue(referralGuardIndex >= 0)
+        assertTrue(referralSupportIndex > referralGuardIndex)
+        assertTrue(routineCardIndex > referralSupportIndex)
     }
 
     @Test
@@ -152,19 +176,19 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
-    fun realGemmaNormalUiRequiresExplicitGates() {
+    fun appFacingUiRequiresRealGemmaAndNeverConstructsMockAgents() {
         val mainActivity = appSourceFile("MainActivity.kt").readText()
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
         val patientListScreen = appSourceFile("ui/PatientListScreen.kt").readText()
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
 
-        assertTrue(mainActivity.contains("realGemmaDevBuildGate: Boolean = BuildConfig.DEBUG && BuildConfig.REAL_GEMMA_DEV_BUILD_GATE"))
-        assertTrue(mainActivity.contains("realGemmaSubmissionBuildGate: Boolean = BuildConfig.REAL_GEMMA_SUBMISSION_MODE"))
+        assertTrue(mainActivity.contains("realGemmaRequiredBuildGate: Boolean = BuildConfig.REAL_GEMMA_SUBMISSION_MODE"))
         assertTrue(mainActivity.contains("RealGemmaDeveloperMode.isLocalGateEnabled(context.filesDir)"))
-        assertTrue(mainActivity.contains("RealGemmaSubmissionMode.evaluate"))
-        assertTrue(mainActivity.contains("realGemmaSubmissionModeStatus.usesRealGemmaVisitAgent"))
-        assertTrue(mainActivity.contains("RealGemmaDeveloperAgentFactory.createVisitAgent"))
-        assertTrue(mainActivity.contains("summaryAgent = remember { GemmaAgentFactory.create(AgentConfig.DEFAULT_MODE) }"))
+        assertTrue(mainActivity.contains("RealGemmaRequiredMode.evaluate"))
+        assertTrue(mainActivity.contains("RealGemmaRequiredAgentFactory.createVisitAgent"))
+        assertFalse(mainActivity.contains("MockGemmaAgent("))
+        assertFalse(mainActivity.contains("GemmaAgentFactory.create(AgentConfig.DEFAULT_MODE)"))
+        assertFalse(mainActivity.contains("summaryAgent = remember"))
         assertFalse(visitScreen.contains("REAL_GEMMA_EXPERIMENTAL"))
         assertFalse(patientListScreen.contains("REAL_GEMMA_EXPERIMENTAL"))
         assertFalse(summaryScreen.contains("REAL_GEMMA_EXPERIMENTAL"))
@@ -174,12 +198,25 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
-    fun realGemmaDeveloperModeStillUsesVisitReasoningPipeline() {
+    fun realGemmaRequiredModeStillUsesVisitReasoningPipeline() {
         val mainActivity = appSourceFile("MainActivity.kt").readText()
 
-        assertTrue(mainActivity.contains("visitAgent = remember(realGemmaSubmissionModeStatus, realGemmaDeveloperModeStatus, modelStatus)"))
+        assertTrue(mainActivity.contains("visitAgent = remember(realGemmaRequiredModeStatus, modelStatus, sharedRealGemmaTextClient)"))
+        assertTrue(mainActivity.contains("sharedTextClient = sharedRealGemmaTextClient"))
         assertTrue(mainActivity.contains("gemmaAgent = visitAgent"))
         assertTrue(mainActivity.contains("visitReasoningPipeline.process("))
+        assertTrue(mainActivity.contains("RealGemmaUnavailableResult.retryMessageFor(reasoningResult)"))
+    }
+
+    @Test
+    fun localReasoningStatusPreloadsWithoutNotLoadedCopy() {
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+
+        assertTrue(mainActivity.contains("RealGemmaEnginePreloadState.PREPARING"))
+        assertTrue(mainActivity.contains("RealGemmaEnginePreloadState.READY"))
+        assertTrue(mainActivity.contains("SmritiLatencyLogger.mark(\"realGemmaPreloadStart\")"))
+        assertTrue(mainActivity.contains("\"Loads on demand\""))
+        assertFalse(mainActivity.contains("\"Found, not loaded\""))
     }
 
     @Test
@@ -189,7 +226,8 @@ class NormalVisitFlowWiringTest {
         assertTrue(summaryScreen.contains("RealGemma Priority Follow-Up Queue"))
         assertTrue(summaryScreen.contains("priorityUnavailableMessage"))
         assertTrue(summaryScreen.contains("priorityQueue"))
-        assertTrue(summaryScreen.contains("Local Supervisor Brief"))
+        assertTrue(summaryScreen.contains("Raw Local Supervisor Data"))
+        assertFalse(summaryScreen.contains("deterministic local summary"))
     }
 
     @Test
