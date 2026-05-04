@@ -49,6 +49,23 @@ class LiteRtEngineConfigFactoryTest {
     }
 
     @Test
+    fun gpuConfigPlanIsExplicitlyOptIn() {
+        val filesDir = Files.createTempDirectory("smriti-config-gpu").toFile()
+        val modelFile = LiteRtModelPaths.expectedModelFile(filesDir)
+        modelFile.parentFile!!.mkdirs()
+        modelFile.writeText("fake model placeholder for gpu config path test only")
+        val modelStatus = ModelAvailability.fromFilesDir(filesDir).check()
+
+        val result = LiteRtEngineConfigFactory(LiteRtBackendMode.GPU_EXPERIMENTAL).prepare(modelStatus)
+
+        assertTrue(result is LiteRtEngineConfigPreparation.Prepared)
+        val prepared = result as LiteRtEngineConfigPreparation.Prepared
+        assertEquals(modelFile.absolutePath, prepared.engineConfig.modelPath)
+        assertTrue(prepared.engineConfig.backend is Backend.GPU)
+        assertEquals("GPU experimental", prepared.backendLabel)
+    }
+
+    @Test
     fun directEngineConfigConstructionIsNotAllowedInAppModule() {
         val filesDir = Files.createTempDirectory("smriti-config-deferred").toFile()
         val modelFile = LiteRtModelPaths.expectedModelFile(filesDir)

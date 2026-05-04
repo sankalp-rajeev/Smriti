@@ -59,7 +59,10 @@ fun ReviewScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Review visit note", style = MaterialTheme.typography.headlineSmall)
-                    Text("Smriti does not diagnose. Review before saving.", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "Smriti does not diagnose. Health worker must review before saving.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                     Text(patient.displayLabel(), style = MaterialTheme.typography.bodyLarge)
                     OutlinedButton(
                         onClick = onBack,
@@ -155,19 +158,19 @@ fun ReviewScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text("This note was prepared using:", fontWeight = FontWeight.SemiBold)
-                            Text("• Today's visit observation")
+                            Text("- Today's visit observation")
                             if (priorVisitCount > 0) {
-                                Text("• Patient history from $priorVisitCount prior visits")
+                                Text("- Patient history from $priorVisitCount prior visits")
                             } else {
-                                Text("• No prior visit history (first visit)")
+                                Text("- No prior visit history (first visit)")
                             }
                             val localSource = patient.country.ifBlank { "this country" }
-                            Text("• Local health guidance for $localSource")
-                            Text("• On-device Gemma 4 reasoning (no internet used)")
+                            Text("- Local health guidance for $localSource")
+                            Text("- On-device note preparation (no internet used)")
                             if (result.protocolChunk == null) {
-                                Text("• Global health guidance (no local guidance for this country yet)")
+                                Text("- Global health guidance (no local guidance for this country yet)")
                             }
-                            Text("Raw guidance ID: ${result.protocolCitation}", style = MaterialTheme.typography.bodyMedium)
+                            Text("Guidance ID: ${result.protocolCitation}", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
@@ -288,7 +291,7 @@ fun ReviewScreen(
                         .heightIn(min = 52.dp),
                     enabled = observationText.isNotBlank() && supportText.isNotBlank() && !isSaving
                 ) {
-                    Text(if (isSaving) "Saving..." else "Confirm and save")
+                    Text(if (isSaving) "Saving locally..." else "Confirm and save")
                 }
             }
         }
@@ -348,3 +351,4 @@ private fun buildStructuredNote(
         "Local guidance support:\n${guidanceSupport.trim()}"
     ).joinToString(separator = "\n\n")
 }
+

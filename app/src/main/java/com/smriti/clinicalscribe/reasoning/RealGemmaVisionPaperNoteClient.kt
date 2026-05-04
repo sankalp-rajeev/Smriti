@@ -20,7 +20,8 @@ class RealGemmaVisionPaperNoteClient(
     private val modelStatus: ModelStatus,
     private val cacheDirPath: String,
     private val engineConfigFactory: LiteRtEngineConfigFactory = LiteRtEngineConfigFactory(),
-    private val runner: VisionInferenceRunner = RealVisionInferenceRunner
+    private val runner: VisionInferenceRunner = RealVisionInferenceRunner,
+    private val sentinelExists: Boolean? = null
 ) {
     suspend fun extractPaperNote(
         imageBytes: ByteArray,
@@ -43,6 +44,17 @@ class RealGemmaVisionPaperNoteClient(
             maxNumImages = 1,
             cacheDir = cacheDirPath
         )
+        val lease = RealGemmaInferenceGate.tryAcquire(
+            requestType = RealGemmaRequestType.PAPER_NOTE_SCAN,
+            diagnostics = RealGemmaRequestDiagnostics(
+                modelExists = true,
+                modelSizeBytes = modelStatus.fileSizeBytes,
+                sentinelExists = sentinelExists,
+                backendMode = "${prepared.backendLabel}; vision=CPU",
+                engineState = "vision_new_conversation",
+                lastEngineFailure = RealGemmaInferenceGate.lastEngineFailure
+            )
+        ) ?: return PaperNoteVisionGenerationResult.Unavailable(RealGemmaInferenceGate.BUSY_MESSAGE)
 
         return try {
             val raw = withTimeout(timeoutMillis) {
@@ -56,11 +68,19 @@ class RealGemmaVisionPaperNoteClient(
                 PaperNoteVisionGenerationResult.Success(raw)
             }
         } catch (_: TimeoutCancellationException) {
+            lease.fail("Vision timed out.")
             PaperNoteVisionGenerationResult.Failed("Local Gemma vision timed out.")
         } catch (error: RuntimeException) {
+            lease.fail(error.message ?: error::class.java.simpleName)
             PaperNoteVisionGenerationResult.Failed(error.message ?: error::class.java.simpleName)
         } catch (error: LinkageError) {
+            lease.fail(error.message ?: error::class.java.simpleName)
             PaperNoteVisionGenerationResult.Failed(error.message ?: error::class.java.simpleName)
+        } catch (error: Throwable) {
+            lease.fail(error.message ?: error::class.java.simpleName)
+            PaperNoteVisionGenerationResult.Failed(error.message ?: error::class.java.simpleName)
+        } finally {
+            lease.release()
         }
     }
 

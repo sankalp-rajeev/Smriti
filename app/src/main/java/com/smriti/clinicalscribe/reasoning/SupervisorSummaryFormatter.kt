@@ -2,8 +2,47 @@ package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.ReferralFlag
+import com.smriti.clinicalscribe.data.VisitLog
 
 object SupervisorSummaryFormatter {
+    fun buildLocalSavedSummary(
+        patients: List<Patient>,
+        visits: List<VisitLog>,
+        referrals: List<ReferralFlag>,
+        narrative: String = "Saved visits, patient history, and local health guidance on this device."
+    ): SupervisorSummary {
+        val patientNamesById = patients.associate { it.id to it.name }
+        val paperUrgent = visits
+            .filter { PaperNoteUrgencyClassifier.needsUrgentReview(it) }
+            .sortedByDescending { it.visitDateMillis }
+        val paperUrgentVisitIds = paperUrgent.map { it.id }.toSet()
+        val followUpsDue = visits
+            .filter { it.confirmed && it.suggestedFollowUp.isNotBlank() && it.id !in paperUrgentVisitIds }
+            .map { visit ->
+                val patientName = patientNamesById[visit.patientId] ?: visit.patientId
+                "$patientName: ${visit.suggestedFollowUp}"
+            }
+        val paperLines = paperUrgent.map { visit ->
+            val name = patientNamesById[visit.patientId] ?: visit.patientId
+            paperScanUrgentReviewCardBody(displayName = name, visit = visit)
+        }
+
+        return SupervisorSummary(
+            totalVisits = visits.count { it.confirmed },
+            referralsFlagged = referrals.size,
+            urgentCases = urgentCases(patients, referrals),
+            followUpsDue = followUpsDue,
+            narrative = narrative,
+            paperScanNeedsUrgentReview = paperLines
+        )
+    }
+
+    fun paperScanUrgentReviewCardBody(displayName: String, visit: VisitLog): String {
+        val phrase = PaperNoteUrgencyClassifier.issueSummaryPhrase(visit)
+        return "$displayName: $phrase. Review scanned note and local guidance.\n\n" +
+            "Not a diagnosis. Health worker reviewed before saving."
+    }
+
     fun urgentCases(
         patients: List<Patient>,
         referrals: List<ReferralFlag>
@@ -18,7 +57,7 @@ object SupervisorSummaryFormatter {
                 val patientName = patientNamesById[flag.patientId] ?: flag.patientId
                 val dangerSigns = conciseDangerSigns(flag)
                 val citation = briefCitation(flag.protocolBasis)
-                "$patientName - ${flag.urgency} - $dangerSigns. Citation: $citation."
+                "$patientName - ${flag.urgency} - $dangerSigns. Health guidance: $citation."
             }
     }
 
@@ -59,7 +98,7 @@ object SupervisorSummaryFormatter {
             .substringBefore(";")
             .replace(Regex("\\s+"), " ")
             .trim()
-            .ifBlank { "Protocol citation unavailable" }
+            .ifBlank { "Review saved note" }
     }
 
     private const val MAX_FALLBACK_DANGER_SIGNS_LENGTH = 90

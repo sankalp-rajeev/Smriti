@@ -38,7 +38,7 @@ class MockGemmaAgent : GemmaAgent {
                 structuredNote = "Observation is too brief to create a safe structured record. $safetyWording",
                 referralFlag = null,
                 protocolCitation = protocolCitation,
-                suggestedFollowUp = "Ask the CHW to repeat the observation with symptoms, vitals, and fetal movement if relevant. Protocol citation: $protocolCitation.",
+                suggestedFollowUp = "Ask the CHW to repeat the observation with symptoms, vitals, and fetal movement if relevant. Health guidance: $protocolCitation.",
                 protocolChunk = protocol,
                 uncertain = true,
                 clarificationPrompt = "Please confirm symptoms, blood pressure if measured, fetal movement, and any bleeding or convulsions."
@@ -52,7 +52,7 @@ class MockGemmaAgent : GemmaAgent {
                 structuredNote = buildString {
                     append("Observation:\n${observationText.trim()}")
                     append("\n\nRelevant history:\n$latestHistory")
-                    append("\n\nProtocol-grounded support:\nNo matching protocol citation was found in the offline corpus. $safetyWording")
+                    append("\n\nLocal guidance support:\nNo matching health guidance was found on this device. $safetyWording")
                 },
                 referralFlag = null,
                 protocolCitation = protocolCitation,
@@ -66,11 +66,11 @@ class MockGemmaAgent : GemmaAgent {
         val note = buildString {
             append("Observation:\n${observationText.trim()}")
             append("\n\nRelevant history:\n$latestHistory")
-            append("\n\nProtocol-grounded support:\nDocumentation support only. $safetyWording ")
+            append("\n\nLocal guidance support:\nDocumentation support only. $safetyWording ")
             if (hasDangerSign) {
-                append("Danger signs are present in the observation and require CHW review for referral. Protocol citation: $protocolCitation.")
+                append("Danger signs are present in the observation and require CHW review for referral. Health guidance: $protocolCitation.")
             } else {
-                append("No obvious danger sign keyword was detected in this mock pass. Protocol citation: $protocolCitation.")
+                append("No urgent danger signs were flagged from this note. Health guidance: $protocolCitation.")
             }
         }
 
@@ -78,7 +78,7 @@ class MockGemmaAgent : GemmaAgent {
             ReferralFlag(
                 patientId = patient.id,
                 urgency = protocolChunks.highestReferralLevel(),
-                reason = "Protocol-grounded referral suggestion only, not a diagnosis: ${protocol!!.text}",
+                reason = "Local health guidance checked; not a diagnosis: ${protocol!!.text}",
                 protocolBasis = protocolCitation,
                 recommendedFacility = "Nearest PHC or obstetric referral facility",
                 dangerSigns = extractDangerSigns(normalized),
@@ -95,9 +95,9 @@ class MockGemmaAgent : GemmaAgent {
             referralFlag = referral,
             protocolCitation = protocolCitation,
             suggestedFollowUp = if (hasDangerSign) {
-                "Contact supervisor and support same-day referral confirmation. Protocol citation: $protocolCitation."
+                "Contact supervisor and support same-day referral confirmation. Health guidance: $protocolCitation."
             } else {
-                "Continue routine ANC follow-up and confirm next visit date. Protocol citation: $protocolCitation."
+                "Continue routine ANC follow-up and confirm next visit date. Health guidance: $protocolCitation."
             },
             protocolChunk = protocol,
             uncertain = false,
@@ -110,25 +110,14 @@ class MockGemmaAgent : GemmaAgent {
         visits: List<VisitLog>,
         referrals: List<ReferralFlag>
     ): SupervisorSummary {
-        val patientNamesById = patients.associate { it.id to it.name }
-        val urgentCases = SupervisorSummaryFormatter.urgentCases(patients, referrals)
-        val followUps = visits
-            .filter { it.suggestedFollowUp.isNotBlank() }
-            .map { visit ->
-                val citationText = if (visit.suggestedFollowUp.contains("citation", ignoreCase = true)) {
-                    ""
-                } else {
-                    " Citation: ${visit.protocolCitation}."
-                }
-                "${patientNamesById[visit.patientId] ?: visit.patientId}: ${visit.suggestedFollowUp}$citationText"
-            }
-
-        return SupervisorSummary(
-            totalVisits = visits.size,
-            referralsFlagged = referrals.size,
-            urgentCases = urgentCases,
-            followUpsDue = followUps,
-            narrative = "Today has ${visits.size} confirmed visit(s), with ${referrals.size} referral flag(s). Review urgent cases first, then follow routine ANC follow-ups."
+        return SupervisorSummaryFormatter.buildLocalSavedSummary(
+            patients = patients,
+            visits = visits,
+            referrals = referrals
+        ).copy(
+            narrative =
+                "Today has ${visits.count { it.confirmed }} confirmed visit(s), with ${referrals.size} referral flag(s). " +
+                    "Review urgent cases first, then follow routine ANC follow-ups."
         )
     }
 

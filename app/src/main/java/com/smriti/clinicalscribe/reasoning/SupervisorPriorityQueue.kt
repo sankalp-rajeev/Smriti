@@ -374,7 +374,7 @@ class SupervisorPriorityQueueGenerator(
         val generation = try {
             var result: TextGenerationResult? = null
             val duration = kotlin.system.measureTimeMillis {
-                result = textClient.generateText(prompt)
+                result = textClient.generateText(prompt, RealGemmaRequestType.SUPERVISOR_SUMMARY)
             }
             SmritiLatencyLogger.log("realGemmaGenerateCall", duration, "supervisor")
             result ?: TextGenerationResult.Failed("Supervisor generation returned no result.")
@@ -409,7 +409,7 @@ class SupervisorPriorityQueueGenerator(
     }
 
     private companion object {
-        const val UNAVAILABLE_MESSAGE = "On-device RealGemma supervisor reasoning unavailable — please retry."
+        const val UNAVAILABLE_MESSAGE = "On-device priority summary unavailable. Showing saved local visit flags."
     }
 }
 

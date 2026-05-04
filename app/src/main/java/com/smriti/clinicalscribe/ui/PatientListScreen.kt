@@ -15,9 +15,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -36,19 +34,14 @@ import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.ReferralFlag
 import com.smriti.clinicalscribe.data.VisitLog
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientListScreen(
     patients: List<Patient>,
     visits: List<VisitLog>,
     referrals: List<ReferralFlag>,
     isLoading: Boolean,
-    offlineProofStatus: OfflineProofStatus,
     importStatusMessage: String?,
     isImportingSupervisorRegister: Boolean,
-    selectedLanguageCode: String,
-    languageStatusMessage: String?,
-    onLanguageSelected: (String) -> Unit,
     onPatientSelected: (Patient) -> Unit,
     onAddPatient: () -> Unit,
     onImportSupervisorRegister: () -> Unit,
@@ -57,7 +50,6 @@ fun PatientListScreen(
     onCheckOfflineSetup: () -> Unit
 ) {
     var showImportDialog by remember { mutableStateOf(false) }
-    var showLanguageSheet by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     val sortedPatients = remember(patients, visits, referrals) {
         PatientRosterUiLogic.sortPatients(patients, visits, referrals)
@@ -95,30 +87,6 @@ fun PatientListScreen(
         )
     }
 
-    if (showLanguageSheet) {
-        ModalBottomSheet(onDismissRequest = { showLanguageSheet = false }) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text("Choose language", style = MaterialTheme.typography.titleLarge)
-                LanguageChoices.options.forEach { option ->
-                    OutlinedButton(
-                        onClick = {
-                            onLanguageSelected(option.code)
-                            showLanguageSheet = false
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                    ) {
-                        Text(option.label)
-                    }
-                }
-            }
-        }
-    }
-
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
@@ -133,12 +101,6 @@ fun PatientListScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Smriti", style = MaterialTheme.typography.headlineMedium)
                     Text("Offline health visit assistant", style = MaterialTheme.typography.bodyLarge)
-                }
-                OutlinedButton(
-                    onClick = { showLanguageSheet = true },
-                    modifier = Modifier.heightIn(min = 48.dp)
-                ) {
-                    Text(LanguageChoices.labelFor(selectedLanguageCode))
                 }
             }
 
@@ -191,18 +153,17 @@ fun PatientListScreen(
                 Text("Check offline setup")
             }
             importStatusMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-            languageStatusMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
 
             if (isLoading) {
                 Text("Loading local patient roster...", style = MaterialTheme.typography.bodyLarge)
             } else {
                 LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                     contentPadding = PaddingValues(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    item {
-                        OfflineProofCard(status = offlineProofStatus, compact = true)
-                    }
                     when {
                         patients.isEmpty() -> item {
                             EmptyRosterState(
@@ -332,7 +293,7 @@ private fun PatientRow(
             Text(PatientVisitUiText.gestationLabel(patient), style = MaterialTheme.typography.bodyLarge)
             Text(PatientVisitUiText.countryVillage(patient), style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = "Output language: ${PatientVisitUiText.outputLanguageLabel(patient)}",
+                text = "Note language: ${PatientVisitUiText.noteLanguageName(patient)}",
                 style = MaterialTheme.typography.bodyMedium
             )
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

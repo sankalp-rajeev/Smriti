@@ -1,100 +1,54 @@
 # Demo Flow
 
-Use this for the recorded judge demo. Reset Demo Data before filming if the emulator has accumulated saved visits.
+Use this for the 3-minute edited judge video. Reset Demo Data before filming if the emulator has accumulated saved visits. Turn on airplane mode before opening Smriti.
 
-## Setup
+## Three-Minute Sequence
 
-1. Turn on airplane mode.
-2. Launch Smriti.
-3. If the Welcome screen appears, show it briefly and tap `Start visits`.
-4. If `One-time setup needed` appears, explain that the model is sideloaded by a supervisor; for a setup demo, tap `Continue without model (demo mode)`. For the RealGemma filmed path, install the model first so this screen does not appear.
+1. **A. Welcome screen** - Show `Smriti` and `Offline health visit assistant`, then tap `Start visits`.
+2. **B. Offline Proof / setup ready** - Tap `Check offline setup`, then show local proof: works offline after setup, patient memory on device, guidance on device, RealGemma ready/setup state, paper-note scan available, no cloud APIs, direct Gemma audio not used. Return to the roster.
+3. **C. Patient roster search and attention chips** - Show search, primary actions, smaller secondary actions, `Needs attention` before routine visits, patient chips, and patient-card `Note language` labels. The roster does not show technical proof details by default.
+4. **D. Amara Tesfaye** - Open Amara and show the missed follow-up alert. Note this is deterministic local history, not prediction.
+5. **E. Fatima Begum** - Open Fatima and show the rising BP history signal. Keep the spoken framing cautious: history signal for CHW attention, not diagnosis.
+6. **F. Meena Sharma** - Select Meena, use the Hindi sample/RealGemma note path, generate a structured note, show referral suggested, local guidance citation, safety wording, CHW review, then confirm/save.
+7. **G. Lucia Fernandez** - Show a Spanish RealGemma note for Lucia after manual validation. Keep citation IDs in English.
+8. **H. Grace Achieng** - Show a Swahili routine/no-referral RealGemma note after manual validation.
+9. **I. Grace paper-note scan** - Use `Use sample paper note`. Local Gemma vision extracts Grace, BP, symptoms, and follow-up from the synthetic note. CHW reviews and saves. Say: vision scan is data-entry support only, not diagnosis.
+10. **J. End-of-day Summary** - Show urgent, follow-up, and routine priority lists. Meena should appear as urgent after the confirmed referral save.
+11. **K. Close with Offline Proof** - Close on no cloud APIs, local patient memory, local guidance, RealGemma text and vision, direct Gemma audio blocked, and CHW review/confirm/save always required.
 
-## Script
+For edited waits, use an on-screen label while keeping the real generated result:
 
-1. **Welcome**
-   - Show `Smriti` and `Offline health visit assistant`.
-   - Say: Smriti helps health workers remember patient history, check local health guidance, prepare visit notes, and decide follow-up. It does not diagnose.
-   - Optional: open `View user guide`, then return.
+```text
+On-device Gemma 4 inference - sped up for demo.
+```
 
-2. **Patient Roster**
-   - Show search near the top.
-   - Show primary actions: `Add patient`, `End-of-day summary`, `Import register`, and `User guide`.
-   - Show language selector. Selecting a language changes the next visit output language without changing saved records.
-   - Point out sorted sections: `Needs attention` before `Routine visits`.
-   - Confirm chips:
-     - Amara: `Follow-up due`
-     - Fatima: `History signal`
-     - Grace: `Routine`
-     - Meena after saving a referral: `Referral saved`
+## Spoken Positioning
 
-3. **Alert Cards**
-   - Open Amara and show `Missed follow-up` above the visit input.
-   - Open Fatima and show `History signal` above the visit input.
-   - Open Grace and confirm no false history signal appears.
+- `Smriti demonstrates local Android LiteRT-LM text reasoning and local Gemma 4 vision paper-note extraction.`
+- `Selected languages demonstrated: English, Hindi, Spanish, Swahili.`
+- `Patient-specific generated note languages are supported; full app UI translation is not claimed.`
+- `Vision scan is data-entry support only, not diagnosis.`
+- `CHW review, confirm, and save is always required.`
+- `Smriti runs one on-device Gemma request at a time so the filmed path stays stable.`
+- `Direct Gemma audio remains blocked, so Smriti uses offline speech or editable transcript into text reasoning.`
 
-4. **Meena Visit**
-   - Open `Meena Sharma, 28F`.
-   - Show patient header, then any alert cards, then `What to do now`.
-   - Tap `Use sample visit transcript`. The sample is Meena-specific and includes severe headache, blurred vision, BP 150/95, and reduced fetal movement.
-   - Prior history is compact and lower on the screen; expand `Show patient history` if useful.
+## Safety Details To Show
 
-5. **Optional Paper Note Scan**
-   - Open `Grace Achieng, 26F` if you want to show the safe scan path.
-   - Tap `Use sample paper note`.
-   - Loading should show `Reading paper note...` and `Extracting visit details...`.
-   - Review Scanned Note should show patient name, date, BP, symptoms, follow-up plan, and the confidence message without raw enum text.
-   - Confirm the association before saving. Say: this is data entry from a synthetic paper note, not diagnosis or referral advice.
-
-6. **Generate Note**
-   - Tap `Generate visit note`.
-   - Loading card should show calm progress: reading history, checking local guidance, running on-device Gemma, preparing note.
-   - If RealGemma is unavailable or invalid, Smriti shows `Note could not be prepared`, preserves the transcript, and does not show mock output.
-
-7. **Review**
-   - Show `Review visit note`.
-   - Read the safety line: `Smriti does not diagnose. Review before saving.`
-   - For danger signs, show `Referral suggested`.
-   - For routine visits, show `No referral flag`.
-   - For incomplete observations, show `More information needed`.
-   - Expand `How was this prepared?` to show today's observation, prior visit count, local guidance country, on-device Gemma, and raw guidance ID.
-
-8. **Confirm And Save**
-   - Edit fields if useful.
-   - Tap `Confirm and save`.
-   - Say: nothing is saved until the health worker reviews and confirms.
-
-9. **End-Of-Day Summary**
-   - Show `Today's priority list`.
-   - Show `Urgent cases`, `Follow-ups`, and `Routine visits`.
-   - If the on-device priority queue is unavailable, the screen must show `On-device summary unavailable. Local visit counts are shown below.`
-   - Expand `Local proof` if needed.
-
-10. **Offline Proof**
-   - Point out:
-     - `Works offline after setup`
-     - `Patient memory: saved on this device`
-     - `Health guidance: stored on this device`
-     - `On-device Gemma: ready` or `Setup needed`
-     - `Cloud APIs: none`
-     - `Direct Gemma audio: not used`
-     - `Paper note scan: Available`
-     - `Cloud OCR: none`
-   - Paper-note scan is local Gemma vision data entry only. Do not claim image diagnosis.
-
-11. **Optional Reset**
-    - Tap `Reset Demo Data`.
-    - Confirm the dialog says it will clear saved visits and restore the original patient list.
-
-## Closing Line
-
-One phone, no signal, local patient memory, local health guidance, on-device Gemma reasoning, and health-worker review before saving.
+- Review screen content is editable before save.
+- Referral support includes a local protocol citation.
+- If RealGemma is unavailable or invalid, Smriti shows retry/setup messaging, preserves the transcript, and does not display mock clinical output.
+- If another RealGemma request is running, Smriti shows `Smriti is already preparing a note. Please wait.` instead of queueing another native inference call.
+- Paper-note scan uses local Gemma vision and Review Scanned Note; image bytes are not persisted.
+- No cloud OCR/API is used.
+- Existing patient note language is not overwritten by any default/new-patient language setting.
 
 ## Do Not Claim
 
 - Do not claim clinical validation.
 - Do not claim autonomous diagnosis or treatment.
 - Do not claim direct Gemma audio works.
-- Do not claim clinical image diagnosis or referral decisions from paper-note images.
-- Do not use paper-note scanning for wounds, rashes, ultrasound, medicine strips, growth charts, or photos of people.
+- Do not claim broad all-language support.
+- Do not claim clinical image diagnosis, broad camera diagnosis, or referral decisions from images alone.
+- Do not say no other team has this.
 - Do not present mock output as RealGemma output.
 - Do not show real patient data.

@@ -47,6 +47,7 @@ import com.smriti.clinicalscribe.reasoning.SupervisorSummaryFormatter
 import com.smriti.clinicalscribe.reasoning.SupervisorPriorityQueue
 import com.smriti.clinicalscribe.reasoning.SupervisorPriorityQueueResult
 import com.smriti.clinicalscribe.reasoning.RealGemmaUnavailableResult
+import com.smriti.clinicalscribe.reasoning.RealGemmaInferenceGate
 import com.smriti.clinicalscribe.reasoning.RealGemmaRequiredAgentFactory
 import com.smriti.clinicalscribe.reasoning.RealGemmaRequiredMode
 import com.smriti.clinicalscribe.reasoning.RealGemmaDeveloperTextClient
@@ -63,6 +64,7 @@ import com.smriti.clinicalscribe.transcript.SimulatedTranscriptClient
 import com.smriti.clinicalscribe.tts.AndroidVoiceOutput
 import com.smriti.clinicalscribe.tts.VoiceOutputResult
 import com.smriti.clinicalscribe.ui.AddPatientScreen
+import com.smriti.clinicalscribe.ui.OfflineSetupScreen
 import com.smriti.clinicalscribe.ui.OfflineProofStatus
 import com.smriti.clinicalscribe.ui.PatientListScreen
 import com.smriti.clinicalscribe.ui.ReviewScreen
@@ -102,19 +104,10 @@ private fun buildRawLocalSummary(
     summaryVisits: List<VisitLog>,
     summaryReferrals: List<ReferralFlag>
 ): SupervisorSummary {
-    val patientNamesById = summaryPatients.associate { it.id to it.name }
-    val followUps = summaryVisits
-        .filter { it.confirmed && it.suggestedFollowUp.isNotBlank() }
-        .map { visit ->
-            val patientName = patientNamesById[visit.patientId] ?: visit.patientId
-            "$patientName: ${visit.suggestedFollowUp}"
-        }
-    return SupervisorSummary(
-        totalVisits = summaryVisits.count { it.confirmed },
-        referralsFlagged = summaryReferrals.size,
-        urgentCases = SupervisorSummaryFormatter.urgentCases(summaryPatients, summaryReferrals),
-        followUpsDue = followUps,
-        narrative = "Raw confirmed local counts and saved referral flags. RealGemma supervisor reasoning is required for prioritization."
+    return SupervisorSummaryFormatter.buildLocalSavedSummary(
+        patients = summaryPatients,
+        visits = summaryVisits,
+        referrals = summaryReferrals
     )
 }
 
@@ -169,6 +162,7 @@ private sealed interface SmritiScreen {
     data object Welcome : SmritiScreen
     data object UserGuide : SmritiScreen
     data object SetupGuidance : SmritiScreen
+    data object OfflineSetup : SmritiScreen
     data object PatientRoster : SmritiScreen
     data object AddPatient : SmritiScreen
     data class Visit(val patient: Patient) : SmritiScreen
@@ -216,9 +210,12 @@ private fun SmritiApp(
             modelStatus = modelStatus
         )
     }
-    val sharedRealGemmaTextClient = remember(realGemmaRequiredModeStatus, modelStatus) {
+    val sharedRealGemmaTextClient = remember(realGemmaRequiredModeStatus, modelStatus, realGemmaLocalGate) {
         if (realGemmaRequiredModeStatus.inferenceEnabled) {
-            RealGemmaDeveloperTextClient(modelStatus)
+            RealGemmaDeveloperTextClient(
+                modelStatus = modelStatus,
+                sentinelExists = realGemmaLocalGate
+            )
         } else {
             null
         }
@@ -237,10 +234,11 @@ private fun SmritiApp(
             speechToTextClient = SimulatedTranscriptClient()
         )
     }
-    val paperNoteVisionClient = remember(modelStatus, context.cacheDir.absolutePath) {
+    val paperNoteVisionClient = remember(modelStatus, context.cacheDir.absolutePath, realGemmaLocalGate) {
         RealGemmaVisionPaperNoteClient(
             modelStatus = modelStatus,
-            cacheDirPath = context.cacheDir.absolutePath
+            cacheDirPath = context.cacheDir.absolutePath,
+            sentinelExists = realGemmaLocalGate
         )
     }
     val paperNoteVisionParser = remember { PaperNoteVisionParser() }
@@ -318,8 +316,6 @@ private fun SmritiApp(
     val firstLaunchPrefs = remember {
         context.getSharedPreferences("smriti_first_launch", android.content.Context.MODE_PRIVATE)
     }
-    var selectedLanguageOverride by remember { mutableStateOf<String?>(null) }
-    var languageStatusMessage by remember { mutableStateOf<String?>(null) }
     var currentScreen by remember {
         mutableStateOf<SmritiScreen>(
             if (firstLaunchPrefs.getBoolean("welcome_seen", false)) {
@@ -352,6 +348,10 @@ private fun SmritiApp(
         val visitScreen = currentScreen as? SmritiScreen.Visit ?: return@rememberLauncherForActivityResult
         if (uri == null) {
             paperNoteStatusMessage = "No image selected."
+            return@rememberLauncherForActivityResult
+        }
+        if (isGenerating || isReadingPaperNote) {
+            errorMessage = RealGemmaInferenceGate.BUSY_MESSAGE
             return@rememberLauncherForActivityResult
         }
         scope.launch {
@@ -463,7 +463,7 @@ private fun SmritiApp(
     }
 
     MaterialTheme {
-        Scaffold { innerPadding ->
+        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -474,11 +474,7 @@ private fun SmritiApp(
                         onStartVisits = { openVisitsAfterWelcome() },
                         onUserGuide = { currentScreen = SmritiScreen.UserGuide },
                         onCheckOfflineSetup = {
-                            currentScreen = if (modelFileReady) {
-                                SmritiScreen.PatientRoster
-                            } else {
-                                SmritiScreen.SetupGuidance
-                            }
+                            currentScreen = SmritiScreen.OfflineSetup
                         }
                     )
 
@@ -495,8 +491,20 @@ private fun SmritiApp(
                     SmritiScreen.SetupGuidance -> SetupGuidanceScreen(
                         onContinueWithoutModel = {
                             firstLaunchPrefs.edit().putBoolean("setup_seen", true).apply()
-                            currentScreen = SmritiScreen.PatientRoster
+                                errorMessage = null
+                                currentScreen = SmritiScreen.PatientRoster
                         },
+                        onBack = {
+                            currentScreen = if (firstLaunchPrefs.getBoolean("welcome_seen", false)) {
+                                SmritiScreen.PatientRoster
+                            } else {
+                                SmritiScreen.Welcome
+                            }
+                        }
+                    )
+
+                    SmritiScreen.OfflineSetup -> OfflineSetupScreen(
+                        status = offlineProofStatus,
                         onBack = {
                             currentScreen = if (firstLaunchPrefs.getBoolean("welcome_seen", false)) {
                                 SmritiScreen.PatientRoster
@@ -511,22 +519,8 @@ private fun SmritiApp(
                         visits = visits,
                         referrals = referrals,
                         isLoading = isLoading,
-                        offlineProofStatus = offlineProofStatus,
                         importStatusMessage = importStatusMessage,
                         isImportingSupervisorRegister = isImportingSupervisorRegister,
-                        selectedLanguageCode = selectedLanguageOverride ?: "en",
-                        languageStatusMessage = languageStatusMessage,
-                        onLanguageSelected = { code ->
-                            selectedLanguageOverride = code
-                            languageStatusMessage = "Language set to ${
-                                when (code) {
-                                    "hi" -> "Hindi"
-                                    "es" -> "Spanish"
-                                    "sw" -> "Swahili"
-                                    else -> "English"
-                                }
-                            }"
-                        },
                         onPatientSelected = { patient ->
                             errorMessage = null
                             currentScreen = SmritiScreen.Visit(patient)
@@ -560,7 +554,7 @@ private fun SmritiApp(
                         },
                         onUserGuide = { currentScreen = SmritiScreen.UserGuide },
                         onCheckOfflineSetup = {
-                            currentScreen = if (modelFileReady) SmritiScreen.PatientRoster else SmritiScreen.SetupGuidance
+                            currentScreen = SmritiScreen.OfflineSetup
                         }
                     )
 
@@ -587,9 +581,6 @@ private fun SmritiApp(
                     )
 
                     is SmritiScreen.Visit -> {
-                        val visitPatient = selectedLanguageOverride?.let { code ->
-                            screen.patient.copy(preferredLanguage = code)
-                        } ?: screen.patient
                         val visitMemorySnapshot = VisitMemorySnapshot(patients, visits, referrals)
                         val visitHistory = remember(screen.patient.id, visits, referrals) {
                             SmritiLatencyLogger.measure(
@@ -603,7 +594,7 @@ private fun SmritiApp(
                             }
                         }
                         VisitScreen(
-                            patient = visitPatient,
+                            patient = screen.patient,
                             history = visitHistory,
                             isGenerating = isGenerating,
                             generationStatusMessage = generationStatusMessage,
@@ -642,7 +633,7 @@ private fun SmritiApp(
                             },
                             onGenerate = { observation, voiceNote ->
                                 scope.launch {
-                                    if (isGenerating) return@launch
+                                    if (isGenerating || isReadingPaperNote) return@launch
                                     isGenerating = true
                                     generationStatusMessage = "Reading patient history..."
                                     errorMessage = null
@@ -653,10 +644,10 @@ private fun SmritiApp(
                                         generationStatusMessage = "Running on-device Gemma 4 reasoning..."
                                         val pipelineResult = visitReasoningPipeline.process(
                                             VisitPipelineInput(
-                                                patient = visitPatient,
+                                                patient = screen.patient,
                                                 priorVisits = visitHistory,
                                                 transcriptText = observation,
-                                                protocolContext = visitPatient.protocolContext()
+                                                protocolContext = screen.patient.protocolContext()
                                             )
                                         )
                                         val reasoningResult = pipelineResult.reasoningResult ?: error(
@@ -671,20 +662,33 @@ private fun SmritiApp(
                                     }.onSuccess { result ->
                                         hasSuccessfulRealGemmaGeneration = true
                                         SmritiLatencyLogger.mark("reviewScreenNavigation", screen.patient.id)
-                                        currentScreen = SmritiScreen.Review(visitPatient, result, voiceNote)
+                                        currentScreen = SmritiScreen.Review(screen.patient, result, voiceNote)
                                     }.onFailure { error ->
-                                        errorMessage = "On-device reasoning was unavailable. Please check the model is installed, then try again."
+                                        val detail = error.message.orEmpty()
+                                        errorMessage = if (detail.contains(RealGemmaInferenceGate.BUSY_MESSAGE)) {
+                                            RealGemmaInferenceGate.BUSY_MESSAGE
+                                        } else {
+                                            "On-device reasoning was unavailable. Please check the model is installed, then try again."
+                                        }
                                     }
                                     isGenerating = false
                                     generationStatusMessage = null
                                 }
                             },
-                            onScanPaperNote = {
+                            onScanPaperNote = scanPaper@{
+                                if (isGenerating || isReadingPaperNote) {
+                                    errorMessage = RealGemmaInferenceGate.BUSY_MESSAGE
+                                    return@scanPaper
+                                }
                                 errorMessage = null
                                 paperNoteStatusMessage = null
                                 paperNoteImageLauncher.launch("image/*")
                             },
-                            onUseSamplePaperNote = {
+                            onUseSamplePaperNote = samplePaper@{
+                                if (isGenerating || isReadingPaperNote) {
+                                    errorMessage = RealGemmaInferenceGate.BUSY_MESSAGE
+                                    return@samplePaper
+                                }
                                 scope.launch {
                                     val sampleBytes = runCatching {
                                         context.assets.open("demo/sample_paper_visit_note.png").use { it.readBytes() }
@@ -708,7 +712,11 @@ private fun SmritiApp(
                                     }
                                 }
                             },
-                            onBack = { currentScreen = SmritiScreen.PatientRoster }
+                            onBack = {
+                                errorMessage = null
+                                paperNoteStatusMessage = null
+                                currentScreen = SmritiScreen.PatientRoster
+                            }
                         )
                     }
 
@@ -742,9 +750,10 @@ private fun SmritiApp(
                                 exportVisitPath = "Export failed: ${error.message}"
                             }
                         },
-                        onConfirmSave = { editedNote, editedFollowUp ->
+                        onConfirmSave = saveVisit@{ editedNote, editedFollowUp ->
+                            if (isSaving) return@saveVisit
+                            isSaving = true
                             scope.launch {
-                                isSaving = true
                                 errorMessage = null
                                 runCatching {
                                     val saveStarted = System.currentTimeMillis()
@@ -797,9 +806,10 @@ private fun SmritiApp(
                             extraction = screen.extraction,
                             isSaving = isSaving,
                             saveStatusMessage = scannedNoteSaveStatusMessage,
-                            onSave = { targetPatient, editedPatientName, editedVisitDate, editedBloodPressure, editedSymptoms, editedFollowUpPlan ->
+                            onSave = saveScanned@{ targetPatient, editedPatientName, editedVisitDate, editedBloodPressure, editedSymptoms, editedFollowUpPlan ->
+                                if (isSaving) return@saveScanned
+                                isSaving = true
                                 scope.launch {
-                                    isSaving = true
                                     errorMessage = null
                                     runCatching {
                                         val snapshot = withContext(Dispatchers.IO) {

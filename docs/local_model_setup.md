@@ -35,7 +35,8 @@ There is currently no debug `applicationIdSuffix`, so `run-as com.smriti.clinica
 - The app checks whether the expected app-private model file exists.
 - If missing, Offline Proof reports the Real Gemma model as not found and inference disabled.
 - If present, the app reports the model as found. Engine status says `Loads on demand`, `Preparing`, `Ready`, `Failed`, or `Loaded`; it should not say `Found, not loaded`.
-- The LiteRT layer constructs `EngineConfig` with `Backend.CPU()` only when the model is found.
+- The LiteRT layer defaults to stable `EngineConfig` with `Backend.CPU()` when the model is found.
+- Experimental `Backend.GPU()` timing is available only through explicit developer/test configuration; it is not the default app path and must keep CPU fallback intact.
 - Passive direct LiteRT API type references compile after the Room KSP migration.
 - With all RealGemma gates active, app startup/Patient Roster can start a non-blocking background preload. It initializes the RealGemma engine/session without generating clinical output and reuses that shared client for visit reasoning and supervisor priority attempts.
 - If preload fails, the UI reports `Engine: Failed` and generation still follows the existing RealGemma unavailable/retry path; the app must not crash or fall back to mock output.
@@ -182,6 +183,30 @@ View the benchmark output:
 adb logcat -s SmritiRealGemmaBenchmark:I "*:S"
 ```
 
+## Manual CPU/GPU Backend Latency Experiment
+
+CPU remains the stable backend. The GPU experiment is isolated and opt-in; do not use it for the filmed build unless it succeeds on the target device/emulator and shows meaningful stable improvement.
+
+Run CPU baseline only:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaBackendLatencyInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
+```
+
+Run CPU plus experimental GPU for one or two RealGemma calls:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaBackendLatencyInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true" "-Pandroid.testInstrumentationRunnerArguments.allowExperimentalGpuBackend=true" "-Pandroid.testInstrumentationRunnerArguments.backendScenarioLimit=2"
+```
+
+View logs:
+
+```powershell
+adb logcat -s SmritiBackendLatency:I SmritiLatency:I "*:S"
+```
+
+If GPU crashes, is unsupported, or has no meaningful improvement, keep CPU documented as stable. The experiment uses real `Backend.GPU()` from the pinned LiteRT-LM artifact and does not invent unsupported generation APIs.
+
 ## Manual Multilingual RealGemma Test
 
 Phase C adds a manual multilingual validation harness for the recorded demo:
@@ -223,7 +248,7 @@ adb shell run-as com.smriti.clinicalscribe touch files/dev/enable_real_gemma_tex
 adb shell run-as com.smriti.clinicalscribe ls -lh files/models/gemma-4-E2B-it-int4.litertlm
 ```
 
-If RealGemma fails, times out, returns invalid JSON, or fails citation/safety validation, the app preserves the transcript and shows `On-device reasoning unavailable — please retry.` It does not silently replace the recorded RealGemma path with mock output.
+If RealGemma fails, times out, returns invalid JSON, or fails citation/safety validation, the app preserves the transcript and shows `On-device reasoning unavailable - please retry.` It does not silently replace the recorded RealGemma path with mock output.
 
 ## Manual Supervisor Priority Queue Test
 

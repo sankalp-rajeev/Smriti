@@ -54,7 +54,7 @@ class NormalVisitFlowWiringTest {
         assertTrue(visitScreen.contains("Offline setup ready"))
         assertTrue(visitScreen.contains("On-device Gemma:"))
         assertTrue(visitScreen.contains("Local guidance available"))
-        assertTrue(visitScreen.contains("Output language: \${PatientVisitUiText.outputLanguageLabel(patient)}"))
+        assertTrue(visitScreen.contains("Visit note will be prepared in \${PatientVisitUiText.noteLanguageDisplayLabel(patient)}"))
     }
 
     @Test
@@ -64,16 +64,29 @@ class NormalVisitFlowWiringTest {
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
 
         assertTrue(patientListScreen.contains("Offline health visit assistant"))
-        assertTrue(patientListScreen.contains("Output language: \${PatientVisitUiText.outputLanguageLabel(patient)}"))
+        assertTrue(patientListScreen.contains("Note language: \${PatientVisitUiText.noteLanguageName(patient)}"))
         assertTrue(patientListScreen.contains("Check offline setup"))
+        assertFalse(patientListScreen.contains("Language set to"))
         assertFalse(patientListScreen.contains("Protocol-grounded"))
-        assertTrue(reviewScreen.contains("Smriti does not diagnose. Review before saving."))
+        assertTrue(reviewScreen.contains("Smriti does not diagnose. Health worker must review before saving."))
         assertTrue(reviewScreen.contains("No referral flag"))
         assertTrue(reviewScreen.contains("No urgent danger signs were flagged from this note."))
         assertTrue(reviewScreen.contains("How was this prepared?"))
+        assertTrue(reviewScreen.contains("Confirm and save"))
         assertFalse(reviewScreen.contains("Protocol-grounded"))
-        assertTrue(summaryScreen.contains("Confirmed local data only"))
+        assertFalse(reviewScreen.contains("Protocol Citation"))
+        assertFalse(reviewScreen.contains("Confirmed local data only"))
+        assertTrue(summaryScreen.contains("Saved visits on this device"))
         assertTrue(summaryScreen.contains("Today's priority list"))
+        assertTrue(summaryScreen.contains("How was this prepared?"))
+        listOf(
+            "Protocol-grounded",
+            "RealGemma context",
+            "Protocol Citation",
+            "Confirmed local data only"
+        ).forEach { forbidden ->
+            assertFalse("Found forbidden summary wording: $forbidden", summaryScreen.contains(forbidden))
+        }
     }
 
     @Test
@@ -89,14 +102,19 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
-    fun rosterUsesReadableFullWidthActionsAndCompactProof() {
+    fun rosterUsesReadableFullWidthActionsAndMovesProofBehindSetup() {
         val patientListScreen = appSourceFile("ui/PatientListScreen.kt").readText()
+        val welcomeScreens = appSourceFile("ui/WelcomeScreens.kt").readText()
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
 
         assertTrue(patientListScreen.contains("Text(\"Add patient\")"))
         assertTrue(patientListScreen.contains("Text(\"End-of-day summary\")"))
         assertTrue(patientListScreen.contains("Text(if (isImportingSupervisorRegister) \"Importing...\" else \"Import register\")"))
+        assertTrue(patientListScreen.contains("Text(\"Check offline setup\")"))
         assertTrue(patientListScreen.contains(".heightIn(min = 48.dp)"))
-        assertTrue(patientListScreen.contains("OfflineProofCard(status = offlineProofStatus, compact = true)"))
+        assertFalse(patientListScreen.contains("OfflineProofCard("))
+        assertTrue(welcomeScreens.contains("OfflineProofCard(status = status)"))
+        assertTrue(mainActivity.contains("SmritiScreen.OfflineSetup"))
         assertFalse(patientListScreen.contains("Load Demo Supervisor Register"))
     }
 
@@ -226,7 +244,7 @@ class NormalVisitFlowWiringTest {
         assertTrue(summaryScreen.contains("Today's priority list"))
         assertTrue(summaryScreen.contains("priorityUnavailableMessage"))
         assertTrue(summaryScreen.contains("priorityQueue"))
-        assertTrue(summaryScreen.contains("Local visit counts are shown below."))
+        assertTrue(summaryScreen.contains("On-device priority summary unavailable. Showing saved local visit flags."))
         assertFalse(summaryScreen.contains("deterministic local summary"))
     }
 

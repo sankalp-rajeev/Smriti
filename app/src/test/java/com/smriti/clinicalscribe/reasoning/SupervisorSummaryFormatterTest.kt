@@ -2,6 +2,7 @@ package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.data.ReferralFlag
+import com.smriti.clinicalscribe.data.TranscriptSource
 import com.smriti.clinicalscribe.data.VisitLog
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -31,7 +32,7 @@ class SupervisorSummaryFormatterTest {
 
         assertEquals(1, urgentCases.size)
         assertEquals(
-            "Meena Sharma - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Meena Sharma - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement. Health guidance: Smriti Demo Maternal Health Protocol - Danger Signs.",
             urgentCases.single()
         )
     }
@@ -44,7 +45,7 @@ class SupervisorSummaryFormatterTest {
         ).single()
 
         assertTrue(urgentCase.contains("Meena Sharma - SAME_DAY"))
-        assertTrue(urgentCase.contains("Citation: Smriti Demo Maternal Health Protocol"))
+        assertTrue(urgentCase.contains("Health guidance: Smriti Demo Maternal Health Protocol"))
         assertFalse(urgentCase.contains("Protocol-grounded referral suggestion"))
         assertFalse(urgentCase.contains("not a diagnosis"))
     }
@@ -62,7 +63,7 @@ class SupervisorSummaryFormatterTest {
         ).single()
 
         assertEquals(
-            "Meena Sharma - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement, convulsions, bleeding. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Meena Sharma - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement, convulsions, bleeding. Health guidance: Smriti Demo Maternal Health Protocol - Danger Signs.",
             urgentCase
         )
         assertFalse(urgentCase.contains("Protocol-grounded referral suggestion"))
@@ -83,7 +84,7 @@ class SupervisorSummaryFormatterTest {
         ).single()
 
         assertEquals(
-            "Meena Sharma - SAME_DAY - headache. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Meena Sharma - SAME_DAY - headache. Health guidance: Smriti Demo Maternal Health Protocol - Danger Signs.",
             urgentCase
         )
     }
@@ -114,11 +115,50 @@ class SupervisorSummaryFormatterTest {
         assertEquals(2, summary.referralsFlagged)
         assertEquals(1, summary.urgentCases.size)
         assertEquals(
-            "Meena Sharma - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Meena Sharma - SAME_DAY - headache, blurred vision, high blood pressure, reduced fetal movement. Health guidance: Smriti Demo Maternal Health Protocol - Danger Signs.",
             summary.urgentCases.single()
         )
         assertFalse(summary.urgentCases.single().contains("long protocol explanation"))
         assertEquals(3, summary.followUpsDue.size)
+        assertTrue(summary.paperScanNeedsUrgentReview.isEmpty())
+    }
+
+    @Test
+    fun highRiskConfirmedPaperScanSurfacesNeedsUrgentReviewLineAndSkipsFollowUpCard() {
+        val riskyPaper = VisitLog(
+            id = 900L,
+            patientId = grace.id,
+            visitDateMillis = 1_800_000_555_000L,
+            observationText = """
+                Paper note patient: Grace Achieng
+                BP: 190/110
+                Symptoms: maumivu ya kichwa, kuona ukungu
+                Plan: return to clinic
+            """.trimIndent(),
+            structuredNote = """
+                Blood pressure recording: 190/110 was written on scanned paper note.
+                Symptoms written: maumivu ya kichwa; kuona ukungu (visual symptoms documented).
+                Paper note extraction only; no referral generated from scan.
+            """.trimIndent(),
+            protocolCitation = "Paper note extraction only; no referral or diagnosis generated from image.",
+            suggestedFollowUp = "routine ANC follow-up",
+            confirmed = true,
+            transcriptSource = TranscriptSource.PAPER_SCAN
+        )
+        val summary = SupervisorSummaryFormatter.buildLocalSavedSummary(
+            patients = DemoSeedData.patients,
+            visits = listOf(riskyPaper),
+            referrals = emptyList(),
+            narrative = "Test narrative only."
+        )
+        assertEquals(1, summary.paperScanNeedsUrgentReview.size)
+        val urgentLine = summary.paperScanNeedsUrgentReview.single()
+        assertTrue(urgentLine.contains("Grace Achieng"))
+        assertTrue(urgentLine.contains("BP 190/110"))
+        assertTrue(urgentLine.contains("headache and blurred vision"))
+        assertTrue(urgentLine.contains("Review scanned note and local guidance."))
+        assertTrue(urgentLine.contains("Not a diagnosis"))
+        assertTrue(summary.followUpsDue.none { line -> line.contains("Grace Achieng") })
     }
 
     @Test
@@ -151,11 +191,11 @@ class SupervisorSummaryFormatterTest {
 
         assertEquals(2, urgentCases.size)
         assertEquals(
-            "Grace Achieng - SAME_DAY - convulsions, bleeding. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Grace Achieng - SAME_DAY - convulsions, bleeding. Health guidance: Smriti Demo Maternal Health Protocol - Danger Signs.",
             urgentCases.first()
         )
         assertEquals(
-            "Meena Sharma - SAME_DAY - headache, blurred vision. Citation: Smriti Demo Maternal Health Protocol - Danger Signs.",
+            "Meena Sharma - SAME_DAY - headache, blurred vision. Health guidance: Smriti Demo Maternal Health Protocol - Danger Signs.",
             urgentCases.last()
         )
         assertFalse(urgentCases.joinToString().contains("Grace Achieng - SAME_DAY - bleeding."))

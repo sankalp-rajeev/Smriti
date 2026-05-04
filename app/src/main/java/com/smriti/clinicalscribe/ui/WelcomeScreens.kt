@@ -38,7 +38,7 @@ fun WelcomeScreen(
                 Text("Offline health visit assistant", style = MaterialTheme.typography.titleMedium)
             }
             Text(
-                text = "Smriti helps you remember patient history, check local health guidance, prepare visit notes, and decide who needs follow-up.\n\nIt does not diagnose. A health worker must review and confirm before saving.",
+                text = "Smriti helps you remember patient history, check local health guidance, prepare visit notes, and decide who needs follow-up.\n\nSmriti does not diagnose. Health worker must review and confirm before saving.",
                 style = MaterialTheme.typography.bodyLarge
             )
             Button(
@@ -66,7 +66,7 @@ fun WelcomeScreen(
                 Text("Check offline setup")
             }
             Text(
-                text = "Works offline after setup • Local patient memory • On-device Gemma 4 reasoning",
+                text = "Works offline after setup - Local patient memory - On-device Gemma 4 reasoning",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -183,6 +183,43 @@ fun SetupGuidanceScreen(
             }
             item {
                 OutlinedButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                ) {
+                    Text("Back")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OfflineSetupScreen(
+    status: OfflineProofStatus,
+    onBack: () -> Unit
+) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Offline setup", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        "These checks stay on this setup screen so the patient roster can stay focused on visits.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+            item {
+                OfflineProofCard(status = status)
+            }
+            item {
+                Button(
                     onClick = onBack,
                     modifier = Modifier
                         .fillMaxWidth()

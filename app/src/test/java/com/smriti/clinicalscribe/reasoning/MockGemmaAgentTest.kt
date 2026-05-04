@@ -33,14 +33,15 @@ class MockGemmaAgentTest {
 
         assertTrue(result.structuredNote.contains("Observation:"))
         assertTrue(result.structuredNote.contains("Relevant history:"))
-        assertTrue(result.structuredNote.contains("Protocol-grounded support:"))
+        assertTrue(result.structuredNote.contains("Local guidance support:"))
         assertTrue(result.structuredNote.contains("Documentation support only"))
         assertFalse(result.structuredNote.contains("Assessment support"))
+        assertFalse(result.structuredNote.contains("Protocol-grounded"))
         assertNull(result.referralFlag)
     }
 
     @Test
-    fun dangerSignsProduceProtocolGroundedReferralSuggestion() = runBlocking {
+    fun dangerSignsProduceLocalGuidanceReferralSuggestion() = runBlocking {
         val result = agent.generateVisitNote(
             patient = patient,
             visitHistory = history,
@@ -51,7 +52,7 @@ class MockGemmaAgentTest {
         val referral = result.referralFlag
 
         assertNotNull(referral)
-        assertTrue(referral!!.reason.contains("Protocol-grounded referral suggestion"))
+        assertTrue(referral!!.reason.contains("Local health guidance checked"))
         assertTrue(referral.reason.contains("not a diagnosis"))
         assertTrue(referral.protocolBasis.contains("Smriti Demo Maternal Health Protocol"))
         assertTrue(referral.protocolBasis.contains("Danger Signs"))
@@ -70,8 +71,8 @@ class MockGemmaAgentTest {
         )
 
         assertTrue(result.protocolCitation.contains("Smriti Demo Maternal Health Protocol"))
-        assertTrue(result.structuredNote.contains("Protocol citation: Smriti Demo Maternal Health Protocol"))
-        assertTrue(result.suggestedFollowUp.contains("Protocol citation: Smriti Demo Maternal Health Protocol"))
+        assertTrue(result.structuredNote.contains("Health guidance: Smriti Demo Maternal Health Protocol"))
+        assertTrue(result.suggestedFollowUp.contains("Health guidance: Smriti Demo Maternal Health Protocol"))
     }
 
     @Test
@@ -119,7 +120,7 @@ class MockGemmaAgentTest {
         assertTrue(result.uncertain)
         assertNull(result.referralFlag)
         assertTrue(result.protocolCitation.contains("No matching protocol citation"))
-        assertTrue(result.structuredNote.contains("No matching protocol citation"))
+        assertTrue(result.structuredNote.contains("No matching health guidance"))
         assertTrue(result.clarificationPrompt!!.contains("No matching local protocol"))
     }
 

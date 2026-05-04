@@ -1,6 +1,5 @@
 package com.smriti.clinicalscribe.reasoning
 
-import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.EngineConfig
 
 sealed class LiteRtEngineConfigPreparation {
@@ -28,7 +27,9 @@ sealed class LiteRtEngineConfigPreparation {
     }
 }
 
-class LiteRtEngineConfigFactory {
+class LiteRtEngineConfigFactory(
+    private val backendMode: LiteRtBackendMode = LiteRtBackendMode.CPU
+) {
     fun prepare(modelStatus: ModelStatus): LiteRtEngineConfigPreparation {
         if (modelStatus.kind != ModelStatusKind.FOUND_NOT_LOADED) {
             return LiteRtEngineConfigPreparation.NotPrepared(
@@ -39,10 +40,10 @@ class LiteRtEngineConfigFactory {
 
         return LiteRtEngineConfigPreparation.Prepared(
             modelPath = modelStatus.expectedPath,
-            backendLabel = "CPU",
+            backendLabel = backendMode.label,
             engineConfig = EngineConfig(
                 modelPath = modelStatus.expectedPath,
-                backend = Backend.CPU()
+                backend = backendMode.toBackend()
             )
         )
     }

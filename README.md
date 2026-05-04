@@ -17,20 +17,19 @@ The core runtime must work in airplane mode. Smriti stores patient data locally,
 ## Core Demo Flow
 
 1. Turn on airplane mode.
-2. Open Smriti.
-3. Show Offline Proof on the Patient Roster.
-4. Optionally select `Amara Tesfaye, 30F` to show the missed follow-up alert.
-5. Optionally select `Fatima Begum, 24F` to show the rising BP history signal.
-6. Select `Meena Sharma, 28F`.
-7. Review prior visit history.
-8. Use the sample danger-sign transcript or enter an observation.
-9. Generate a local structured visit note.
-10. Review referral suggestion and protocol citation.
-11. CHW edits/confirms before saving.
-12. Open End-of-Day Supervisor Summary.
-13. Show urgent case, follow-ups, Offline Proof, RealGemma priority queue when gated, and optional JSON export.
+2. Show Welcome.
+3. Tap `Check offline setup` to show Offline Proof / setup ready, then return to the roster.
+4. Show Patient Roster search, attention chips, and patient-card note language labels.
+5. Open `Amara Tesfaye, 30F` for missed follow-up.
+6. Open `Fatima Begum, 24F` for rising BP history signal.
+7. Open `Meena Sharma, 28F` for a Hindi RealGemma danger-sign note with referral suggested, local guidance citation, and CHW confirm/save.
+8. Open `Lucia Fernandez` for a Spanish RealGemma note after manual validation.
+9. Open `Grace Achieng` for a Swahili routine/no-referral RealGemma note after manual validation.
+10. Use Grace's sample paper-note scan; local Gemma 4 vision extracts structured data for CHW review/save.
+11. Open End-of-Day Summary for urgent, follow-up, and routine priority lists.
+12. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision, direct Gemma audio blocked.
 
-Do not claim direct Gemma 4 audio works or that the synthetic/global protocol pack is clinical validation. The input path remains offline speech or editable transcript into RealGemma text reasoning.
+Smriti demonstrates local Android LiteRT-LM text reasoning and local Gemma 4 vision paper-note extraction. Selected languages demonstrated: English, Hindi, Spanish, Swahili. Do not claim direct Gemma 4 audio works, clinical validation, all-language support, or broad camera diagnosis. The input path remains offline speech or editable transcript into RealGemma text reasoning, and vision scan is data-entry support only, not diagnosis.
 
 See [docs/demo_flow.md](docs/demo_flow.md) for the step-by-step judge script.
 
@@ -51,15 +50,16 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 
 ## Current Evidence
 
-- Normal demo: local roster/history, local protocol JSON, required `RealGemmaAgent`, review/confirm/save, raw local supervisor counts, and Offline Proof.
+- Normal demo: local roster/history, local protocol JSON, required `RealGemmaAgent`, review/confirm/save, raw local supervisor counts, and Offline Proof from `Check offline setup` or Summary.
 - Patient infrastructure: six synthetic demo patients with prior histories, local supervisor-register import from app assets, and add-patient registration with offline speech/manual fallback.
 - Protocol pack: 46 local chunks across global, country, and regional tags.
 - Synthetic benchmark: 10 legacy fixture cases through `ProtocolRetriever -> VisitReasoningPipeline -> MockGemmaAgent`; these are tests only, not app-facing reasoning.
 - Phase B memory intelligence: missed follow-up alert for Amara and rising BP trend signal for Fatima are deterministic local logic.
-- Phase C multilingual demo support: selected patient-specific output languages are English, Hindi, Swahili, and Spanish; `preferredLanguage` controls RealGemma visit-note output in fully gated submission mode. The architecture can extend to more Gemma-supported languages as protocol packs and UI translations are added.
+- Phase C multilingual demo support: selected patient-specific output languages demonstrated are English, Hindi, Spanish, and Swahili; `preferredLanguage` controls RealGemma visit-note output in fully gated submission mode after manual validation.
 - RealGemma: manual text inference validated; app-facing reasoning now requires build flag + app-private sentinel + app-private model for inference.
 - Supervisor priority: raw local counts remain visible, and the app attempts RealGemma priority reasoning; unavailable output shows retry/setup messaging.
 - Audio: direct Gemma 4 audio is blocked; Smriti uses offline speech/editable transcript fallback.
+- Vision: manual probe passed; local Gemma 4 vision extracts structured JSON from a synthetic paper note for CHW-reviewed data entry only. Image bytes are not persisted and no cloud OCR/API is used.
 
 The 15.8s average RealGemma latency reflects real on-device Gemma 4 E2B text inference on CPU backend; in the CHW field workflow, this is positioned as protocol-grounded reasoning support replacing manual paper/protocol lookup, not instant chat.
 
@@ -83,8 +83,8 @@ See [docs/judge_evidence.md](docs/judge_evidence.md).
 - Local JSON export for visit and summary data.
 - Local app-private voice note recording metadata.
 - Android TTS buttons for offline voice output when device language data is available.
-- Patient language labels on the roster and Visit screen: EN / English, हिंदी / Hindi, Kiswahili / Swahili, and Español / Spanish.
-- Offline Proof visible on Patient Roster and Summary.
+- Patient note-language labels on the roster and Visit screen: English, Hindi, Swahili, and Spanish. Existing patient `preferredLanguage` controls generated note language.
+- Offline Proof available from `Check offline setup` and Summary, not shown by default on the roster.
 - Repo safety checks against committed model artifacts.
 - Synthetic global benchmark cases for local protocol retrieval and legacy mock fixtures.
 
@@ -106,7 +106,7 @@ See [docs/judge_evidence.md](docs/judge_evidence.md).
 - Dependency pinned: `com.google.ai.edge.litertlm:litertlm-android:0.10.2`.
 - Required model path: `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
 - The app detects whether that file exists; if missing or not enabled, generation is blocked with setup/retry messaging.
-- EngineConfig is constructed with `Backend.CPU()` only when that model file exists.
+- EngineConfig defaults to stable `Backend.CPU()` when that model file exists. An isolated `Backend.GPU()` latency experiment exists behind explicit developer/test configuration and is not the default.
 - Direct LiteRT-LM API types compile after the Room KSP migration.
 - Runtime text inference is enabled only when the submission build flag, app-private local gate, and app-private model are present.
 - No model files are committed.

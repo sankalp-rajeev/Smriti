@@ -35,10 +35,10 @@ class RealGemmaAgentTest {
 
         assertTrue(result.uncertain)
         assertNull(result.referralFlag)
-        assertTrue(result.structuredNote.contains("RealGemma reasoning unavailable"))
+        assertTrue(result.structuredNote.contains("On-device reasoning unavailable"))
         assertTrue(result.structuredNote.contains(PatientLanguages.Hindi.safetyWording))
-        assertTrue(result.structuredNote.contains("Protocol citation required before recommendation"))
-        assertTrue(result.suggestedFollowUp.contains("RealGemma reasoning is unavailable"))
+        assertTrue(result.structuredNote.contains("Health guidance is required before recommendation"))
+        assertTrue(result.suggestedFollowUp.contains("On-device reasoning is unavailable"))
     }
 
     @Test
@@ -183,7 +183,7 @@ class RealGemmaAgentTest {
         )
 
         assertSafeRejectedResult(result)
-        assertTrue(result.suggestedFollowUp.contains("Protocol citation required before recommendation"))
+        assertTrue(result.suggestedFollowUp.contains("Health guidance is required before recommendation"))
     }
 
     @Test
@@ -326,7 +326,7 @@ class RealGemmaAgentTest {
         assertTrue(result.uncertain)
         assertNull(result.referralFlag)
         assertTrue(result.structuredNote.contains(PatientLanguages.Hindi.safetyWording))
-        assertTrue(result.structuredNote.contains("Protocol citation required before recommendation"))
+        assertTrue(result.structuredNote.contains("Health guidance is required before recommendation"))
     }
 
     private fun validJson(

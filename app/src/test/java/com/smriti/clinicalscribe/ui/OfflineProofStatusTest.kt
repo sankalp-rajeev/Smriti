@@ -49,11 +49,23 @@ class OfflineProofStatusTest {
                 "Patient memory" to "saved on this device",
                 "Health guidance" to "stored on this device",
                 "On-device Gemma" to "Setup needed",
-                "Paper note scan" to "setup needed",
+                "Paper note scan" to "available",
                 "Cloud APIs" to "none",
                 "Direct Gemma audio" to "not used"
             ),
             status.compactLines
+        )
+        assertEquals(
+            listOf(
+                "Works offline after setup",
+                "Patient memory: saved on this device",
+                "Health guidance: stored on this device",
+                "On-device Gemma: Setup needed",
+                "Paper note scan: available",
+                "Cloud APIs: none",
+                "Direct Gemma audio: not used"
+            ),
+            status.compactDisplayLines
         )
     }
 

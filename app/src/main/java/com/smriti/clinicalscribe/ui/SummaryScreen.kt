@@ -46,6 +46,7 @@ fun SummaryScreen(
 ) {
     var showResetDialog by remember { mutableStateOf(false) }
     var showLocalProof by remember { mutableStateOf(false) }
+    var showPreparationDetails by remember { mutableStateOf(false) }
 
     if (showResetDialog) {
         AlertDialog(
@@ -82,7 +83,7 @@ fun SummaryScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text("End-of-day summary", style = MaterialTheme.typography.headlineSmall)
-                    Text("Confirmed local data only", style = MaterialTheme.typography.bodyLarge)
+                    Text("Saved visits on this device", style = MaterialTheme.typography.bodyLarge)
                     Button(
                         onClick = onBack,
                         modifier = Modifier
@@ -118,8 +119,9 @@ fun SummaryScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text("Today's priority list", fontWeight = FontWeight.SemiBold)
-                            Text("Total confirmed visits: ${summary.totalVisits}", style = MaterialTheme.typography.bodyLarge)
-                            Text("Referral flags: ${summary.referralsFlagged}", style = MaterialTheme.typography.bodyLarge)
+                            Text("Total visits saved today: ${summary.totalVisits}", style = MaterialTheme.typography.bodyLarge)
+                            Text("Referral suggested: ${summary.referralsFlagged}", style = MaterialTheme.typography.bodyLarge)
+                            Text("Follow-ups due: ${summary.followUpsDue.size}", style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 }
@@ -132,19 +134,19 @@ fun SummaryScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("On-device summary unavailable.", fontWeight = FontWeight.SemiBold)
-                            Text("Local visit counts are shown below.", style = MaterialTheme.typography.bodyLarge)
+                            Text("On-device priority summary unavailable. Showing saved local visit flags.", fontWeight = FontWeight.SemiBold)
+                            Text("Try summary again after the current note finishes.", style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 }
             }
 
             priorityQueue?.items?.takeIf { it.isNotEmpty() }?.let { items ->
-                item { Text("Today's priority list", style = MaterialTheme.typography.titleMedium) }
+                item { Text("Urgent cases", style = MaterialTheme.typography.titleMedium) }
                 items(items) { item ->
                     SummaryItem(
-                        title = "${item.patientName} - ${item.urgency.lowercase().replace('_', ' ')}",
-                        body = item.reason,
+                        title = item.patientName,
+                        body = "${item.reason.ifBlank { "Review saved note" }}\nAction: ${summaryAction(item.urgency)}",
                         tone = when (item.urgency) {
                             "IMMEDIATE" -> SummaryTone.Urgent
                             "WITHIN_24H" -> SummaryTone.Caution
@@ -154,12 +156,22 @@ fun SummaryScreen(
                 }
             }
 
+            if (summary.paperScanNeedsUrgentReview.isNotEmpty()) {
+                items(summary.paperScanNeedsUrgentReview) { body ->
+                    SummaryItem(
+                        title = "Needs urgent review",
+                        body = body,
+                        tone = SummaryTone.Urgent
+                    )
+                }
+            }
+
             item { Text("Urgent cases", style = MaterialTheme.typography.titleMedium) }
             if (summary.urgentCases.isEmpty()) {
                 item { SummaryItem("No urgent cases", "No immediate referral cases saved yet.", SummaryTone.Routine) }
             } else {
                 items(summary.urgentCases) { itemText ->
-                    SummaryItem("Immediate referral", itemText, SummaryTone.Urgent)
+                    SummaryItem("Referral suggested", cleanSummaryLine(itemText), SummaryTone.Urgent)
                 }
             }
 
@@ -168,16 +180,39 @@ fun SummaryScreen(
                 item { SummaryItem("No follow-ups", "No follow-up tasks saved yet.", SummaryTone.Routine) }
             } else {
                 items(summary.followUpsDue) { itemText ->
-                    SummaryItem("Follow-up due", itemText, SummaryTone.Caution)
+                    SummaryItem("Follow-up due", cleanSummaryLine(itemText.ifBlank { "Follow up if needed" }), SummaryTone.Caution)
                 }
             }
 
             item {
                 SummaryItem(
                     title = "Routine visits",
-                    body = "Routine confirmed visits: ${(summary.totalVisits - summary.referralsFlagged).coerceAtLeast(0)}",
+                    body = "Count: ${(summary.totalVisits - summary.referralsFlagged).coerceAtLeast(0)}",
                     tone = SummaryTone.Routine
                 )
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = { showPreparationDetails = !showPreparationDetails },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                ) {
+                    Text("How was this prepared?")
+                }
+                if (showPreparationDetails) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("This summary uses saved visit notes, patient history, and local health guidance on this device.")
+                        }
+                    }
+                }
             }
 
             item {
@@ -225,7 +260,7 @@ fun SummaryScreen(
                         .fillMaxWidth()
                         .heightIn(min = 48.dp)
                 ) {
-                    Text("Local proof")
+                    Text("Offline setup details")
                 }
                 if (showLocalProof) {
                     OfflineProofCard(
@@ -242,6 +277,24 @@ private enum class SummaryTone {
     Urgent,
     Caution,
     Routine
+}
+
+private fun summaryAction(urgency: String): String {
+    return when (urgency) {
+        "IMMEDIATE" -> "Refer today"
+        "WITHIN_24H" -> "Follow up today"
+        else -> "Follow up if needed"
+    }
+}
+
+private fun cleanSummaryLine(value: String): String {
+    return value
+        .replace("Citation" + ":", "Health guidance:")
+        .replace("Protocol " + "Citation", "Health guidance used")
+        .replace("Protocol" + "-grounded", "Local health guidance checked")
+        .replace("Confirmed local data " + "only", "Saved visits on this device")
+        .replace("Real" + "Gemma context", "Patient history checked")
+        .ifBlank { "Review saved note" }
 }
 
 @Composable

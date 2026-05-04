@@ -15,7 +15,7 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
 - If a model is present, Offline Proof says `Real Gemma model: Found`, `Engine: Loads on demand`, and `Inference: Enabled; on-device RealGemma text reasoning` when gates are active. After a successful generation in the app session, engine status can show `Loaded`.
 - Direct LiteRT-LM API types now compile through a passive type probe:
   `Engine`, `EngineConfig`, `Backend`, `Content.Text`, `Content.ImageBytes`, `Content.ImageFile`, `Content.AudioBytes`, `Content.AudioFile`, `InputData.Image`, `InputData.Audio`, `Conversation`, `ConversationConfig`, `ToolCall`, and `OpenApiTool`.
-- `LiteRtEngineConfigFactory` constructs a real `EngineConfig` with `Backend.CPU()` only when the model file is found.
+- `LiteRtEngineConfigFactory` defaults to a real `EngineConfig` with `Backend.CPU()` when the model file is found.
 - `LiteRtEngineInitializationChecker` can initialize and immediately close `Engine` only when an explicit manual-test flag is true.
 - `LiteRtGemmaTextClient.generateTextManual(...)` can run one text-only `sendMessage` call only when an explicit manual inference flag is true.
 - RealGemma text UI mode can call the same text path only when the submission build gate, app-private local gate, and app-private model are present.
@@ -104,6 +104,12 @@ The local AAR/classes.jar inspection did not find a public class or method named
 Current vision status: the manual probe passed on emulator. The engine accepted the `Conversation` image input path, and local Gemma 4 vision extracted structured JSON from the synthetic paper note: Grace Achieng, 02 May 2026, BP 116/74, symptoms, routine ANC follow-up, confidence HIGH, and `needsReview=true`.
 
 The app now includes a narrow paper-note scan flow using `RealGemmaVisionPaperNoteClient` and `PaperNoteVisionParser`. It is data-entry support only. CHW review/edit and explicit patient-record confirmation are required before saving to local history with `transcriptSource=paper_scan`. The flow does not call visit-note referral generation, does not call supervisor priority reasoning, does not persist image bytes, and does not use cloud OCR/API.
+
+## Backend Latency Experiment
+
+Stable text inference remains CPU by default. The pinned LiteRT-LM artifact exposes `Backend.GPU()`, and Smriti now keeps it behind `LiteRtBackendMode.GPU_EXPERIMENTAL` plus the manual-only `ManualRealGemmaBackendLatencyInstrumentedTest`.
+
+The experiment logs CPU and optional GPU timings under `SmritiBackendLatency` and `SmritiLatency`. If GPU crashes, is unsupported, or does not improve timing meaningfully, CPU remains the documented stable backend. The app does not invent generation-options APIs or remove CPU fallback.
 
 Phase 2 starts the fallback architecture for voice visits:
 

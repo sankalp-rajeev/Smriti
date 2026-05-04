@@ -5,5 +5,6 @@ data class SupervisorSummary(
     val referralsFlagged: Int,
     val urgentCases: List<String>,
     val followUpsDue: List<String>,
-    val narrative: String
+    val narrative: String,
+    val paperScanNeedsUrgentReview: List<String> = emptyList()
 )

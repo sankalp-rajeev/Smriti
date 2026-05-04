@@ -83,6 +83,7 @@ class JsonExporter(private val exportDir: File) {
                 append("  \"narrative\": \"${summary.narrative.escapeJson()}\",\n")
                 append("  \"urgent_cases\": ${summary.urgentCases.toJsonArray()},\n")
                 append("  \"follow_ups_due\": ${summary.followUpsDue.toJsonArray()},\n")
+                append("  \"paper_scan_needs_urgent_review\": ${summary.paperScanNeedsUrgentReview.toJsonArray()},\n")
                 append("  \"safety\": \"Not a diagnosis. CHW confirmation required.\"\n")
                 append("}\n")
             }

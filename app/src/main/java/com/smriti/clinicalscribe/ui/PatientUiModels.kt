@@ -98,7 +98,7 @@ object PatientRosterUiLogic {
 object PatientVisitUiText {
     fun gestationLabel(patient: Patient): String {
         val weeks = patient.pregnancyWeeks ?: return "Pregnancy weeks not recorded"
-        return "$weeks weeks • ${trimesterLabel(weeks)}"
+        return "$weeks weeks - ${trimesterLabel(weeks)}"
     }
 
     fun trimesterLabel(weeks: Int): String {
@@ -112,11 +112,15 @@ object PatientVisitUiText {
     fun countryVillage(patient: Patient): String {
         return listOf(patient.country, patient.village)
             .filter { it.isNotBlank() }
-            .joinToString(" • ")
+            .joinToString(" - ")
     }
 
-    fun outputLanguageLabel(patient: Patient): String {
-        return outputLanguageLabel(PatientLanguages.forPatient(patient).code)
+    fun noteLanguageName(patient: Patient): String {
+        return PatientLanguages.forPatient(patient).englishName
+    }
+
+    fun noteLanguageDisplayLabel(patient: Patient): String {
+        return PatientLanguages.forPatient(patient).displayLabel
     }
 
     fun outputLanguageLabel(code: String): String {

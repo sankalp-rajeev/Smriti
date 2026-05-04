@@ -302,13 +302,13 @@ class RealGemmaOutputParser(
             fallback = VisitReasoningResult(
                 patientId = patient.id,
                 observationText = originalObservationText,
-                structuredNote = "Real Gemma output rejected: $reason This is not a diagnosis. CHW confirmation required.",
+                structuredNote = "On-device note could not be prepared: $reason Smriti does not diagnose. Health worker must review before saving.",
                 referralFlag = null,
                 protocolCitation = citation,
-                suggestedFollowUp = "RealGemma output was rejected. Ask the CHW to review manually and retry after setup. Protocol citation: $citation",
+                suggestedFollowUp = "Ask the health worker to review manually and retry after setup. Health guidance: $citation",
                 protocolChunk = protocolChunks.firstOrNull(),
                 uncertain = true,
-                clarificationPrompt = "Real Gemma output was rejected safely: $reason"
+                clarificationPrompt = "On-device note could not be prepared safely: $reason"
             )
         )
     }
@@ -320,8 +320,8 @@ class RealGemmaOutputParser(
     ): String {
         return listOf(
             "Observation:\n${observationText.trim()}",
-            "Relevant history:\nLocal patient history was included in RealGemma context.",
-            "Protocol-grounded support:\n${summary.trim()}\n\nSafety note: ${safetyNote.trim()}"
+            "Relevant history:\nPatient history checked on this device.",
+            "Local guidance support:\n${summary.trim()}\n\nSafety note: ${safetyNote.trim()}"
         ).joinToString(separator = "\n\n")
     }
 

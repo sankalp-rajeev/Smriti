@@ -10,7 +10,7 @@
     <string name="offline_proof">Offline Proof</string>
     <string name="history_signal">History signal</string>
     <string name="missed_follow_up">Missed follow-up</string>
-    <string name="protocol_grounded_support">Protocol-grounded support</string>
+    <string name="local_guidance_support">Local guidance support</string>
     <string name="not_a_diagnosis">Not a diagnosis</string>
     <string name="chw_confirmation_required">CHW confirmation required</string>
     <string name="reasoning_unavailable_retry">On-device reasoning unavailable — please retry</string>

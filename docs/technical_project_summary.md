@@ -45,7 +45,8 @@ The demo includes:
 - RealGemma priority follow-up queue attempt in the app-facing summary flow, with raw local counts retained when RealGemma supervisor reasoning is unavailable.
 - Reset Demo Data for repeatable filming/demo runs.
 - Local JSON export for visit and summary data.
-- Offline Proof display on the roster and summary screens.
+- Local Gemma 4 vision paper-note extraction from synthetic paper notes for data-entry support only.
+- Offline Proof display from `Check offline setup` and on the summary screen.
 
 Out of scope for the current submission:
 
@@ -57,6 +58,7 @@ Out of scope for the current submission:
 - Direct Gemma 4 audio through the current public LiteRT-LM Android/Kotlin path.
 - Bundling the RealGemma model or bypassing local setup gates.
 - Broad all-language support or untested Amharic, Oromo, or Bangla output.
+- Broad camera diagnosis or clinical image diagnosis.
 
 ## 4. System Architecture
 
@@ -77,7 +79,7 @@ PatientListScreen
 Key modules:
 
 - `MainActivity`: wires the app state, patient selection, visit generation, review/save flow, summary flow, model status, and RealGemma developer gates.
-- `PatientListScreen`: shows the local roster, Offline Proof, Add Patient, and local supervisor-register import.
+- `PatientListScreen`: shows the local roster, patient-card note language labels, Add Patient, local supervisor-register import, and a `Check offline setup` path to Offline Proof.
 - `AddPatientScreen`: collects a new local patient through EN/HI/ES/SW offline speech prompts or manual fields.
 - `VisitScreen`: shows prior history, transcript controls, sample transcript, offline speech fallback, local reasoning context, and generate action.
 - `PatientMemoryInsights`: deterministic missed follow-up and rising BP history-signal logic.
@@ -150,7 +152,7 @@ Repository and runtime constraints:
 - No model file is bundled in app assets.
 - No runtime model download code exists.
 - The app path detects the model and only attempts inference after the submission build flag, local sentinel, and app-private model are present.
-- `EngineConfig` is constructed with `Backend.CPU()` only when the app-private model is present.
+- `EngineConfig` defaults to `Backend.CPU()` when the app-private model is present; GPU remains an explicit experiment.
 - Runtime `Engine` initialization and text inference are blocked until local setup is complete.
 
 Manual text inference has been validated with a sideloaded app-private model. `ManualLiteRtTextInferenceInstrumentedTest` sent the non-clinical prompt `Reply with exactly: SMRITI_LITERT_OK` and returned the expected text.
@@ -280,9 +282,24 @@ Latency framing:
 
 The 15.8s average latency reflects real on-device Gemma 4 E2B text inference on CPU backend. In the CHW field workflow, this is positioned as protocol-grounded reasoning support replacing manual paper/protocol lookup, not instant chat.
 
-GPU backend has not been validated for the final demo. CPU remains the stable documented backend; GPU benchmarking is future work.
+GPU backend is isolated as an explicit developer/test experiment through `LiteRtBackendMode.GPU_EXPERIMENTAL` and `ManualRealGemmaBackendLatencyInstrumentedTest`. CPU remains the default stable backend. Do not use GPU for the filmed build unless the manual experiment is run on the target device/emulator, produces successful RealGemma output, and shows meaningful stable latency improvement without breaking the CPU fallback.
 
-## 12. Safety Model
+## 12. Paper-Note Vision Status
+
+Smriti demonstrates local Android LiteRT-LM text reasoning and local Gemma 4 vision paper-note extraction.
+
+Manual vision probe evidence:
+
+- `ManualRealGemmaVisionProbeInstrumentedTest` passed on emulator with the sideloaded app-private model.
+- The engine accepted `Conversation` image input.
+- Local Gemma 4 vision extracted structured JSON from the synthetic paper note: Grace Achieng, 02 May 2026, BP 116/74, symptoms, routine ANC follow-up, confidence HIGH, and `needsReview=true`.
+- The app uses this only for paper-note data entry support.
+- CHW review/edit and explicit patient-record confirmation are required before saving.
+- Image bytes are not persisted.
+- No cloud OCR/API is used.
+- Direct Gemma audio remains blocked.
+
+## 13. Safety Model
 
 Smriti's safety model is explicit:
 
@@ -305,12 +322,12 @@ RealGemma-specific safety:
 ```text
 This is not a diagnosis.
 CHW confirmation is required before saving.
-à¤¯à¤¹ à¤¨à¤¿à¤¦à¤¾à¤¨ à¤¨à¤¹à¥€à¤‚ à¤¹à¥ˆà¥¤ CHW à¤•à¥€ à¤ªà¥à¤·à¥à¤Ÿà¤¿ à¤†à¤µà¤¶à¥à¤¯à¤• à¤¹à¥ˆà¥¤
-Esto no es un diagnÃ³stico. Se requiere confirmaciÃ³n de la trabajadora de salud.
+यह निदान नहीं है। CHW की पुष्टि आवश्यक है।
+Esto no es un diagnóstico. Se requiere confirmación de la trabajadora de salud.
 Hii si utambuzi wa ugonjwa. Uthibitisho wa mfanyakazi wa afya unahitajika.
 ```
 
-## 13. Final Validation And APK
+## 14. Final Validation And APK
 
 Final validation passed:
 
@@ -344,21 +361,22 @@ Repository safety scan findings:
 - Docs do not claim direct Gemma audio works.
 - Docs do not claim clinical validation.
 
-## 14. Demo Flow
+## 15. Demo Flow
 
 Recommended filmed/live flow:
 
 1. Turn on airplane mode.
-2. Open Smriti.
-3. Show Patient Roster and Offline Proof.
-4. Select `Meena Sharma, 28F`.
-5. Show prior visit history.
-6. Tap the sample danger-sign transcript or enter the observation manually.
-7. Generate the local visit note.
-8. On Review screen, show structured note, referral support, protocol citation, and safety gate.
-9. Confirm CHW review and save.
-10. Show End-of-Day Supervisor Summary.
-11. Show urgent case and Offline Proof again.
+2. Show Welcome.
+3. Tap `Check offline setup` to show Offline Proof / setup ready, then return to the roster.
+4. Show Patient Roster search, attention chips, and patient-card note language labels.
+5. Show Amara missed follow-up alert.
+6. Show Fatima rising BP history signal.
+7. Show Meena Hindi RealGemma note with referral suggested, citation/local guidance, and CHW confirm/save.
+8. Show Lucia Spanish RealGemma note after manual validation.
+9. Show Grace Swahili routine/no-referral RealGemma note after manual validation.
+10. Show Grace sample paper-note scan: local Gemma vision extracts structured paper-note data for CHW review/save.
+11. Show End-of-Day Summary urgent/follow-up/routine priority list.
+12. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision, and direct Gemma audio blocked.
 
 Core spoken claim:
 
@@ -372,22 +390,25 @@ Avoid claiming:
 - autonomous treatment,
 - direct Gemma audio,
 - clinical validation,
+- broad all-language support,
+- broad camera diagnosis,
 - missing RealGemma setup as a successful reasoning result,
 - cloud runtime.
 
-## 15. Known Limitations / Future Work
+## 16. Known Limitations / Future Work
 
 - Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin audio preprocessing and prompt-template path.
 - Android offline speech depends on device/emulator recognizer support and installed offline language packs.
 - The protocol corpus is a scaffold, not a complete reviewed guideline library.
 - RealGemma text reasoning is required for app-facing output; missing setup shows retry/setup messaging.
-- GPU backend benchmarking is future work.
+- Target-device GPU benchmark results are pending.
+- GPU backend is not default; it is an isolated experiment unless target-device evidence proves stable improvement.
 - Clinical review is required before any real deployment.
 - RealGemma submission mode depends on a locally sideloaded model and should be smoke-tested before filming.
 - Sync, supervisor dashboarding, and multi-device workflows are future work.
 - Country-specific protocol content needs expert review and expansion before pilot use.
 
-## 16. File / Doc Map
+## 17. File / Doc Map
 
 Primary entry points:
 

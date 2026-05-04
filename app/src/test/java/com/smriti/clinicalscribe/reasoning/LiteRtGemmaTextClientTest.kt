@@ -9,6 +9,52 @@ import org.junit.Test
 
 class LiteRtGemmaTextClientTest {
     @Test
+    fun realGemmaInferenceGateAllowsOnlyOneRequestAtATime() {
+        RealGemmaInferenceGate.resetForTests()
+        val first = RealGemmaInferenceGate.tryAcquire(
+            RealGemmaRequestType.VISIT_NOTE,
+            testDiagnostics()
+        )
+        val second = RealGemmaInferenceGate.tryAcquire(
+            RealGemmaRequestType.SUPERVISOR_SUMMARY,
+            testDiagnostics()
+        )
+
+        assertTrue(first != null)
+        assertEquals(null, second)
+        first!!.release()
+        assertFalse(RealGemmaInferenceGate.isBusy)
+    }
+
+    @Test
+    fun secondManualInferenceWhileGateActiveReturnsBusyWithoutCallingLiteRt() = runBlocking {
+        RealGemmaInferenceGate.resetForTests()
+        var runnerCalled = false
+        val active = RealGemmaInferenceGate.tryAcquire(
+            RealGemmaRequestType.VISIT_NOTE,
+            testDiagnostics()
+        )!!
+        val client = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = LiteRtGemmaTextClient.ManualTextInferenceRunner { _, _ ->
+                runnerCalled = true
+                "should not run"
+            }
+        )
+
+        val result = client.generateTextManual(
+            prompt = "Supervisor should wait",
+            allowManualTextInference = true,
+            requestType = RealGemmaRequestType.SUPERVISOR_SUMMARY
+        )
+
+        assertTrue(result is TextGenerationResult.Unavailable)
+        assertEquals(RealGemmaInferenceGate.BUSY_MESSAGE, (result as TextGenerationResult.Unavailable).status)
+        assertFalse(runnerCalled)
+        active.release()
+    }
+
+    @Test
     fun liteRtClientReturnsUnavailableSafely() = runBlocking {
         val client = LiteRtGemmaTextClient()
 
@@ -171,6 +217,7 @@ class LiteRtGemmaTextClientTest {
             modelStatus = foundModelStatus(),
             manualInferenceRunner = LiteRtGemmaTextClient.ManualTextInferenceRunner { engineConfig, prompt ->
                 assertTrue(engineConfig.modelPath.endsWith(LiteRtModelPaths.GEMMA_E2B_MODEL_FILE_NAME))
+                assertEquals("CPU", engineConfig.backend.name)
                 assertEquals("Manual test prompt", prompt)
                 "generated text"
             }
@@ -186,6 +233,42 @@ class LiteRtGemmaTextClientTest {
         assertTrue(client.engineInitializationAttempted)
         assertTrue(client.conversationCreated)
         assertTrue(client.inferenceAttempted)
+    }
+
+    @Test
+    fun experimentalGpuBackendConfigIsOptInOnly() = runBlocking {
+        val defaultClient = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = LiteRtGemmaTextClient.ManualTextInferenceRunner { engineConfig, _ ->
+                assertEquals("CPU", engineConfig.backend.name)
+                "default cpu text"
+            }
+        )
+
+        assertEquals(
+            TextGenerationResult.Success("default cpu text"),
+            defaultClient.generateTextManual(
+                prompt = "Manual CPU prompt",
+                allowManualTextInference = true
+            )
+        )
+
+        val gpuClient = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            engineConfigFactory = LiteRtEngineConfigFactory(LiteRtBackendMode.GPU_EXPERIMENTAL),
+            manualInferenceRunner = LiteRtGemmaTextClient.ManualTextInferenceRunner { engineConfig, _ ->
+                assertEquals("GPU", engineConfig.backend.name)
+                "experimental gpu text"
+            }
+        )
+
+        assertEquals(
+            TextGenerationResult.Success("experimental gpu text"),
+            gpuClient.generateTextManual(
+                prompt = "Manual GPU prompt",
+                allowManualTextInference = true
+            )
+        )
     }
 
     @Test
@@ -269,5 +352,16 @@ class LiteRtGemmaTextClientTest {
         modelFile.parentFile!!.mkdirs()
         modelFile.writeText("fake model placeholder for manual inference test only")
         return ModelAvailability.fromFilesDir(filesDir).check()
+    }
+
+    private fun testDiagnostics(): RealGemmaRequestDiagnostics {
+        return RealGemmaRequestDiagnostics(
+            modelExists = true,
+            modelSizeBytes = 123L,
+            sentinelExists = true,
+            backendMode = "CPU",
+            engineState = "test",
+            lastEngineFailure = null
+        )
     }
 }

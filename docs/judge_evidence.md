@@ -11,7 +11,7 @@ The recorded-demo UI was simplified for community health workers and low-digital
 - Welcome screen explains Smriti in plain language before showing the roster.
 - User Guide gives six short steps: choose patient, speak/type visit, generate note, review carefully, confirm/save, end of day.
 - Setup Guidance appears when the model file is absent on first launch and avoids internal runtime terms.
-- Patient Roster has local search, large primary actions, language selector, attention/routine sections, empty states, and patient status chips.
+- Patient Roster has local search, large primary actions, smaller secondary actions, attention/routine sections, empty states, patient status chips, and patient-card `Note language` labels.
 - Status chips are deterministic from local data: Amara shows `Follow-up due`, Fatima shows `History signal`, Grace shows `Routine`, and Meena shows `Referral saved` after a confirmed referral visit.
 - Visit screen places missed follow-up and history-signal cards above transcript input, then shows a simple instruction card.
 - Sample transcripts are patient-specific, so Grace never receives Meena's danger-sign sample.
@@ -19,7 +19,7 @@ The recorded-demo UI was simplified for community health workers and low-digital
 - RealGemma failure shows a retry card and preserves the transcript. It does not display mock output.
 - Review screen uses plain cards for `Referral suggested`, `No referral flag`, and `More information needed`, plus a collapsed source section explaining what information was used.
 - Summary screen shows priority list, urgent cases, follow-ups, routine visits, and a plain fallback when on-device summary reasoning is unavailable.
-- Offline Proof uses CHW-facing wording and avoids confusing model/internal status labels.
+- Offline Proof uses CHW-facing wording and avoids confusing model/internal status labels. It is available from `Check offline setup` and is not shown by default on the roster.
 - Destructive actions are confirmed before import/reset.
 - No cloud APIs, runtime downloads, direct Gemma audio, PHI, or invalid-output save path was added. The paper-note scan flow is local Gemma vision data entry only and requires CHW review before save.
 
@@ -50,8 +50,11 @@ Evidence:
 - When the gated model is present, Smriti starts a background RealGemma preload and keeps the shared engine/client warm for subsequent patient generations and supervisor priority attempts. The first RealGemma call may still be slower because model/session initialization is expensive; later calls should avoid repeated cold loads when memory allows.
 - Confirm/save is a local Room/SQLite write only. It never invokes RealGemma, never re-runs retrieval, and never auto-exports JSON; the CHW confirm/save gate remains required.
 - `SmritiLatency` logs timing markers for readiness, preload/init, protocol retrieval, history formatting, prompt build, generation, parser/safety/citation validation, ReviewScreen navigation, local save, and summary refresh without logging transcripts or raw clinical text.
+- A native LiteRT-LM crash was observed after overlapping/retried RealGemma calls piled up behind `Conversation.sendMessage(prompt)`. The app now uses one global non-queueing RealGemma inference gate across visit notes, supervisor priority generation, paper-note vision extraction, manual test paths, and preload. Busy requests return a friendly wait message instead of entering another native call.
+- UI actions disable overlapping generation/scan/save paths. Confirm/save remains local Room/SQLite only and is guarded against double taps.
 - Measured emulator/local setup timing evidence from `SmritiLatency`: RealGemma preload/init 1.885 s; Meena RealGemma generation 21.726 s; Meena validation 31 ms; Meena Room save 49 ms; Meena summary refresh 5 ms; Lucia RealGemma generation after preload/reuse 14.434 s; Lucia validation 4 ms; protocol retrieval 1-2 ms; prompt build 1-3 ms. Device performance may vary.
 - Timing interpretation: RealGemma inference dominates latency. Local retrieval, prompt build, parser/safety/citation validation, Room save, and summary refresh are negligible by comparison. The second generation was faster after preload/engine reuse.
+- CPU is the stable documented text backend. GPU timing is isolated as an explicit experiment via `ManualRealGemmaBackendLatencyInstrumentedTest`; it is not default and should only be used for filming if target-device results are successful, stable, and meaningfully faster.
 - The visit prompt now asks for exact JSON only: `summary`, boolean `referralFlag`, `referralReason`, `dangerSigns`, `followUpPlan`, `clarificationQuestion`, `citations`, `confidence`, and `safetyNote`.
 - The parser extracts close JSON from markdown fences/surrounding text and accepts safe aliases, but still rejects missing referral equivalents, diagnostic wording, invented/missing referral citations, and prose-only output.
 - `MockGemmaAgent` may remain in tests/fixtures only; app screens do not use it for clinical/visit/supervisor output.
@@ -59,7 +62,7 @@ Evidence:
 - Local protocol retrieval uses JSON assets with country-aware ranking.
 - Generated notes and referral support go to ReviewScreen before saving.
 - CHW confirm/save is required before visits or referral flags persist.
-- Raw local counts and saved urgent flags can remain visible as local data.
+- Summary uses CHW-facing wording: `Saved visits on this device`, urgent cases, follow-ups, routine visits, and a collapsed explanation of saved visit notes, patient history, and local health guidance.
 - Offline Proof reports local/offline status, RealGemma model status, setup state, and blocked direct audio.
 - The core runtime does not require a cloud API.
 
@@ -126,7 +129,9 @@ Current schema-hardening note: if manual RealGemma output still fails the strict
 
 ## Phase C Multilingual Evidence
 
-- Smriti demonstrates selected patient-specific local-language output: English, Hindi, Swahili, and Spanish.
+- Selected languages demonstrated: English, Hindi, Spanish, Swahili.
+- Smriti demonstrates selected patient-specific local-language output in those four languages after manual validation.
+- Full app UI translation is not claimed. Existing patient `preferredLanguage` is not overwritten by any default/new-patient language setting.
 - `Patient.preferredLanguage` controls the RealGemma visit-note output language.
 - Patient mapping is Meena/Priya -> Hindi, Grace -> Swahili, Lucia -> Spanish, and Fatima/Amara -> English.
 - Lucia is Peru/Spanish; Brazil is not used for her Spanish-language demo.
@@ -164,6 +169,8 @@ Local Gemma 4 vision is claimed only for synthetic paper-note data extraction.
 - The scan flow does not call visit-note referral generation or supervisor priority reasoning.
 
 Do not claim clinical image diagnosis, referral decisions from image alone, real patient image support, or cloud OCR.
+
+Direct Gemma audio remains blocked; the vision path does not change the audio limitation.
 
 ## Not Claimed
 

@@ -8,10 +8,17 @@ sealed class TextGenerationResult {
 
 interface RealGemmaTextClient {
     suspend fun generateText(prompt: String): TextGenerationResult
+
+    suspend fun generateText(
+        prompt: String,
+        requestType: RealGemmaRequestType
+    ): TextGenerationResult {
+        return generateText(prompt)
+    }
 }
 
 class UnavailableGemmaTextClient(
-    private val status: String = "RealGemma reasoning unavailable. Complete local model setup and retry."
+    private val status: String = "On-device reasoning unavailable. Complete local model setup and retry."
 ) : RealGemmaTextClient {
     override suspend fun generateText(prompt: String): TextGenerationResult {
         return TextGenerationResult.Unavailable(status = status)

@@ -83,17 +83,29 @@ class RealGemmaDeveloperTextClient(
 ) : RealGemmaTextClient, RealGemmaPreloadable {
     constructor(
         modelStatus: ModelStatus,
-        timeoutMillis: Long = LiteRtGemmaTextClient.DEFAULT_MANUAL_TIMEOUT_MILLIS
+        timeoutMillis: Long = LiteRtGemmaTextClient.DEFAULT_MANUAL_TIMEOUT_MILLIS,
+        sentinelExists: Boolean? = null
     ) : this(
-        liteRtClient = LiteRtGemmaTextClient(modelStatus = modelStatus),
+        liteRtClient = LiteRtGemmaTextClient(
+            modelStatus = modelStatus,
+            sentinelExists = sentinelExists
+        ),
         timeoutMillis = timeoutMillis
     )
 
     override suspend fun generateText(prompt: String): TextGenerationResult {
+        return generateText(prompt, RealGemmaRequestType.MANUAL_TEST)
+    }
+
+    override suspend fun generateText(
+        prompt: String,
+        requestType: RealGemmaRequestType
+    ): TextGenerationResult {
         return liteRtClient.generateTextManual(
             prompt = prompt,
             allowManualTextInference = true,
-            timeoutMillis = timeoutMillis
+            timeoutMillis = timeoutMillis,
+            requestType = requestType
         )
     }
 

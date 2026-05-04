@@ -3,6 +3,7 @@ package com.smriti.clinicalscribe.reasoning
 import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.rag.ProtocolChunk
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -64,6 +65,10 @@ class RealGemmaOutputParserTest {
         assertNotNull(visit.referralFlag)
         assertEquals(protocol.citation, visit.referralFlag!!.protocolBasis)
         assertTrue(visit.structuredNote.contains("Safety note:"))
+        assertTrue(visit.structuredNote.contains("Local guidance support:"))
+        assertTrue(visit.structuredNote.contains("Patient history checked on this device."))
+        assertFalse(visit.structuredNote.contains("Protocol-grounded"))
+        assertFalse(visit.structuredNote.contains("RealGemma context"))
     }
 
     @Test
@@ -426,8 +431,8 @@ class RealGemmaOutputParserTest {
             rejected.reason.contains(reasonFragment)
         )
         assertTrue("Rejected output should return an uncertain fallback", rejected.fallback.uncertain)
-        assertTrue("Fallback should preserve not-a-diagnosis language", rejected.fallback.structuredNote.contains("not a diagnosis"))
-        assertTrue("Fallback should require CHW confirmation", rejected.fallback.structuredNote.contains("CHW confirmation required"))
+        assertTrue("Fallback should preserve not-a-diagnosis language", rejected.fallback.structuredNote.contains("does not diagnose"))
+        assertTrue("Fallback should require health worker review", rejected.fallback.structuredNote.contains("Health worker must review"))
     }
 
     private fun RealGemmaParseResult.describe(): String {
@@ -440,7 +445,7 @@ class RealGemmaOutputParserTest {
     private fun validJson(
         protocolCitation: String = protocol.citation,
         structuredNote: String = "Observation support only. This is not a diagnosis. CHW confirmation required.",
-        suggestedFollowUp: String = "Same-day referral support. Protocol citation: ${protocol.citation}",
+        suggestedFollowUp: String = "Same-day referral support. Health guidance: ${protocol.citation}",
         referralReason: String = "Protocol-grounded referral suggestion; not a diagnosis.",
         referralFlag: String = """
             {

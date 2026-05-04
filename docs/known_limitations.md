@@ -43,6 +43,18 @@ Real-world handwriting quality, camera quality, and model behavior still need fi
 
 `RealGemmaAgent` is the app-facing reasoning engine. It requires a local submission build flag, an app-private sentinel, and a sideloaded app-private `.litertlm` model. If setup is missing or inference fails, the app shows setup/retry messaging and does not show mock clinical output.
 
+## RealGemma Native Stability
+
+A native LiteRT-LM text inference crash was observed in Logcat inside `liblitertlm_jni.so` during `Conversation.sendMessage(prompt)` after overlapping/retried RealGemma calls piled up behind the synchronized text inference runner. This was not a screen, Room, or SQLite crash.
+
+The app now uses a global non-queueing RealGemma inference gate so only one preload, visit-note generation, supervisor priority generation, paper-note vision extraction, or manual test request can run at a time. A second request returns `Smriti is already preparing a note. Please wait.` and does not enter another native call.
+
+This reduces the likely overlapping-call crash condition, but a true native abort can still terminate the process because Kotlin cannot catch `SIGABRT`. For filming, use the stable CPU path, avoid repeated taps during inference, and do not rely on coroutine timeout as native cancellation.
+
+## GPU Backend Experiment
+
+CPU is the stable documented backend for the filmed path. `Backend.GPU()` is available only through an isolated manual latency experiment and is not default. If GPU is unsupported, crashes, or does not provide meaningful stable improvement on the target device/emulator, keep CPU for filming and documentation.
+
 ## RealGemma Schema Adherence
 
 RealGemma can load and return text on the emulator, but output schema adherence is still being tuned. A recent RealGemma response omitted the required `referralFlag` field, so the app rejected it as invalid output. This is expected safe behavior: invalid RealGemma output is not saved, is not shown as a clinical result, and does not trigger a mock fallback.

@@ -63,20 +63,35 @@ class PhaseDUxLogicTest {
     }
 
     @Test
-    fun welcomeGuideSetupAndLanguageSelectorAreWired() {
+    fun welcomeGuideSetupAndOfflineSetupAreWiredWithoutMisleadingLanguageSelector() {
         val mainActivity = appSourceFile("MainActivity.kt").readText()
         val welcomeScreens = appSourceFile("ui/WelcomeScreens.kt").readText()
         val roster = appSourceFile("ui/PatientListScreen.kt").readText()
 
         assertTrue(mainActivity.contains("SmritiScreen.Welcome"))
         assertTrue(mainActivity.contains("SmritiScreen.SetupGuidance"))
-        assertTrue(mainActivity.contains("selectedLanguageOverride"))
-        assertTrue(mainActivity.contains("visitPatient = selectedLanguageOverride?.let"))
+        assertTrue(mainActivity.contains("SmritiScreen.OfflineSetup"))
+        assertTrue(mainActivity.contains("OfflineSetupScreen("))
+        assertFalse(mainActivity.contains("selectedLanguageOverride"))
+        assertFalse(mainActivity.contains("copy(preferredLanguage = code)"))
         assertTrue(welcomeScreens.contains("Offline health visit assistant"))
         assertTrue(welcomeScreens.contains("One-time setup needed"))
         assertTrue(welcomeScreens.contains("Continue without model (demo mode)"))
-        assertTrue(roster.contains("ModalBottomSheet"))
-        assertTrue(mainActivity.contains("Language set to"))
+        assertTrue(welcomeScreens.contains("Offline setup"))
+        assertTrue(welcomeScreens.contains("OfflineProofCard(status = status)"))
+        assertFalse(roster.contains("ModalBottomSheet"))
+        assertFalse(mainActivity.contains("Language set to"))
+    }
+
+    @Test
+    fun patientCardsAndVisitHeaderExplainNoteLanguageOnly() {
+        val roster = appSourceFile("ui/PatientListScreen.kt").readText()
+        val visit = appSourceFile("ui/VisitScreen.kt").readText()
+
+        assertTrue(roster.contains("Note language: \${PatientVisitUiText.noteLanguageName(patient)}"))
+        assertTrue(visit.contains("Visit note will be prepared in \${PatientVisitUiText.noteLanguageDisplayLabel(patient)}"))
+        assertFalse(roster.contains("Output language:"))
+        assertFalse(visit.contains("Output language:"))
     }
 
     @Test
@@ -87,8 +102,8 @@ class PhaseDUxLogicTest {
         assertTrue(visit.contains("This observation is very short."))
         assertTrue(visit.contains("Note could not be prepared"))
         assertTrue(visit.contains("Try again"))
-        assertTrue(visit.contains("Stop generating note?"))
-        assertTrue(visit.contains("Going back will cancel the current note."))
+        assertTrue(visit.contains("Note is being prepared"))
+        assertTrue(visit.contains("Please wait until Smriti finishes."))
     }
 
     @Test
@@ -100,7 +115,7 @@ class PhaseDUxLogicTest {
         assertTrue(review.contains("More information needed"))
         assertTrue(review.contains("var showSourceDetails by remember(result) { mutableStateOf(false) }"))
         assertTrue(review.contains("Patient history from \$priorVisitCount prior visits"))
-        assertTrue(review.contains("Raw guidance ID"))
+        assertTrue(review.contains("Guidance ID"))
         assertFalse(review.contains("Protocol Citation"))
         assertFalse(review.contains("Protocol-grounded"))
     }
@@ -110,12 +125,27 @@ class PhaseDUxLogicTest {
         val summary = appSourceFile("ui/SummaryScreen.kt").readText()
         val roster = appSourceFile("ui/PatientListScreen.kt").readText()
 
-        assertTrue(summary.contains("On-device summary unavailable."))
-        assertTrue(summary.contains("Local visit counts are shown below."))
+        assertTrue(summary.contains("On-device priority summary unavailable. Showing saved local visit flags."))
+        assertTrue(summary.contains("Needs urgent review"))
+        assertTrue(summary.contains("Saved visits on this device"))
         assertTrue(summary.contains("Reset all demo data?"))
         assertTrue(roster.contains("Add patients from file?"))
         assertFalse(summary.contains("mock"))
         assertFalse(summary.contains("Mock"))
+    }
+
+    @Test
+    fun rosterKeepsLocalProofBehindSetupScreen() {
+        val roster = appSourceFile("ui/PatientListScreen.kt").readText()
+        val welcomeScreens = appSourceFile("ui/WelcomeScreens.kt").readText()
+
+        assertTrue(roster.contains("Check offline setup"))
+        assertFalse(roster.contains("OfflineProofCard("))
+        assertTrue(welcomeScreens.contains("OfflineProofCard(status = status)"))
+        assertTrue(welcomeScreens.contains("Smriti does not diagnose"))
+        assertTrue(welcomeScreens.contains("Health worker must review"))
+        assertTrue(welcomeScreens.contains("Confirm and save"))
+        assertTrue(welcomeScreens.contains("Works offline after setup - Local patient memory"))
     }
 
     @Test

@@ -37,7 +37,7 @@ data class OfflineProofStatus(
             "Patient memory" to "saved on this device",
             "Health guidance" to "stored on this device",
             "On-device Gemma" to modelReadyLabel,
-            "Paper note scan" to if (modelReadyLabel == "ready") "available" else "setup needed",
+            "Paper note scan" to "available",
             "Cloud APIs" to "none",
             "Direct Gemma audio" to "not used"
         )
@@ -57,6 +57,12 @@ data class OfflineProofStatus(
             "Cloud APIs" to "none",
             "Direct Gemma audio" to "not used"
         )
+
+    val compactDisplayLines: List<String>
+        get() = compactLines.toDisplayLines()
+
+    val displayLines: List<String>
+        get() = lines.toDisplayLines()
 }
 
 @Composable
@@ -74,13 +80,17 @@ fun OfflineProofCard(
             verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)
         ) {
             Text("Local proof", fontWeight = FontWeight.SemiBold)
-            val proofLines = if (compact) status.compactLines else status.lines
-            proofLines.forEach { (label, value) ->
+            val proofLines = if (compact) status.compactDisplayLines else status.displayLines
+            proofLines.forEach { line ->
                 Text(
-                    text = if (value.isBlank()) label else "$label: $value",
+                    text = line,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
     }
+}
+
+private fun List<Pair<String, String>>.toDisplayLines(): List<String> {
+    return map { (label, value) -> if (value.isBlank()) label else "$label: $value" }
 }

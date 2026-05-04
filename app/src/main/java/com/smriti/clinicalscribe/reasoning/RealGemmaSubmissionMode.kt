@@ -66,12 +66,14 @@ object RealGemmaUnavailableResult {
         return result.uncertain && (
             "realgemma required setup incomplete" in text ||
                 "realgemma reasoning is unavailable" in text ||
+                "on-device reasoning unavailable" in text ||
                 "realgemma output was rejected" in text ||
                 "real gemma path unavailable" in text ||
                 "real gemma output rejected" in text ||
                 "text generation failed" in text ||
                 "model unavailable" in text ||
                 "manual text inference" in text ||
+                "smriti is already preparing a note" in text ||
                 "model" in text && "not" in text && "found" in text
             )
     }

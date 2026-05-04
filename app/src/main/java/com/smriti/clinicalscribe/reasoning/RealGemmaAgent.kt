@@ -10,7 +10,8 @@ class RealGemmaAgent(
     private val textClient: RealGemmaTextClient = UnavailableGemmaTextClient(),
     private val promptBuilder: RealGemmaPromptBuilder = RealGemmaPromptBuilder(),
     private val outputParser: RealGemmaOutputParser = RealGemmaOutputParser(),
-    private val safetyPostProcessor: RealGemmaSafetyPostProcessor = RealGemmaSafetyPostProcessor()
+    private val safetyPostProcessor: RealGemmaSafetyPostProcessor = RealGemmaSafetyPostProcessor(),
+    private val requestType: RealGemmaRequestType = RealGemmaRequestType.VISIT_NOTE
 ) : GemmaAgent {
     fun initializeModel(): Boolean {
         // TODO LiteRT-LM integration: initialize only in a future client implementation, never in this scaffold.
@@ -47,7 +48,7 @@ class RealGemmaAgent(
         val generation = try {
             var result: TextGenerationResult? = null
             val duration = kotlin.system.measureTimeMillis {
-                result = textClient.generateText(prompt)
+                result = textClient.generateText(prompt, requestType)
             }
             SmritiLatencyLogger.log("realGemmaGenerateCall", duration, scenario)
             result ?: TextGenerationResult.Failed("Text generation returned no result.")
@@ -157,14 +158,14 @@ class RealGemmaAgent(
                 append("Observation:\n${observationText.trim()}")
                 append("\n\nRelevant history:\n")
                 append(latestHistory)
-                append("\n\nProtocol-grounded support:\n")
+                append("\n\nLocal guidance support:\n")
                 append(status)
                 append(" $safetyWording ")
-                append("Protocol citation required before recommendation.")
+                append("Health guidance is required before recommendation.")
             },
             referralFlag = null,
             protocolCitation = citation,
-            suggestedFollowUp = "RealGemma reasoning is unavailable. Ask the CHW to review manually and retry after setup. Protocol citation required before recommendation. Protocol citation: $citation",
+            suggestedFollowUp = "On-device reasoning is unavailable. Ask the CHW to review manually and retry after setup. Health guidance is required before recommendation. Health guidance: $citation",
             protocolChunk = protocolChunks.firstOrNull(),
             uncertain = true,
             clarificationPrompt = "$status Complete local RealGemma setup or retry; no mock clinical output was generated."

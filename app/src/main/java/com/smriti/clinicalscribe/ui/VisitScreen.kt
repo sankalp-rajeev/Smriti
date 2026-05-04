@@ -38,6 +38,7 @@ import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.data.HistorySignal
 import com.smriti.clinicalscribe.data.MissedFollowUpAlert
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.TranscriptSource
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.transcript.AndroidOfflineSpeechRecognizerClient
 import com.smriti.clinicalscribe.transcript.TranscriptResult
@@ -154,6 +155,9 @@ fun VisitScreen(
                 inlineError = "This observation is very short.\nAdd more detail for a better note."
                 onGenerate(observationText, null)
             }
+            isReadingPaperNote -> {
+                inlineError = "Smriti is reading a paper note. Please wait."
+            }
             !isGenerating -> {
                 inlineError = null
                 onGenerate(observationText, null)
@@ -164,21 +168,11 @@ fun VisitScreen(
     if (showStopDialog) {
         AlertDialog(
             onDismissRequest = { showStopDialog = false },
-            title = { Text("Stop generating note?") },
-            text = { Text("Going back will cancel the current note.") },
+            title = { Text("Note is being prepared") },
+            text = { Text("Please wait until Smriti finishes. This keeps the on-device model from starting another request.") },
             confirmButton = {
                 TextButton(onClick = { showStopDialog = false }) {
-                    Text("Stay")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showStopDialog = false
-                        onBack()
-                    }
-                ) {
-                    Text("Go back")
+                    Text("OK")
                 }
             }
         )
@@ -201,7 +195,7 @@ fun VisitScreen(
                             Text(PatientVisitUiText.gestationLabel(patient), style = MaterialTheme.typography.bodyLarge)
                             Text(PatientVisitUiText.countryVillage(patient), style = MaterialTheme.typography.bodyLarge)
                             Text(
-                                "Output language: ${PatientVisitUiText.outputLanguageLabel(patient)}",
+                                "Visit note will be prepared in ${PatientVisitUiText.noteLanguageDisplayLabel(patient)}",
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -279,7 +273,7 @@ fun VisitScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 48.dp),
-                            enabled = !isGenerating
+                            enabled = !isGenerating && !isReadingPaperNote
                         ) {
                             Text("Use sample visit transcript")
                         }
@@ -307,7 +301,7 @@ fun VisitScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 52.dp),
-                            enabled = !isGenerating
+                            enabled = !isGenerating && !isReadingPaperNote
                         ) {
                             Text(if (isGenerating) "Preparing note..." else "Generate visit note")
                         }
@@ -368,7 +362,7 @@ fun VisitScreen(
                 }
             }
 
-            errorMessage?.let {
+            errorMessage?.let { message ->
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
@@ -380,7 +374,7 @@ fun VisitScreen(
                         ) {
                             Text("Note could not be prepared", fontWeight = FontWeight.SemiBold)
                             Text(
-                                "On-device reasoning was unavailable. Please check the model is installed, then try again.",
+                                message,
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             OutlinedButton(
@@ -523,21 +517,63 @@ private fun PriorHistorySection(
 
 @Composable
 private fun HistoryCard(visit: VisitLog) {
+    var showDetails by remember(visit.id) { mutableStateOf(false) }
+    val status = historyStatusLabel(visit)
+    val followUp = visit.suggestedFollowUp.trim()
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(formatDate(visit.visitDateMillis), fontWeight = FontWeight.SemiBold)
-            Text(visit.structuredNote, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = "Health guidance used: ${visit.protocolCitation}",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Text(status, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(historyObservationSummary(visit), style = MaterialTheme.typography.bodyLarge)
+            if (followUp.isNotBlank()) {
+                Text("Follow-up: $followUp", style = MaterialTheme.typography.bodyMedium)
+            }
+            Text("Not a diagnosis. Health worker reviewed before saving.", style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = { showDetails = !showDetails }) {
+                Text(if (showDetails) "Hide details" else "Show details")
+            }
+            if (showDetails) {
+                Text("Full observation: ${visit.observationText.ifBlank { "Review saved note" }}")
+                Text("Patient history checked")
+                Text("Local health guidance checked")
+                if (visit.protocolCitation.isNotBlank()) {
+                    Text("Guidance ID: ${visit.protocolCitation}", style = MaterialTheme.typography.bodyMedium)
+                }
+                Text("Source: ${historySourceLabel(visit)}", style = MaterialTheme.typography.bodyMedium)
+            }
         }
+    }
+}
+
+private fun historyStatusLabel(visit: VisitLog): String {
+    return when {
+        visit.transcriptSource == TranscriptSource.PAPER_SCAN -> "Paper note scan"
+        visit.structuredNote.contains("more information", ignoreCase = true) -> "More information needed"
+        visit.structuredNote.contains("referral", ignoreCase = true) ||
+            visit.suggestedFollowUp.contains("refer", ignoreCase = true) -> "Referral suggested"
+        else -> "No referral flag"
+    }
+}
+
+private fun historyObservationSummary(visit: VisitLog): String {
+    val source = visit.observationText.ifBlank { visit.structuredNote }
+        .replace(Regex("\\s+"), " ")
+        .trim()
+    return source.ifBlank { "Review saved note" }
+        .let { if (it.length <= 130) it else "${it.take(127).trimEnd()}..." }
+}
+
+private fun historySourceLabel(visit: VisitLog): String {
+    return when (visit.transcriptSource) {
+        TranscriptSource.PAPER_SCAN -> "Paper note scan"
+        TranscriptSource.REAL_ASR_PENDING -> "Local voice note"
+        else -> "Typed or sample visit observation"
     }
 }
 

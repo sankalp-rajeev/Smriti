@@ -17,7 +17,7 @@ object PatientLanguages {
     val Hindi = PatientLanguage(
         code = "hi",
         englishName = "Hindi",
-        displayLabel = "हिंदी / Hindi",
+        displayLabel = "हिन्दी / Hindi",
         safetyWording = "यह निदान नहीं है। CHW की पुष्टि आवश्यक है।"
     )
     val Swahili = PatientLanguage(
