@@ -84,6 +84,43 @@ class LocalVisitMemoryStoreTest {
     }
 
     @Test
+    fun supervisorRegisterImportKeepsLocallyConfirmedVisitsOnSamePatients() = runBlocking {
+        val store = fakeStore()
+        val seeded = store.seedDemoIfNeeded(listOf(protocolChunk), nowMillis = SEED_TIME)
+        val visitCountAfterSeed = seeded.visits.size
+        store.saveConfirmedVisit(
+            result = visitResultWithReferral(),
+            editedNote = "CHW-reviewed saved visit after seeded demo roster.",
+            editedFollowUp = "Local supervisor follow-up after confirmation.",
+            voiceNote = null,
+            nowMillis = RETURN_VISIT_TIME
+        )
+        val afterConfirmed = store.refresh()
+        assertEquals(visitCountAfterSeed + 1, afterConfirmed.visits.size)
+        assertTrue(
+            afterConfirmed.visits.any { visit ->
+                visit.patientId == patient.id &&
+                    visit.observationText.contains("Meena reports severe headache", ignoreCase = true)
+            }
+        )
+
+        val register = SupervisorRegister(
+            patients = DemoSeedData.patients,
+            priorVisits = DemoSeedData.initialVisitLogs(SEED_TIME)
+        )
+        store.importSupervisorRegister(register)
+        val afterImport = store.refresh()
+
+        assertEquals(visitCountAfterSeed + 1, afterImport.visits.size)
+        assertTrue(
+            afterImport.visits.any { visit ->
+                visit.patientId == patient.id &&
+                    visit.observationText.contains("Meena reports severe headache", ignoreCase = true)
+            }
+        )
+    }
+
+    @Test
     fun seedDemoBackfillsAmaraStructuredFollowUpForExistingPhaseAData() = runBlocking {
         val store = fakeStore()
         val phaseAVisits = DemoSeedData.initialVisitLogs(SEED_TIME).map { visit ->

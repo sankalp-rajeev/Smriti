@@ -534,17 +534,20 @@ private fun SmritiApp(
                                 isImportingSupervisorRegister = true
                                 errorMessage = null
                                 importStatusMessage = null
-                                runCatching {
-                                    val register = DemoSupervisorRegisterImporter.fromAsset(context)
-                                    visitMemoryStore.importSupervisorRegister(register)
-                                }.onSuccess { result ->
+                                try {
+                                    val result = withContext(Dispatchers.IO) {
+                                        val register = DemoSupervisorRegisterImporter.fromAsset(context)
+                                        visitMemoryStore.importSupervisorRegister(register)
+                                    }
                                     applySnapshot(result.snapshot)
-                                    importStatusMessage =
-                                        "${result.patientCount} synthetic patients imported from local supervisor register."
-                                }.onFailure { error ->
-                                    errorMessage = "Could not import local supervisor register: ${error.message}"
+                                    importStatusMessage = "Register imported on this device."
+                                } catch (_: Throwable) {
+                                    importStatusMessage = null
+                                    errorMessage =
+                                        "Register could not be imported. Please try again."
+                                } finally {
+                                    isImportingSupervisorRegister = false
                                 }
-                                isImportingSupervisorRegister = false
                             }
                         },
                         onShowSummary = {

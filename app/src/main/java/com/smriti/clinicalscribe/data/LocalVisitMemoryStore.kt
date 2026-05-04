@@ -62,11 +62,7 @@ class LocalVisitMemoryStore(
     suspend fun importSupervisorRegister(
         register: SupervisorRegister
     ): SupervisorRegisterImportResult {
-        val patientIds = register.patients.map { it.id }
         patientDao.upsertAll(register.patients)
-        if (patientIds.isNotEmpty()) {
-            visitLogDao.deleteForPatients(patientIds)
-        }
         visitLogDao.upsertAll(register.priorVisits)
         val snapshot = refresh()
         return SupervisorRegisterImportResult(
