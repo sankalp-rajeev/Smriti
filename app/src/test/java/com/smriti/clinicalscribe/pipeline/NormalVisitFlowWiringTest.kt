@@ -240,11 +240,14 @@ class NormalVisitFlowWiringTest {
     @Test
     fun summaryScreenCanDisplayPriorityQueueAndFallbackMessage() {
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
 
         assertTrue(summaryScreen.contains("Today's priority list"))
         assertTrue(summaryScreen.contains("priorityUnavailableMessage"))
         assertTrue(summaryScreen.contains("priorityQueue"))
         assertTrue(summaryScreen.contains("On-device priority summary unavailable. Showing saved local visit flags."))
+        assertFalse(mainActivity.contains("createSupervisorPriorityGenerator"))
+        assertFalse(mainActivity.contains("SupervisorPriorityQueueResult"))
         assertFalse(summaryScreen.contains("deterministic local summary"))
     }
 

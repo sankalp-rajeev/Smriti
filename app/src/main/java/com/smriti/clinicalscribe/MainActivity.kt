@@ -45,7 +45,6 @@ import com.smriti.clinicalscribe.reasoning.RealGemmaDeveloperMode
 import com.smriti.clinicalscribe.reasoning.SupervisorSummary
 import com.smriti.clinicalscribe.reasoning.SupervisorSummaryFormatter
 import com.smriti.clinicalscribe.reasoning.SupervisorPriorityQueue
-import com.smriti.clinicalscribe.reasoning.SupervisorPriorityQueueResult
 import com.smriti.clinicalscribe.reasoning.RealGemmaUnavailableResult
 import com.smriti.clinicalscribe.reasoning.RealGemmaInferenceGate
 import com.smriti.clinicalscribe.reasoning.RealGemmaRequiredAgentFactory
@@ -74,7 +73,6 @@ import com.smriti.clinicalscribe.ui.SummaryScreen
 import com.smriti.clinicalscribe.ui.UserGuideScreen
 import com.smriti.clinicalscribe.ui.VisitScreen
 import com.smriti.clinicalscribe.ui.WelcomeScreen
-import java.util.Calendar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -90,15 +88,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private fun startOfTodayMillis(): Long {
-    return Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
-}
-
 private fun buildRawLocalSummary(
     summaryPatients: List<Patient>,
     summaryVisits: List<VisitLog>,
@@ -107,7 +96,8 @@ private fun buildRawLocalSummary(
     return SupervisorSummaryFormatter.buildLocalSavedSummary(
         patients = summaryPatients,
         visits = summaryVisits,
-        referrals = summaryReferrals
+        referrals = summaryReferrals,
+        nowMillis = System.currentTimeMillis()
     )
 }
 
@@ -186,6 +176,7 @@ private sealed interface SmritiScreen {
 private fun SmritiApp(
     database: AppDatabase,
     realGemmaRequiredBuildGate: Boolean = BuildConfig.REAL_GEMMA_SUBMISSION_MODE,
+    finalRecordingUi: Boolean = BuildConfig.FINAL_RECORDING_UI,
     realGemmaLocalGateOverride: Boolean? = null
 ) {
     val scope = rememberCoroutineScope()
@@ -401,49 +392,14 @@ private fun SmritiApp(
         referrals = snapshot.referrals
     }
 
-    suspend fun buildSummaryScreen(
+    fun buildSummaryScreen(
         summaryPatients: List<Patient>,
         summaryVisits: List<VisitLog>,
         summaryReferrals: List<ReferralFlag>
     ): SmritiScreen.Summary {
-        val rawLocalSummary = buildRawLocalSummary(summaryPatients, summaryVisits, summaryReferrals)
-
-        val missedFollowUps = summaryPatients.flatMap { patient ->
-            PatientMemoryInsights.missedFollowUpAlerts(
-                patientId = patient.id,
-                visits = summaryVisits
-            )
-        }
-        val historySignals = summaryPatients.mapNotNull { patient ->
-            PatientMemoryInsights.risingBloodPressureSignal(
-                patient = patient,
-                visits = summaryVisits
-            )
-        }
-        val todayVisits = summaryVisits.filter { visit ->
-            visit.confirmed && visit.visitDateMillis >= startOfTodayMillis()
-        }
-        val priorityGenerator = RealGemmaRequiredAgentFactory.createSupervisorPriorityGenerator(
-            status = realGemmaRequiredModeStatus,
-            modelStatus = modelStatus,
-            sharedTextClient = sharedRealGemmaTextClient
+        return SmritiScreen.Summary(
+            summary = buildRawLocalSummary(summaryPatients, summaryVisits, summaryReferrals)
         )
-        return when (val priority = priorityGenerator.generate(
-            patients = summaryPatients,
-            todayVisits = todayVisits,
-            referrals = summaryReferrals,
-            missedFollowUps = missedFollowUps,
-            historySignals = historySignals
-        )) {
-            is SupervisorPriorityQueueResult.Available -> SmritiScreen.Summary(
-                summary = rawLocalSummary,
-                priorityQueue = priority.queue
-            )
-            is SupervisorPriorityQueueResult.Unavailable -> SmritiScreen.Summary(
-                summary = rawLocalSummary,
-                priorityUnavailableMessage = priority.reason
-            )
-        }
     }
 
     DisposableEffect(voiceOutput) {
@@ -551,9 +507,7 @@ private fun SmritiApp(
                             }
                         },
                         onShowSummary = {
-                            scope.launch {
-                                currentScreen = buildSummaryScreen(patients, visits, referrals)
-                            }
+                            currentScreen = buildSummaryScreen(patients, visits, referrals)
                         },
                         onUserGuide = { currentScreen = SmritiScreen.UserGuide },
                         onCheckOfflineSetup = {
@@ -619,6 +573,7 @@ private fun SmritiApp(
                             ),
                             isReadingPaperNote = isReadingPaperNote,
                             paperNoteStatusMessage = paperNoteStatusMessage,
+                            showDemoControls = !finalRecordingUi,
                             onRequestAudioPermission = {
                                 audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                             },
@@ -845,6 +800,7 @@ private fun SmritiApp(
                         priorityQueue = screen.priorityQueue,
                         priorityUnavailableMessage = screen.priorityUnavailableMessage,
                         isResettingDemoData = isResettingDemoData,
+                        showDemoControls = !finalRecordingUi,
                         offlineProofStatus = offlineProofStatus,
                         ttsStatusMessage = ttsStatusMessage,
                         exportSummaryPath = exportSummaryPath,

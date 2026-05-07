@@ -45,6 +45,7 @@ class DemoSupervisorRegisterImporterTest {
 
         register.priorVisits.forEach { visit ->
             assertTrue(visit.audioFilePath.isNullOrBlank())
+            assertEquals(TranscriptSource.SEEDED_PRIOR_HISTORY, visit.transcriptSource)
         }
     }
 }

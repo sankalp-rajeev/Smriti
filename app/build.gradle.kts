@@ -15,6 +15,11 @@ val realGemmaSubmissionModeBuildGate = providers
     .map { it.toBoolean() }
     .getOrElse(false)
 
+val finalRecordingUiBuildGate = providers
+    .gradleProperty("smriti.finalRecordingUi")
+    .map { it.toBoolean() }
+    .getOrElse(false)
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
@@ -35,6 +40,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("boolean", "REAL_GEMMA_DEV_BUILD_GATE", realGemmaDevModeBuildGate.toString())
         buildConfigField("boolean", "REAL_GEMMA_SUBMISSION_MODE", realGemmaSubmissionModeBuildGate.toString())
+        buildConfigField("boolean", "FINAL_RECORDING_UI", finalRecordingUiBuildGate.toString())
     }
 
     buildTypes {

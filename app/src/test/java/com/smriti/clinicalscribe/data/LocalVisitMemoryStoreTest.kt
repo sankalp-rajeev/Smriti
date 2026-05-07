@@ -4,6 +4,7 @@ import com.smriti.clinicalscribe.rag.ProtocolChunk
 import com.smriti.clinicalscribe.reasoning.MockGemmaAgent
 import com.smriti.clinicalscribe.reasoning.PaperNoteVisionConfidence
 import com.smriti.clinicalscribe.reasoning.PaperNoteVisionExtraction
+import com.smriti.clinicalscribe.reasoning.SupervisorSummaryFormatter
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -31,6 +32,7 @@ class LocalVisitMemoryStoreTest {
 
         assertEquals(6, snapshot.patients.size)
         assertEquals(3, store.historyForPatient(snapshot, patient.id).size)
+        assertTrue(snapshot.visits.all { it.transcriptSource == TranscriptSource.SEEDED_PRIOR_HISTORY })
         assertEquals(0, snapshot.referrals.size)
     }
 
@@ -310,7 +312,7 @@ class LocalVisitMemoryStoreTest {
     }
 
     @Test
-    fun resetDemoDataClearsSavedVisitsAndRestoresSeededMeenaHistory() = runBlocking {
+    fun resetDemoDataClearsSavedVisitsPaperScansReferralsAndRestoresSeededHistory() = runBlocking {
         val store = fakeStore()
         store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)
         val afterSave = store.saveConfirmedVisit(
@@ -322,6 +324,16 @@ class LocalVisitMemoryStoreTest {
         )
         assertEquals(4, store.historyForPatient(afterSave, patient.id).size)
         assertEquals(1, afterSave.referrals.size)
+        store.saveConfirmedScannedPaperNote(
+            patientId = "patient-grace",
+            extraction = paperNoteExtraction(),
+            editedPatientName = "Grace Achieng",
+            editedVisitDate = "02 May 2026",
+            editedBloodPressure = "190/110",
+            editedSymptoms = listOf("headache", "blurred vision"),
+            editedFollowUpPlan = "urgent review",
+            nowMillis = RETURN_VISIT_TIME
+        )
 
         val resetSnapshot = store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)
 
@@ -329,14 +341,19 @@ class LocalVisitMemoryStoreTest {
         assertEquals(3, resetHistory.size)
         assertEquals(emptyList<ReferralFlag>(), resetSnapshot.referrals)
         assertTrue(resetHistory.none { it.structuredNote.contains("Temporary saved test visit") })
+        assertTrue(resetSnapshot.visits.none { it.transcriptSource == TranscriptSource.PAPER_SCAN })
+        assertTrue(resetSnapshot.visits.all { it.transcriptSource == TranscriptSource.SEEDED_PRIOR_HISTORY })
 
-        val summary = MockGemmaAgent().generateSupervisorSummary(
+        val summary = SupervisorSummaryFormatter.buildLocalSavedSummary(
             patients = resetSnapshot.patients,
             visits = resetSnapshot.visits,
-            referrals = resetSnapshot.referrals
+            referrals = resetSnapshot.referrals,
+            nowMillis = RETURN_VISIT_TIME
         )
-        assertEquals(DemoSeedData.initialVisitLogs(SEED_TIME).size, summary.totalVisits)
+        assertEquals(0, summary.totalVisits)
         assertEquals(0, summary.referralsFlagged)
+        assertTrue(summary.urgentCases.none { it.contains("Meena", ignoreCase = true) })
+        assertTrue(summary.paperScanNeedsUrgentReview.none { it.contains("Grace", ignoreCase = true) })
     }
 
     private fun fakeStore(): LocalVisitMemoryStore {

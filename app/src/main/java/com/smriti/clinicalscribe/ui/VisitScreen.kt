@@ -66,6 +66,7 @@ fun VisitScreen(
     historySignal: HistorySignal?,
     isReadingPaperNote: Boolean,
     paperNoteStatusMessage: String?,
+    showDemoControls: Boolean = true,
     onRequestAudioPermission: () -> Unit,
     onMarkFollowUpConfirmed: (Long) -> Unit,
     onGenerate: (String, VoiceNoteMetadata?) -> Unit,
@@ -264,18 +265,20 @@ fun VisitScreen(
                         ) {
                             Text(if (isListeningOfflineSpeech) "Listening..." else "Speak observation")
                         }
-                        OutlinedButton(
-                            onClick = {
-                                observationText = VisitSampleTranscripts.forPatient(patient)
-                                inlineError = null
-                                offlineSpeechStatus = null
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp),
-                            enabled = !isGenerating && !isReadingPaperNote
-                        ) {
-                            Text("Use sample visit transcript")
+                        if (showDemoControls) {
+                            OutlinedButton(
+                                onClick = {
+                                    observationText = VisitSampleTranscripts.forPatient(patient)
+                                    inlineError = null
+                                    offlineSpeechStatus = null
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp),
+                                enabled = !isGenerating && !isReadingPaperNote
+                            ) {
+                                Text("Use sample visit transcript")
+                            }
                         }
                         OutlinedTextField(
                             value = observationText,

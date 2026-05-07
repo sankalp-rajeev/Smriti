@@ -57,6 +57,7 @@ object DemoSupervisorRegisterImporter {
                         protocolCitation = visitJson.optString("protocolCitation"),
                         suggestedFollowUp = visitJson.optString("suggestedFollowUp"),
                         confirmed = visitJson.optBoolean("confirmed", true),
+                        transcriptSource = TranscriptSource.SEEDED_PRIOR_HISTORY,
                         followUpDueDateMillis = followUpDueDaysAgo?.let {
                             nowMillis - it.daysToMillis()
                         },

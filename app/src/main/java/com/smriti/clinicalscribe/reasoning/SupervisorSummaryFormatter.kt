@@ -2,21 +2,31 @@ package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.ReferralFlag
+import com.smriti.clinicalscribe.data.TranscriptSource
 import com.smriti.clinicalscribe.data.VisitLog
+import java.util.Calendar
 
 object SupervisorSummaryFormatter {
     fun buildLocalSavedSummary(
         patients: List<Patient>,
         visits: List<VisitLog>,
         referrals: List<ReferralFlag>,
-        narrative: String = "Saved visits, patient history, and local health guidance on this device."
+        narrative: String = "Saved visits, patient history, and local health guidance on this device.",
+        nowMillis: Long = summaryAnchorMillis(visits, referrals)
     ): SupervisorSummary {
         val patientNamesById = patients.associate { it.id to it.name }
-        val paperUrgent = visits
+        val todayStart = startOfDayMillis(nowMillis)
+        val savedVisitsToday = visits.filter { it.isUserSavedVisitToday(todayStart) }
+        val savedVisitIdsToday = savedVisitsToday.map { it.id }.toSet()
+        val savedReferralsToday = referrals.filter { referral ->
+            referral.createdAtMillis >= todayStart &&
+                (referral.visitLogId == null || referral.visitLogId in savedVisitIdsToday)
+        }
+        val paperUrgent = savedVisitsToday
             .filter { PaperNoteUrgencyClassifier.needsUrgentReview(it) }
             .sortedByDescending { it.visitDateMillis }
         val paperUrgentVisitIds = paperUrgent.map { it.id }.toSet()
-        val followUpsDue = visits
+        val followUpsDue = savedVisitsToday
             .filter { it.confirmed && it.suggestedFollowUp.isNotBlank() && it.id !in paperUrgentVisitIds }
             .map { visit ->
                 val patientName = patientNamesById[visit.patientId] ?: visit.patientId
@@ -28,9 +38,9 @@ object SupervisorSummaryFormatter {
         }
 
         return SupervisorSummary(
-            totalVisits = visits.count { it.confirmed },
-            referralsFlagged = referrals.size,
-            urgentCases = urgentCases(patients, referrals),
+            totalVisits = savedVisitsToday.size,
+            referralsFlagged = savedReferralsToday.size,
+            urgentCases = urgentCases(patients, savedReferralsToday),
             followUpsDue = followUpsDue,
             narrative = narrative,
             paperScanNeedsUrgentReview = paperLines
@@ -99,6 +109,35 @@ object SupervisorSummaryFormatter {
             .replace(Regex("\\s+"), " ")
             .trim()
             .ifBlank { "Review saved note" }
+    }
+
+    private fun VisitLog.isUserSavedVisitToday(todayStart: Long): Boolean {
+        return confirmed &&
+            transcriptSource != TranscriptSource.SEEDED_PRIOR_HISTORY &&
+            visitDateMillis >= todayStart
+    }
+
+    private fun startOfDayMillis(nowMillis: Long): Long {
+        return Calendar.getInstance().apply {
+            timeInMillis = nowMillis
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
+
+    private fun summaryAnchorMillis(
+        visits: List<VisitLog>,
+        referrals: List<ReferralFlag>
+    ): Long {
+        val latestSavedVisit = visits
+            .filter { it.confirmed && it.transcriptSource != TranscriptSource.SEEDED_PRIOR_HISTORY }
+            .maxOfOrNull { it.visitDateMillis }
+        val latestReferral = referrals.maxOfOrNull { it.createdAtMillis }
+        return listOfNotNull(latestSavedVisit, latestReferral)
+            .maxOrNull()
+            ?: System.currentTimeMillis()
     }
 
     private const val MAX_FALLBACK_DANGER_SIGNS_LENGTH = 90

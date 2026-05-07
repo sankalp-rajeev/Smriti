@@ -129,9 +129,25 @@ class PhaseDUxLogicTest {
         assertTrue(summary.contains("Needs urgent review"))
         assertTrue(summary.contains("Saved visits on this device"))
         assertTrue(summary.contains("Reset all demo data?"))
+        assertTrue(summary.contains("showDemoControls: Boolean = true"))
+        assertTrue(summary.contains("if (showDemoControls)"))
         assertTrue(roster.contains("Add patients from file?"))
         assertFalse(summary.contains("mock"))
         assertFalse(summary.contains("Mock"))
+    }
+
+    @Test
+    fun finalRecordingUiFlagCanHideInternalDemoControlsWithoutRemovingThem() {
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+        val visit = appSourceFile("ui/VisitScreen.kt").readText()
+        val summary = appSourceFile("ui/SummaryScreen.kt").readText()
+
+        assertTrue(mainActivity.contains("finalRecordingUi: Boolean = BuildConfig.FINAL_RECORDING_UI"))
+        assertTrue(mainActivity.contains("showDemoControls = !finalRecordingUi"))
+        assertTrue(visit.contains("Use sample visit transcript"))
+        assertTrue(visit.contains("if (showDemoControls)"))
+        assertTrue(summary.contains("Reset Demo Data"))
+        assertTrue(summary.contains("if (showDemoControls)"))
     }
 
     @Test

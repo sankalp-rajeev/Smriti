@@ -36,6 +36,7 @@ fun SummaryScreen(
     priorityQueue: SupervisorPriorityQueue?,
     priorityUnavailableMessage: String?,
     isResettingDemoData: Boolean,
+    showDemoControls: Boolean = true,
     offlineProofStatus: OfflineProofStatus,
     ttsStatusMessage: String?,
     exportSummaryPath: String?,
@@ -241,15 +242,17 @@ fun SummaryScreen(
                 }
             }
 
-            item {
-                OutlinedButton(
-                    onClick = { showResetDialog = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                    enabled = !isResettingDemoData
-                ) {
-                    Text(if (isResettingDemoData) "Resetting..." else "Reset Demo Data")
+            if (showDemoControls) {
+                item {
+                    OutlinedButton(
+                        onClick = { showResetDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp),
+                        enabled = !isResettingDemoData
+                    ) {
+                        Text(if (isResettingDemoData) "Resetting..." else "Reset Demo Data")
+                    }
                 }
             }
 

@@ -255,6 +255,8 @@ object DemoSeedData {
                 suggestedFollowUp = "Continue routine ANC follow-up with regional/global protocol fallback if needed.",
                 confirmed = true
             )
-        )
+        ).map { visit ->
+            visit.copy(transcriptSource = TranscriptSource.SEEDED_PRIOR_HISTORY)
+        }
     }
 }

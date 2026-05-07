@@ -125,7 +125,7 @@ class FullLocalVisitCycleTest {
             visits = confirmed.visits,
             referrals = confirmed.referrals
         )
-        assertEquals(seededVisitCount() + 1, summary.totalVisits)
+        assertEquals(1, summary.totalVisits)
         assertEquals(1, summary.referralsFlagged)
         assertEquals(1, summary.urgentCases.size)
         assertTrue(summary.urgentCases.single().startsWith("Meena Sharma - SAME_DAY"))
@@ -146,7 +146,7 @@ class FullLocalVisitCycleTest {
             visits = repeatedSave.visits,
             referrals = repeatedSave.referrals
         )
-        assertEquals(seededVisitCount() + 2, repeatedSummary.totalVisits)
+        assertEquals(2, repeatedSummary.totalVisits)
         assertEquals(2, repeatedSummary.referralsFlagged)
         assertEquals(1, repeatedSummary.urgentCases.size)
         assertTrue(repeatedSummary.urgentCases.single().startsWith("Meena Sharma - SAME_DAY"))

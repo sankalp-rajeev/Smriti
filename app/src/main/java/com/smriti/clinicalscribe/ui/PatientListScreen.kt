@@ -299,7 +299,7 @@ private fun PatientRow(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 chips.forEach { chip -> PatientChip(chip) }
             }
-            Text("$visitCount saved visit(s)", style = MaterialTheme.typography.bodyMedium)
+            Text("$visitCount history entr${if (visitCount == 1) "y" else "ies"}", style = MaterialTheme.typography.bodyMedium)
             Button(
                 onClick = { onPatientSelected(patient) },
                 modifier = Modifier

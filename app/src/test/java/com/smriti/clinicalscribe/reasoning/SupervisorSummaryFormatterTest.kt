@@ -98,11 +98,11 @@ class SupervisorSummaryFormatterTest {
         )
         val older = referral(
             dangerSigns = "headache, blurred vision",
-            createdAtMillis = 100L
+            createdAtMillis = 1_700_000_000_100L
         )
         val latest = referral(
             dangerSigns = "headache, blurred vision, high blood pressure, reduced fetal movement",
-            createdAtMillis = 300L
+            createdAtMillis = 1_700_000_000_300L
         )
 
         val summary = MockGemmaAgent().generateSupervisorSummary(
@@ -121,6 +121,22 @@ class SupervisorSummaryFormatterTest {
         assertFalse(summary.urgentCases.single().contains("long protocol explanation"))
         assertEquals(3, summary.followUpsDue.size)
         assertTrue(summary.paperScanNeedsUrgentReview.isEmpty())
+    }
+
+    @Test
+    fun localSavedSummaryExcludesSeededPriorHistoryFromTodayCounts() {
+        val seededHistory = DemoSeedData.initialVisitLogs(1_800_000_000_000L)
+        val savedVisit = visit(id = 700L, followUp = "Return tomorrow.")
+
+        val summary = SupervisorSummaryFormatter.buildLocalSavedSummary(
+            patients = DemoSeedData.patients,
+            visits = seededHistory + savedVisit,
+            referrals = emptyList(),
+            nowMillis = savedVisit.visitDateMillis
+        )
+
+        assertEquals(1, summary.totalVisits)
+        assertTrue(summary.followUpsDue.single().contains("Meena Sharma"))
     }
 
     @Test
