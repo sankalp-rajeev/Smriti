@@ -47,6 +47,7 @@ import com.smriti.clinicalscribe.reasoning.SupervisorSummaryFormatter
 import com.smriti.clinicalscribe.reasoning.SupervisorPriorityQueue
 import com.smriti.clinicalscribe.reasoning.RealGemmaUnavailableResult
 import com.smriti.clinicalscribe.reasoning.RealGemmaInferenceGate
+import com.smriti.clinicalscribe.reasoning.RealGemmaLifecyclePolicy
 import com.smriti.clinicalscribe.reasoning.RealGemmaRequiredAgentFactory
 import com.smriti.clinicalscribe.reasoning.RealGemmaRequiredMode
 import com.smriti.clinicalscribe.reasoning.RealGemmaDeveloperTextClient
@@ -177,6 +178,7 @@ private fun SmritiApp(
     database: AppDatabase,
     realGemmaRequiredBuildGate: Boolean = BuildConfig.REAL_GEMMA_SUBMISSION_MODE,
     finalRecordingUi: Boolean = BuildConfig.FINAL_RECORDING_UI,
+    recycleRealGemmaEngineAfterVisitNote: Boolean = BuildConfig.RECYCLE_REAL_GEMMA_ENGINE_AFTER_VISIT_NOTE,
     realGemmaLocalGateOverride: Boolean? = null
 ) {
     val scope = rememberCoroutineScope()
@@ -201,11 +203,24 @@ private fun SmritiApp(
             modelStatus = modelStatus
         )
     }
-    val sharedRealGemmaTextClient = remember(realGemmaRequiredModeStatus, modelStatus, realGemmaLocalGate) {
+    val realGemmaLifecyclePolicy = remember(finalRecordingUi, recycleRealGemmaEngineAfterVisitNote) {
+        RealGemmaLifecyclePolicy(
+            finalRecordingUi = finalRecordingUi,
+            freshConversationForVisitNote = true,
+            recycleEngineAfterVisitNote = recycleRealGemmaEngineAfterVisitNote
+        )
+    }
+    val sharedRealGemmaTextClient = remember(
+        realGemmaRequiredModeStatus,
+        modelStatus,
+        realGemmaLocalGate,
+        realGemmaLifecyclePolicy
+    ) {
         if (realGemmaRequiredModeStatus.inferenceEnabled) {
             RealGemmaDeveloperTextClient(
                 modelStatus = modelStatus,
-                sentinelExists = realGemmaLocalGate
+                sentinelExists = realGemmaLocalGate,
+                lifecyclePolicy = realGemmaLifecyclePolicy
             )
         } else {
             null
@@ -271,10 +286,22 @@ private fun SmritiApp(
         )
     }
 
-    LaunchedEffect(sharedRealGemmaTextClient) {
+    LaunchedEffect(finalRecordingUi, recycleRealGemmaEngineAfterVisitNote) {
+        SmritiLatencyLogger.mark(
+            "realGemmaLifecycle finalRecordingUi=$finalRecordingUi; " +
+                "recycleEngineAfterVisitNote=$recycleRealGemmaEngineAfterVisitNote"
+        )
+    }
+
+    LaunchedEffect(sharedRealGemmaTextClient, finalRecordingUi) {
         val client = sharedRealGemmaTextClient
         if (client == null) {
             realGemmaPreloadState = RealGemmaEnginePreloadState.UNAVAILABLE
+            return@LaunchedEffect
+        }
+        if (finalRecordingUi) {
+            realGemmaPreloadState = RealGemmaEnginePreloadState.LOADS_ON_DEMAND
+            SmritiLatencyLogger.mark("realGemmaPreloadSkipped finalRecordingUi=true")
             return@LaunchedEffect
         }
         realGemmaPreloadState = RealGemmaEnginePreloadState.PREPARING

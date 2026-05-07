@@ -84,11 +84,13 @@ class RealGemmaDeveloperTextClient(
     constructor(
         modelStatus: ModelStatus,
         timeoutMillis: Long = LiteRtGemmaTextClient.DEFAULT_MANUAL_TIMEOUT_MILLIS,
-        sentinelExists: Boolean? = null
+        sentinelExists: Boolean? = null,
+        lifecyclePolicy: RealGemmaLifecyclePolicy = RealGemmaLifecyclePolicy()
     ) : this(
         liteRtClient = LiteRtGemmaTextClient(
             modelStatus = modelStatus,
-            sentinelExists = sentinelExists
+            sentinelExists = sentinelExists,
+            lifecyclePolicy = lifecyclePolicy
         ),
         timeoutMillis = timeoutMillis
     )

@@ -20,6 +20,11 @@ val finalRecordingUiBuildGate = providers
     .map { it.toBoolean() }
     .getOrElse(false)
 
+val recycleRealGemmaEngineAfterVisitNoteBuildGate = providers
+    .gradleProperty("smriti.recycleRealGemmaEngineAfterVisitNote")
+    .map { it.toBoolean() }
+    .getOrElse(finalRecordingUiBuildGate)
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
@@ -41,6 +46,11 @@ android {
         buildConfigField("boolean", "REAL_GEMMA_DEV_BUILD_GATE", realGemmaDevModeBuildGate.toString())
         buildConfigField("boolean", "REAL_GEMMA_SUBMISSION_MODE", realGemmaSubmissionModeBuildGate.toString())
         buildConfigField("boolean", "FINAL_RECORDING_UI", finalRecordingUiBuildGate.toString())
+        buildConfigField(
+            "boolean",
+            "RECYCLE_REAL_GEMMA_ENGINE_AFTER_VISIT_NOTE",
+            recycleRealGemmaEngineAfterVisitNoteBuildGate.toString()
+        )
     }
 
     buildTypes {

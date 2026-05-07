@@ -233,8 +233,24 @@ class NormalVisitFlowWiringTest {
         assertTrue(mainActivity.contains("RealGemmaEnginePreloadState.PREPARING"))
         assertTrue(mainActivity.contains("RealGemmaEnginePreloadState.READY"))
         assertTrue(mainActivity.contains("SmritiLatencyLogger.mark(\"realGemmaPreloadStart\")"))
+        assertTrue(mainActivity.contains("realGemmaPreloadSkipped finalRecordingUi=true"))
         assertTrue(mainActivity.contains("\"Loads on demand\""))
         assertFalse(mainActivity.contains("\"Found, not loaded\""))
+    }
+
+    @Test
+    fun finalRecordingModeUsesRealGemmaLifecyclePolicy() {
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+        val buildGradle = File("app/build.gradle.kts")
+            .takeIf { it.exists() }
+            ?: File("build.gradle.kts").takeIf { it.exists() }
+            ?: File("../app/build.gradle.kts")
+
+        assertTrue(mainActivity.contains("recycleRealGemmaEngineAfterVisitNote: Boolean = BuildConfig.RECYCLE_REAL_GEMMA_ENGINE_AFTER_VISIT_NOTE"))
+        assertTrue(mainActivity.contains("RealGemmaLifecyclePolicy("))
+        assertTrue(mainActivity.contains("freshConversationForVisitNote = true"))
+        assertTrue(mainActivity.contains("recycleEngineAfterVisitNote = recycleRealGemmaEngineAfterVisitNote"))
+        assertTrue(buildGradle.readText().contains("smriti.recycleRealGemmaEngineAfterVisitNote"))
     }
 
     @Test

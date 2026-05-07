@@ -143,6 +143,7 @@ class PhaseDUxLogicTest {
         val summary = appSourceFile("ui/SummaryScreen.kt").readText()
 
         assertTrue(mainActivity.contains("finalRecordingUi: Boolean = BuildConfig.FINAL_RECORDING_UI"))
+        assertTrue(mainActivity.contains("recycleRealGemmaEngineAfterVisitNote: Boolean = BuildConfig.RECYCLE_REAL_GEMMA_ENGINE_AFTER_VISIT_NOTE"))
         assertTrue(mainActivity.contains("showDemoControls = !finalRecordingUi"))
         assertTrue(visit.contains("Use sample visit transcript"))
         assertTrue(visit.contains("if (showDemoControls)"))

@@ -9,12 +9,19 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
+data class RealGemmaLifecyclePolicy(
+    val finalRecordingUi: Boolean = false,
+    val freshConversationForVisitNote: Boolean = true,
+    val recycleEngineAfterVisitNote: Boolean = false
+)
+
 class LiteRtGemmaTextClient(
     private val modelStatus: ModelStatus? = null,
     private val engineConfigFactory: LiteRtEngineConfigFactory = LiteRtEngineConfigFactory(),
     private val apiSurfaceProbe: LiteRtApiSurfaceProbe = LiteRtApiSurfaceProbe(),
     private val manualInferenceRunner: ManualTextInferenceRunner = RealManualTextInferenceRunner,
-    private val sentinelExists: Boolean? = null
+    private val sentinelExists: Boolean? = null,
+    private val lifecyclePolicy: RealGemmaLifecyclePolicy = RealGemmaLifecyclePolicy()
 ) : RealGemmaTextClient {
     var modelLoadAttempted: Boolean = false
         private set
@@ -81,6 +88,18 @@ class LiteRtGemmaTextClient(
             lease.release()
             return TextGenerationResult.Unavailable("Manual LiteRT-LM text inference unavailable: EngineConfig not ready.")
         }
+        val freshConversation = lifecyclePolicy.freshConversationForVisitNote &&
+            requestType == RealGemmaRequestType.VISIT_NOTE
+        val recycleEngineAfterRequest = lifecyclePolicy.recycleEngineAfterVisitNote &&
+            requestType == RealGemmaRequestType.VISIT_NOTE
+        SmritiLatencyLogger.mark(
+            "realGemmaLifecycle finalRecordingUi=${lifecyclePolicy.finalRecordingUi}; " +
+                "requestType=$requestType; modelExists=true; modelSizeBytes=${status.fileSizeBytes}; " +
+                "backendMode=${prepared.backendLabel}; freshConversation=$freshConversation; " +
+                "engineRecycledAfterRequest=$recycleEngineAfterRequest; " +
+                "engineStateBefore=${manualInferenceRunner.engineState()}; " +
+                "requestCountSinceEngineInit=${manualInferenceRunner.requestCountSinceEngineInit()}"
+        )
 
         return try {
             var generationDuration = 0L
@@ -93,12 +112,23 @@ class LiteRtGemmaTextClient(
                     inferenceAttempted = true
                     var generatedText = ""
                     generationDuration = kotlin.system.measureTimeMillis {
-                        generatedText = manualInferenceRunner.generateText(prepared.engineConfig, prompt)
+                        generatedText = manualInferenceRunner.generateText(
+                            engineConfig = prepared.engineConfig,
+                            prompt = prompt,
+                            requestType = requestType,
+                            freshConversation = freshConversation,
+                            recycleEngineAfterRequest = recycleEngineAfterRequest
+                        )
                     }
                     SmritiLatencyLogger.mark("realGemmaGenerateCallEnd")
                     generatedText
                 }
             }
+            SmritiLatencyLogger.mark(
+                "realGemmaLifecycle requestType=$requestType; " +
+                    "engineStateAfter=${manualInferenceRunner.engineState()}; " +
+                    "requestCountSinceEngineInit=${manualInferenceRunner.requestCountSinceEngineInit()}"
+            )
             SmritiLatencyLogger.log("realGemmaGenerateCall.${prepared.backendLabel}", generationDuration)
             TextGenerationResult.Success(text)
         } catch (_: TimeoutCancellationException) {
@@ -122,6 +152,10 @@ class LiteRtGemmaTextClient(
         allowManualTextInference: Boolean,
         timeoutMillis: Long = DEFAULT_MANUAL_TIMEOUT_MILLIS
     ): RealGemmaPreloadResult {
+        if (lifecyclePolicy.finalRecordingUi) {
+            SmritiLatencyLogger.mark("realGemmaPreloadSkipped finalRecordingUi=true")
+            return RealGemmaPreloadResult.Unavailable("Manual LiteRT-LM preload skipped for final recording UI stability.")
+        }
         val lease = RealGemmaInferenceGate.tryAcquire(
             RealGemmaRequestType.PRELOAD,
             requestDiagnostics(RealGemmaRequestType.PRELOAD)
@@ -181,9 +215,23 @@ class LiteRtGemmaTextClient(
     fun interface ManualTextInferenceRunner {
         fun generateText(engineConfig: EngineConfig, prompt: String): String
 
+        fun generateText(
+            engineConfig: EngineConfig,
+            prompt: String,
+            requestType: RealGemmaRequestType,
+            freshConversation: Boolean,
+            recycleEngineAfterRequest: Boolean
+        ): String {
+            return generateText(engineConfig, prompt)
+        }
+
         fun preload(engineConfig: EngineConfig) {
             // Default test runners can remain generation-only.
         }
+
+        fun engineState(): String = "external_runner"
+
+        fun requestCountSinceEngineInit(): Int = 0
     }
 
     private object RealManualTextInferenceRunner : ManualTextInferenceRunner {
@@ -191,6 +239,7 @@ class LiteRtGemmaTextClient(
         private var cachedConversation: Conversation? = null
         private var cachedConfigKey: String? = null
         private var failedReason: String? = null
+        private var requestCountSinceEngineInit: Int = 0
 
         @Synchronized
         override fun preload(engineConfig: EngineConfig) {
@@ -199,9 +248,48 @@ class LiteRtGemmaTextClient(
 
         @Synchronized
         override fun generateText(engineConfig: EngineConfig, prompt: String): String {
-            val conversation = ensureConversation(engineConfig)
+            return generateText(
+                engineConfig = engineConfig,
+                prompt = prompt,
+                requestType = RealGemmaRequestType.MANUAL_TEST,
+                freshConversation = false,
+                recycleEngineAfterRequest = false
+            )
+        }
+
+        @Synchronized
+        override fun generateText(
+            engineConfig: EngineConfig,
+            prompt: String,
+            requestType: RealGemmaRequestType,
+            freshConversation: Boolean,
+            recycleEngineAfterRequest: Boolean
+        ): String {
             return try {
-                conversation.sendMessage(prompt).extractText()
+                val text = if (freshConversation) {
+                    closeCachedConversationOnly()
+                    val engine = ensureEngine(engineConfig)
+                    requestCountSinceEngineInit += 1
+                    SmritiLatencyLogger.mark(
+                        "realGemmaLifecycle requestType=$requestType; freshConversation=true; " +
+                            "requestCountSinceEngineInit=$requestCountSinceEngineInit"
+                    )
+                    engine.createConversation().use { conversation ->
+                        conversation.sendMessage(prompt).extractText()
+                    }
+                } else {
+                    val conversation = ensureConversation(engineConfig)
+                    requestCountSinceEngineInit += 1
+                    SmritiLatencyLogger.mark(
+                        "realGemmaLifecycle requestType=$requestType; freshConversation=false; " +
+                            "requestCountSinceEngineInit=$requestCountSinceEngineInit"
+                    )
+                    conversation.sendMessage(prompt).extractText()
+                }
+                if (recycleEngineAfterRequest) {
+                    closeCached()
+                }
+                text
             } catch (error: Throwable) {
                 failedReason = error.message ?: error::class.java.simpleName
                 closeCached()
@@ -209,32 +297,67 @@ class LiteRtGemmaTextClient(
             }
         }
 
-        private fun ensureConversation(engineConfig: EngineConfig): Conversation {
+        private fun ensureEngine(engineConfig: EngineConfig): Engine {
             failedReason?.let { reason ->
                 error("LiteRT-LM engine session is marked failed after native call error: $reason. Relaunch the app or explicitly reset the engine before retrying.")
             }
             val configKey = "${engineConfig.modelPath}|${engineConfig.backend.name}"
-            val existing = cachedConversation
+            val existing = cachedEngine
             if (existing != null && cachedConfigKey == configKey) {
                 return existing
             }
 
             closeCached()
-            val engine = Engine(engineConfig)
-            engine.initialize()
+            SmritiLatencyLogger.mark(
+                "realGemmaLifecycle engineInitStart; backendMode=${engineConfig.backend.name}; " +
+                    "modelPath=${engineConfig.modelPath}"
+            )
+            return try {
+                val engine = Engine(engineConfig)
+                engine.initialize()
+                cachedEngine = engine
+                cachedConfigKey = configKey
+                requestCountSinceEngineInit = 0
+                SmritiLatencyLogger.mark(
+                    "realGemmaLifecycle engineInitSuccess; backendMode=${engineConfig.backend.name}; " +
+                        "requestCountSinceEngineInit=$requestCountSinceEngineInit"
+                )
+                engine
+            } catch (error: Throwable) {
+                val reason = error.message ?: error::class.java.simpleName
+                failedReason = reason
+                closeCached()
+                SmritiLatencyLogger.mark("realGemmaLifecycle engineInitFailure message=${reason.take(160)}")
+                throw error
+            }
+        }
+
+        private fun ensureConversation(engineConfig: EngineConfig): Conversation {
+            val configKey = "${engineConfig.modelPath}|${engineConfig.backend.name}"
+            val engine = ensureEngine(engineConfig)
+            val existing = cachedConversation
+            if (existing != null && cachedConfigKey == configKey) {
+                return existing
+            }
+
+            closeCachedConversationOnly()
             val conversation = engine.createConversation()
-            cachedEngine = engine
             cachedConversation = conversation
-            cachedConfigKey = configKey
             return conversation
         }
 
-        private fun closeCached() {
+        private fun closeCachedConversationOnly() {
             runCatching { cachedConversation?.close() }
+            cachedConversation = null
+        }
+
+        private fun closeCached() {
+            closeCachedConversationOnly()
             runCatching { cachedEngine?.close() }
             cachedConversation = null
             cachedEngine = null
             cachedConfigKey = null
+            requestCountSinceEngineInit = 0
         }
 
         private fun com.google.ai.edge.litertlm.Message.extractText(): String {
@@ -248,7 +371,7 @@ class LiteRtGemmaTextClient(
             return text
         }
 
-        fun engineState(): String {
+        override fun engineState(): String {
             val failure = failedReason
             return when {
                 failure != null -> "failed: $failure"
@@ -257,6 +380,8 @@ class LiteRtGemmaTextClient(
                 else -> "not_loaded"
             }
         }
+
+        override fun requestCountSinceEngineInit(): Int = requestCountSinceEngineInit
     }
 
     companion object {

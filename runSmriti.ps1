@@ -36,6 +36,7 @@ $gradleProps = @("-Psmriti.realGemmaSubmissionMode=true")
 if ($FinalUi) {
     Write-Host "Final recording UI enabled: demo-only controls will be hidden."
     $gradleProps += "-Psmriti.finalRecordingUi=true"
+    $gradleProps += "-Psmriti.recycleRealGemmaEngineAfterVisitNote=true"
 }
 .\gradlew.bat assembleDebug @gradleProps
 

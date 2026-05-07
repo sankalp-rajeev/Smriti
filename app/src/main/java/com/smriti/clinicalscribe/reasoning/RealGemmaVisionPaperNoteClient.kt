@@ -44,6 +44,12 @@ class RealGemmaVisionPaperNoteClient(
             maxNumImages = 1,
             cacheDir = cacheDirPath
         )
+        SmritiLatencyLogger.mark(
+            "realGemmaLifecycle requestType=${RealGemmaRequestType.PAPER_NOTE_SCAN}; " +
+                "modelExists=true; modelSizeBytes=${modelStatus.fileSizeBytes}; " +
+                "backendMode=${prepared.backendLabel}; vision=CPU; freshConversation=true; " +
+                "engineRecycledAfterRequest=true; engineStateBefore=vision_new_engine"
+        )
         val lease = RealGemmaInferenceGate.tryAcquire(
             requestType = RealGemmaRequestType.PAPER_NOTE_SCAN,
             diagnostics = RealGemmaRequestDiagnostics(
@@ -62,6 +68,10 @@ class RealGemmaVisionPaperNoteClient(
                     runner.generate(visionConfig, prompt, imageBytes)
                 }
             }
+            SmritiLatencyLogger.mark(
+                "realGemmaLifecycle requestType=${RealGemmaRequestType.PAPER_NOTE_SCAN}; " +
+                    "engineStateAfter=vision_engine_closed; engineRecycledAfterRequest=true"
+            )
             if (raw.isBlank()) {
                 PaperNoteVisionGenerationResult.Failed("Local Gemma vision returned no text.")
             } else {
@@ -91,8 +101,28 @@ class RealGemmaVisionPaperNoteClient(
     private object RealVisionInferenceRunner : VisionInferenceRunner {
         override fun generate(engineConfig: EngineConfig, prompt: String, imageBytes: ByteArray): String {
             Engine(engineConfig).use { engine ->
-                engine.initialize()
+                SmritiLatencyLogger.mark(
+                    "realGemmaLifecycle engineInitStart; requestType=${RealGemmaRequestType.PAPER_NOTE_SCAN}; " +
+                        "backendMode=${engineConfig.backend.name}; modelPath=${engineConfig.modelPath}"
+                )
+                try {
+                    engine.initialize()
+                    SmritiLatencyLogger.mark(
+                        "realGemmaLifecycle engineInitSuccess; requestType=${RealGemmaRequestType.PAPER_NOTE_SCAN}; " +
+                            "freshConversation=true; requestCountSinceEngineInit=0"
+                    )
+                } catch (error: Throwable) {
+                    SmritiLatencyLogger.mark(
+                        "realGemmaLifecycle engineInitFailure; requestType=${RealGemmaRequestType.PAPER_NOTE_SCAN}; " +
+                            "message=${(error.message ?: error::class.java.simpleName).take(160)}"
+                    )
+                    throw error
+                }
                 engine.createConversation().use { conversation ->
+                    SmritiLatencyLogger.mark(
+                        "realGemmaLifecycle requestType=${RealGemmaRequestType.PAPER_NOTE_SCAN}; " +
+                            "freshConversation=true; requestCountSinceEngineInit=1"
+                    )
                     val response = conversation.sendMessage(
                         Contents.Companion.of(
                             Content.Text(prompt),

@@ -236,6 +236,98 @@ class LiteRtGemmaTextClientTest {
     }
 
     @Test
+    fun visitNoteUsesFreshConversationByDefaultWithoutEngineRecycle() = runBlocking {
+        val runner = RecordingRunner()
+        val client = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = runner
+        )
+
+        val result = client.generateTextManual(
+            prompt = "Visit note prompt",
+            allowManualTextInference = true,
+            requestType = RealGemmaRequestType.VISIT_NOTE
+        )
+
+        assertEquals(TextGenerationResult.Success("generated text"), result)
+        assertEquals(RealGemmaRequestType.VISIT_NOTE, runner.requestType)
+        assertTrue(runner.freshConversation)
+        assertFalse(runner.recycleEngineAfterRequest)
+    }
+
+    @Test
+    fun finalRecordingLifecycleRecyclesEngineAfterVisitNote() = runBlocking {
+        val runner = RecordingRunner()
+        val client = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = runner,
+            lifecyclePolicy = RealGemmaLifecyclePolicy(
+                finalRecordingUi = true,
+                freshConversationForVisitNote = true,
+                recycleEngineAfterVisitNote = true
+            )
+        )
+
+        val result = client.generateTextManual(
+            prompt = "Visit note prompt",
+            allowManualTextInference = true,
+            requestType = RealGemmaRequestType.VISIT_NOTE
+        )
+
+        assertEquals(TextGenerationResult.Success("generated text"), result)
+        assertTrue(runner.freshConversation)
+        assertTrue(runner.recycleEngineAfterRequest)
+    }
+
+    @Test
+    fun finalRecordingLifecycleDoesNotRecycleSupervisorOrManualRequests() = runBlocking {
+        val runner = RecordingRunner()
+        val client = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = runner,
+            lifecyclePolicy = RealGemmaLifecyclePolicy(
+                finalRecordingUi = true,
+                freshConversationForVisitNote = true,
+                recycleEngineAfterVisitNote = true
+            )
+        )
+
+        val result = client.generateTextManual(
+            prompt = "Manual prompt",
+            allowManualTextInference = true,
+            requestType = RealGemmaRequestType.MANUAL_TEST
+        )
+
+        assertEquals(TextGenerationResult.Success("generated text"), result)
+        assertFalse(runner.freshConversation)
+        assertFalse(runner.recycleEngineAfterRequest)
+    }
+
+    @Test
+    fun finalRecordingPreloadIsSkippedForStability() = runBlocking {
+        var preloadCalled = false
+        val client = LiteRtGemmaTextClient(
+            modelStatus = foundModelStatus(),
+            manualInferenceRunner = object : LiteRtGemmaTextClient.ManualTextInferenceRunner {
+                override fun generateText(
+                    engineConfig: com.google.ai.edge.litertlm.EngineConfig,
+                    prompt: String
+                ): String = "generated text"
+
+                override fun preload(engineConfig: com.google.ai.edge.litertlm.EngineConfig) {
+                    preloadCalled = true
+                }
+            },
+            lifecyclePolicy = RealGemmaLifecyclePolicy(finalRecordingUi = true)
+        )
+
+        val result = client.preloadManual(allowManualTextInference = true)
+
+        assertTrue(result is RealGemmaPreloadResult.Unavailable)
+        assertFalse(preloadCalled)
+    }
+
+    @Test
     fun experimentalGpuBackendConfigIsOptInOnly() = runBlocking {
         val defaultClient = LiteRtGemmaTextClient(
             modelStatus = foundModelStatus(),
@@ -363,5 +455,32 @@ class LiteRtGemmaTextClientTest {
             engineState = "test",
             lastEngineFailure = null
         )
+    }
+
+    private class RecordingRunner : LiteRtGemmaTextClient.ManualTextInferenceRunner {
+        var requestType: RealGemmaRequestType? = null
+            private set
+        var freshConversation: Boolean = false
+            private set
+        var recycleEngineAfterRequest: Boolean = false
+            private set
+
+        override fun generateText(
+            engineConfig: com.google.ai.edge.litertlm.EngineConfig,
+            prompt: String
+        ): String = "generated text"
+
+        override fun generateText(
+            engineConfig: com.google.ai.edge.litertlm.EngineConfig,
+            prompt: String,
+            requestType: RealGemmaRequestType,
+            freshConversation: Boolean,
+            recycleEngineAfterRequest: Boolean
+        ): String {
+            this.requestType = requestType
+            this.freshConversation = freshConversation
+            this.recycleEngineAfterRequest = recycleEngineAfterRequest
+            return "generated text"
+        }
     }
 }
