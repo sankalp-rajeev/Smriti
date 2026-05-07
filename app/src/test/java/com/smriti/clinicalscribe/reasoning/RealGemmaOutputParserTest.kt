@@ -146,6 +146,23 @@ class RealGemmaOutputParserTest {
     }
 
     @Test
+    fun referralOutputWithoutCitationStillRejectedEvenWhenDangerSignsAreClear() {
+        val noCitation = validCurrentJson(
+            summary = "Severe headache, blurred vision, BP 150/95, and reduced fetal movement noted.",
+            referralReason = "Danger signs in pregnancy need same-day referral support."
+        ).replace("\"citations\":[\"${protocol.citation}\"]", "\"citations\":[]")
+
+        val result = parser.parseVisitReasoning(
+            rawOutput = noCitation,
+            patient = patient,
+            originalObservationText = "तेज़ सिर दर्द, धुंधला दिख रहा है, BP 150/95, बच्चे की हलचल कम.",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertRejected(result, "Referral output must include")
+    }
+
+    @Test
     fun currentSchemaDiagnosticLanguageIsRejected() {
         val unsafe = validCurrentJson(
             summary = "Patient has preeclampsia.",

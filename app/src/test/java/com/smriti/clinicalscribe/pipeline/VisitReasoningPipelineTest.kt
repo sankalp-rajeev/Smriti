@@ -1,6 +1,7 @@
 package com.smriti.clinicalscribe.pipeline
 
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.DemoSeedData
 import com.smriti.clinicalscribe.data.ReferralFlag
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.rag.ProtocolChunk
@@ -203,6 +204,32 @@ class VisitReasoningPipelineTest {
 
         assertEquals(listOf(headacheChunk), result.protocolChunks)
         assertEquals(listOf(headacheChunk), agent.protocolChunks)
+    }
+
+    @Test
+    fun multilingualExpansionRetrievesProtocolsWithoutChangingObservationText() = runBlocking {
+        val meena = DemoSeedData.patients.first { it.id == "patient-meena" }
+        val hindiTranscript = "तेज़ सिर दर्द, धुंधला दिख रहा है, BP 150/95, बच्चे की हलचल कम."
+        val agent = CapturingGemmaAgent()
+        val pipeline = VisitReasoningPipeline(
+            protocolRetriever = ProtocolRetriever.fromJson(assetCorpusJson()),
+            gemmaAgent = agent,
+            speechToTextClient = SimulatedTranscriptClient()
+        )
+
+        val result = pipeline.process(
+            VisitPipelineInput(
+                patient = meena,
+                priorVisits = emptyList(),
+                transcriptText = hindiTranscript,
+                protocolContext = meena.protocolContext()
+            )
+        )
+
+        assertEquals(hindiTranscript, result.transcriptText)
+        assertEquals(hindiTranscript, agent.observationText)
+        assertTrue(result.protocolChunks.any { it.citation == "Smriti Demo Maternal Health Protocol Danger Signs 1.1" })
+        assertTrue(agent.protocolChunks.any { it.id == "mh_high_blood_pressure" })
     }
 
     @Test

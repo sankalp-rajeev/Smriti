@@ -46,6 +46,90 @@ class ProtocolRetrieverTest {
     }
 
     @Test
+    fun hindiDangerSignInputRetrievesDangerSignProtocolAfterLocalExpansion() {
+        val expanded = MultilingualProtocolQueryExpander.expandForProtocolRetrieval(
+            rawText = "तेज़ सिर दर्द, धुंधला दिख रहा है, BP 150/95, बच्चे की हलचल कम.",
+            preferredLanguage = "hi"
+        )
+
+        val results = retriever.retrieve(
+            query = expanded,
+            context = ProtocolRetrievalContext(countryCode = "IN", region = "INDIA")
+        )
+
+        assertTrue(expanded.contains("severe headache headache danger sign"))
+        assertTrue(expanded.contains("blurred vision visual symptoms danger sign"))
+        assertTrue(expanded.contains("high blood pressure hypertension ANC danger signs referral"))
+        assertTrue(expanded.contains("reduced fetal movement pregnancy danger sign referral"))
+        assertTrue(results.any { it.citation == "Smriti Demo Maternal Health Protocol Danger Signs 1.1" })
+        assertTrue(results.any { it.id == "mh_high_blood_pressure" })
+        assertTrue(results.any { it.id == "mh_reduced_fetal_movement" })
+    }
+
+    @Test
+    fun spanishDangerSignInputRetrievesDangerSignProtocolAfterLocalExpansion() {
+        val lucia = DemoSeedData.patients.first { it.id == "patient-lucia" }
+        val expanded = MultilingualProtocolQueryExpander.expandForProtocolRetrieval(
+            rawText = "Dolor de cabeza fuerte, visión borrosa, PA 150/95 y menos movimiento del bebé.",
+            preferredLanguage = lucia.preferredLanguage
+        )
+
+        val results = retriever.retrieve(query = expanded, context = lucia.protocolContext())
+
+        assertTrue(expanded.contains("severe headache headache danger sign"))
+        assertTrue(expanded.contains("blurred vision visual symptoms danger sign"))
+        assertTrue(expanded.contains("high blood pressure hypertension ANC danger signs referral"))
+        assertTrue(results.any { it.referralLevel == "SAME_DAY" && it.citation.contains("danger", ignoreCase = true) })
+    }
+
+    @Test
+    fun swahiliDangerSignInputRetrievesDangerSignProtocolAfterLocalExpansion() {
+        val grace = DemoSeedData.patients.first { it.id == "patient-grace" }
+        val expanded = MultilingualProtocolQueryExpander.expandForProtocolRetrieval(
+            rawText = "Maumivu makali ya kichwa, kuona ukungu, BP 150/95, harakati za mtoto zimepungua.",
+            preferredLanguage = grace.preferredLanguage
+        )
+
+        val results = retriever.retrieve(query = expanded, context = grace.protocolContext())
+
+        assertTrue(expanded.contains("severe headache headache danger sign"))
+        assertTrue(expanded.contains("blurred vision visual symptoms danger sign"))
+        assertTrue(expanded.contains("reduced fetal movement pregnancy danger sign referral"))
+        assertTrue(results.any { it.referralLevel == "SAME_DAY" && it.citation.contains("danger", ignoreCase = true) })
+    }
+
+    @Test
+    fun routineSpanishInputWithNormalBpDoesNotTriggerDangerSignRetrieval() {
+        val lucia = DemoSeedData.patients.first { it.id == "patient-lucia" }
+        val raw = "Visita rutinaria de ANC. Presión arterial 120/80. Come bien y no tiene quejas."
+        val expanded = MultilingualProtocolQueryExpander.expandForProtocolRetrieval(
+            rawText = raw,
+            preferredLanguage = lucia.preferredLanguage
+        )
+
+        val results = retriever.retrieve(query = expanded, context = lucia.protocolContext())
+
+        assertEquals(raw, expanded)
+        assertTrue(results.isEmpty())
+    }
+
+    @Test
+    fun englishMeenaSampleStillRetrievesSameDangerSignCitation() {
+        val meena = DemoSeedData.patients.first { it.id == "patient-meena" }
+        val raw = "Meena reports severe headache and blurred vision today. BP is 150/95. She says fetal movement is reduced."
+        val expanded = MultilingualProtocolQueryExpander.expandForProtocolRetrieval(
+            rawText = raw,
+            preferredLanguage = meena.preferredLanguage
+        )
+
+        val results = retriever.retrieve(query = expanded, context = meena.protocolContext())
+
+        assertTrue(results.any { it.citation == "Smriti Demo Maternal Health Protocol Danger Signs 1.1" })
+        assertTrue(results.any { it.id == "mh_blurred_vision" })
+        assertTrue(results.any { it.id == "mh_high_blood_pressure" })
+    }
+
+    @Test
     fun returnsNoHallucinatedProtocolForUnrelatedQuery() {
         val results = retriever.retrieve("Broken water pump near the school needs repair")
 
