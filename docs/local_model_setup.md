@@ -339,6 +339,24 @@ View the manual audio inference output:
 adb logcat -s SmritiLiteRtAudioInference:I "*:S"
 ```
 
+## Manual Audio Transcript Probe (Phase 6)
+
+Phase 6 transcript-extraction probe, updated for LiteRT-LM 0.11.0. Sets `audioBackend = Backend.CPU()` in the EngineConfig (new in 0.11.0, was absent in 0.10.2) and prioritises Route 2 (Conversation+AudioBytes with raw WAV bytes) first. Also tries Conversation+AudioFile, Session+InputData.Audio, and WAV PCM-only extraction. If any route succeeds, the transcript preview is logged. If all routes are blocked, the test skips and logs the blocker. The probe does not write to Room, invoke the visit reasoning pipeline, or change any default app behavior.
+
+Current status: probe updated for 0.11.0 with `audioBackend`. Runtime probe pending on-device execution. If the runtime still blocks, audio is permanently closed for this submission.
+
+Run only the Phase 6 audio transcript probe:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaAudioTranscriptInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualAudioInference=true" "-Pandroid.testInstrumentationRunnerArguments.manualAudioFilePath=/data/local/tmp/manual-smriti-audio.wav"
+```
+
+View the Phase 6 audio transcript output:
+
+```powershell
+adb logcat -s SmritiGemmaAudioTranscript:I "*:S"
+```
+
 ## Manual Vision Probe
 
 Current status: the `litertlm-android-0.10.2` AAR/classes.jar exposes `Content.ImageBytes`, `Content.ImageFile`, `InputData.Image`, `EngineConfig.visionBackend`, and `EngineConfig.maxNumImages`, but no public prompt-template, media-placeholder, multimodal-template, image-preprocessor, or `preprocess(...)` API was found. The manual probe passed on emulator with a sideloaded app-private model: the engine accepted `Conversation` image input and local Gemma 4 vision extracted structured JSON from the synthetic paper note.

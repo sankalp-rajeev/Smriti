@@ -69,7 +69,7 @@ class ManualLiteRtAudioInferenceInstrumentedTest {
             ?: tryGenerateRawAudioWithSession(prepared, audioBytes)
             ?: run {
                 val blocker = "Audio runtime blocked: LiteRT-LM requires preprocessing, " +
-                    "but preprocessing API was not found/wired in litertlm-android 0.10.2."
+                    "but preprocessing API was not found/wired in litertlm-android 0.11.0."
                 Log.w(TAG, blocker)
                 Log.w(
                     TAG,

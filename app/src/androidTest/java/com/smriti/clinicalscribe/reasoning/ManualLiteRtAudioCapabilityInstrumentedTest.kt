@@ -33,7 +33,7 @@ class ManualLiteRtAudioCapabilityInstrumentedTest {
         Log.i(TAG, "Content.AudioFile API available: path=${audioFileContent.absolutePath}")
         Log.i(TAG, "InputData.Audio API available: bytes=${audioInputData.bytes.size}")
         Log.i(TAG, "InputData.Text API available: textLength=${textInputData.text.length}")
-        Log.i(TAG, "Audio API finding: LiteRT-LM Android 0.10.2 exposes audio content/input classes.")
+        Log.i(TAG, "Audio API finding: LiteRT-LM Android 0.11.0 exposes audio content/input classes.")
         LiteRtApiSurfaceProbe().audioPreprocessingFindings.forEach { finding ->
             Log.i(TAG, "Audio preprocessing API finding: $finding")
         }

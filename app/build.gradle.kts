@@ -89,7 +89,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     implementation("androidx.room:room-ktx:2.8.4")
     implementation("androidx.room:room-runtime:2.8.4")
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.10.2")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.11.0")
 
     ksp("androidx.room:room-compiler:2.8.4")
 

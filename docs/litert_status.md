@@ -1,11 +1,11 @@
-﻿# LiteRT-LM Status
+# LiteRT-LM Status
 
 This document is the current judge-facing status of Smriti's LiteRT-LM integration.
 
 ## Current State
 
 - LiteRT-LM dependency is pinned in `app/build.gradle.kts`:
-  `com.google.ai.edge.litertlm:litertlm-android:0.10.2`
+  `com.google.ai.edge.litertlm:litertlm-android:0.11.0`
 - Room annotation processing uses KSP `2.3.7`; KAPT is no longer applied in the app module.
 - `RealGemmaAgent` is the app-facing reasoning engine.
 - If RealGemma setup is missing or inference fails, the UI shows setup/retry messaging instead of mock output.
@@ -14,7 +14,7 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
 - If the model is absent, Offline Proof says `Real Gemma model: Not found`.
 - If a model is present, Offline Proof says `Real Gemma model: Found`, `Engine: Loads on demand`, and `Inference: Enabled; on-device RealGemma text reasoning` when gates are active. After a successful generation in the app session, engine status can show `Loaded`.
 - Direct LiteRT-LM API types now compile through a passive type probe:
-  `Engine`, `EngineConfig`, `Backend`, `Content.Text`, `Content.ImageBytes`, `Content.ImageFile`, `Content.AudioBytes`, `Content.AudioFile`, `InputData.Image`, `InputData.Audio`, `Conversation`, `ConversationConfig`, `ToolCall`, and `OpenApiTool`.
+  `Engine`, `EngineConfig`, `Backend`, `Content.Text`, `Content.ImageBytes`, `Content.ImageFile`, `Content.AudioBytes`, `Content.AudioFile`, `InputData.Image`, `InputData.Audio`, `Conversation`, `ConversationConfig`, `ToolCall`, `OpenApiTool`, `SamplerConfig`, `SessionConfig`, `Capabilities`, and `ExperimentalFlags`.
 - `LiteRtEngineConfigFactory` defaults to a real `EngineConfig` with `Backend.CPU()` when the model file is found.
 - `LiteRtEngineInitializationChecker` can initialize and immediately close `Engine` only when an explicit manual-test flag is true.
 - `LiteRtGemmaTextClient.generateTextManual(...)` can run one text-only `sendMessage` call only when an explicit manual inference flag is true.
@@ -65,29 +65,32 @@ This is manual-only and does not write outputs to Room.
 
 ## Audio API Status
 
-LiteRT-LM Android `0.10.2` exposes audio-capable classes:
+LiteRT-LM Android `0.11.0` exposes audio-capable classes:
 
 - `Content.AudioBytes`
 - `Content.AudioFile`
 - `InputData.Audio`
 - `Session.generateContent(...)` over `InputData`
 - `Conversation.sendMessage(Contents)` with `Content.AudioFile` / `Content.AudioBytes`
+- `EngineConfig.audioBackend` — **new in 0.11.0** (was absent in 0.10.2)
 
 Smriti added `ManualLiteRtAudioCapabilityInstrumentedTest` to log this API surface. It does not claim Gemma 4 E2B transcription quality by itself.
 
-Audio preprocessing investigation for the local `litertlm-android-0.10.2` AAR found no public class or method named like `AudioPreprocessor`, `AudioProcessor`, `Preprocessor`, or `preprocess(...)` in `classes.jar`. The public audio holders are raw containers. The current Kotlin API path also does not expose prompt-template customization needed for multimodal placeholder injection. The runtime raw-audio attempt failed with:
+Audio preprocessing investigation for the local `litertlm-android-0.11.0` AAR found no public class or method named like `AudioPreprocessor`, `AudioProcessor`, `Preprocessor`, or `preprocess(...)` in `classes.jar`. However, `EngineConfig.audioBackend` is now a public field, and `ExperimentalFlags.overwritePromptTemplate` is also available. The runtime raw-audio attempt with 0.10.2 previously failed with:
 
 ```text
 LiteRtLmJniException: Failed to generate content: INTERNAL: Audio must be preprocessed before being used in SessionAdvanced.
 ```
 
-`ManualLiteRtAudioInferenceInstrumentedTest` is the separate real-audio manual harness. It requires `allowManualAudioInference=true`, `manualAudioFilePath=/data/local/tmp/manual-smriti-audio.wav`, and the sideloaded app-private Gemma model. It now tries the `Conversation.sendMessage(Contents.of(Content.Text(...), Content.AudioFile(...)))` route first, then the raw `Session.generateContent(InputData.Text(...), InputData.Audio(...))` route. If both routes hit the preprocessing requirement, the test logs and skips as blocked instead of claiming transcription works.
+`ManualLiteRtAudioInferenceInstrumentedTest` is the separate real-audio manual harness. It requires `allowManualAudioInference=true`, `manualAudioFilePath=/data/local/tmp/manual-smriti-audio.wav`, and the sideloaded app-private Gemma model. It tries the `Conversation.sendMessage(Contents.of(Content.Text(...), Content.AudioFile(...)))` route first, then the raw `Session.generateContent(InputData.Text(...), InputData.Audio(...))` route.
 
-Current audio status: API surface available, real raw-audio runtime blocked until a public/wired LiteRT-LM audio preprocessing and prompt-template path is identified. Direct Gemma 4 audio transcription is therefore blocked by the current public Gemma 4 LiteRT-LM Android/Kotlin artifact/API limitations, not enabled in the normal app flow, and not claimed as working.
+`ManualRealGemmaAudioTranscriptInstrumentedTest` is the Phase 6 transcript-extraction probe, updated for 0.11.0. It now sets `audioBackend = Backend.CPU()` in the EngineConfig and prioritises Route 2 (Conversation+AudioBytes with raw WAV bytes) first, followed by Conversation+AudioFile, Session+InputData.Audio, and WAV PCM-only extraction. It requires `allowManualAudioInference=true`, `manualAudioFilePath=/data/local/tmp/manual-smriti-audio.wav`, and the sideloaded app-private Gemma model. If any route succeeds, it logs a transcript preview under `SmritiGemmaAudioTranscript`. If all routes are blocked, it logs the blocker and skips. The probe does not write to Room, invoke the visit reasoning pipeline, or change any default app behavior.
+
+Current audio status: `EngineConfig.audioBackend` is available in 0.11.0. Phase 6 audio transcript probe updated to use it. Runtime probe pending on-device execution. No public `AudioPreprocessor` class found. If the runtime still blocks, audio is permanently closed for this submission.
 
 ## Vision API Status
 
-LiteRT-LM Android `0.10.2` exposes image-capable classes and config fields:
+LiteRT-LM Android `0.11.0` exposes image-capable classes and config fields:
 
 - `Content.ImageBytes`
 - `Content.ImageFile`

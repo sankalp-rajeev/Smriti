@@ -2,19 +2,19 @@
 
 ## Direct Gemma 4 Audio
 
-Direct Gemma 4 audio transcription is not enabled in the normal app flow. LiteRT-LM Android `0.10.2` exposes audio container classes, but the manual runtime path hit:
+Direct Gemma 4 audio transcription is not enabled in the normal app flow. LiteRT-LM Android `0.10.2` exposed audio container classes but the manual runtime path hit:
 
 ```text
 Audio must be preprocessed before being used in SessionAdvanced.
 ```
 
-No public audio preprocessing API was found in the local AAR inspection. The current Phase 2 voice path is therefore editable transcript plus Android offline speech fallback, not direct Gemma audio.
+**0.11.0 update:** `EngineConfig.audioBackend` is now a public field (was absent in 0.10.2). `ExperimentalFlags.overwritePromptTemplate` is also available. No public `AudioPreprocessor` class was found in the 0.11.0 AAR inspection. The Phase 6 audio transcript probe has been updated to set `audioBackend = Backend.CPU()` and prioritise Route 2 (Conversation+AudioBytes). Runtime probe is pending on-device execution.
 
-The current Kotlin API path also does not expose prompt-template customization needed for multimodal placeholder injection. Direct Gemma 4 audio through the public LiteRT-LM Android/Kotlin path remains blocked by upstream artifact/API limits.
+Phase 6 `ManualRealGemmaAudioTranscriptInstrumentedTest` tries four routes (Conversation+AudioBytes, Conversation+AudioFile, Session+InputData.Audio, WAV PCM extraction) with `audioBackend = Backend.CPU()`. If the runtime still blocks, audio is permanently closed for this submission and the safe product path remains: local audio → Android offline speech / manual transcript → editable field → existing text reasoning pipeline → CHW review/save.
 
 ## Gemma 4 Vision Scope
 
-The Phase H API surface check inspected the local `litertlm-android-0.10.2` AAR/classes.jar and found:
+The Phase H API surface check inspected the local `litertlm-android-0.11.0` AAR/classes.jar and found:
 
 - `Content.ImageBytes`
 - `Content.ImageFile`

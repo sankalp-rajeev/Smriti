@@ -1,13 +1,17 @@
 package com.smriti.clinicalscribe.reasoning
 
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Capabilities
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.ExperimentalFlags
 import com.google.ai.edge.litertlm.InputData
 import com.google.ai.edge.litertlm.OpenApiTool
+import com.google.ai.edge.litertlm.SamplerConfig
+import com.google.ai.edge.litertlm.SessionConfig
 import com.google.ai.edge.litertlm.ToolCall
 
 /**
@@ -28,7 +32,10 @@ data class LiteRtApiSurfaceProbe(
     val conversation: Conversation? = null,
     val conversationConfig: ConversationConfig? = null,
     val toolCall: ToolCall? = null,
-    val openApiTool: OpenApiTool? = null
+    val openApiTool: OpenApiTool? = null,
+    val samplerConfig: SamplerConfig? = null,
+    val sessionConfig: SessionConfig? = null,
+    val capabilities: Capabilities? = null
 ) {
     val verifiedTypeNames: List<String>
         get() = listOf(
@@ -45,7 +52,11 @@ data class LiteRtApiSurfaceProbe(
             "com.google.ai.edge.litertlm.Conversation",
             "com.google.ai.edge.litertlm.ConversationConfig",
             "com.google.ai.edge.litertlm.ToolCall",
-            "com.google.ai.edge.litertlm.OpenApiTool"
+            "com.google.ai.edge.litertlm.OpenApiTool",
+            "com.google.ai.edge.litertlm.SamplerConfig",
+            "com.google.ai.edge.litertlm.SessionConfig",
+            "com.google.ai.edge.litertlm.Capabilities",
+            "com.google.ai.edge.litertlm.ExperimentalFlags"
         )
 
     val audioPreprocessingFindings: List<String>
@@ -53,7 +64,9 @@ data class LiteRtApiSurfaceProbe(
             "Session.generateContent(List<InputData>) is public.",
             "Conversation.sendMessage(Contents) is public and accepts Content.AudioFile/AudioBytes through Contents.",
             "InputData.Audio and Content.AudioBytes/AudioFile are public raw-audio containers.",
-            "No public AudioPreprocessor, AudioProcessor, Preprocessor, or preprocess(...) API was found in litertlm-android 0.10.2 classes.jar.",
+            "EngineConfig.audioBackend is now available in litertlm-android 0.11.0 (was absent in 0.10.2).",
+            "No public AudioPreprocessor, AudioProcessor, Preprocessor, or preprocess(...) API was found in litertlm-android 0.11.0 classes.jar.",
+            "ExperimentalFlags.overwritePromptTemplate is available (may enable multimodal prompt customization).",
             "Runtime raw InputData.Audio may fail with: Audio must be preprocessed before being used in SessionAdvanced."
         )
 
@@ -64,7 +77,8 @@ data class LiteRtApiSurfaceProbe(
             "EngineConfig exposes visionBackend and maxNumImages.",
             "Session.generateContent(List<InputData>) is public.",
             "Conversation.sendMessage(Contents) is public and accepts Content.ImageBytes/ImageFile through Contents.",
-            "No public PromptTemplate, MediaPlaceholder, MultiModalTemplate, ImagePreprocessor, or preprocess(...) API was found in litertlm-android 0.10.2 classes.jar.",
+            "No public PromptTemplate, MediaPlaceholder, MultiModalTemplate, ImagePreprocessor, or preprocess(...) API was found in litertlm-android 0.11.0 classes.jar.",
+            "ExperimentalFlags.overwritePromptTemplate is available (may enable multimodal prompt customization).",
             "Manual runtime probing is required before claiming a usable Gemma 4 vision path."
         )
 }
