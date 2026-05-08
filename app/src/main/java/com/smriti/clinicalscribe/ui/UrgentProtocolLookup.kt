@@ -46,7 +46,7 @@ object UrgentProtocolLookupBuilder {
         return UrgentProtocolLookupResult(
             observedSigns = selectedSigns.map { it.label },
             freeText = freeText.trim(),
-            contextLabel = patient?.protocolContextLabel() ?: "Global local guidance",
+            contextLabel = patient?.protocolContextLabel() ?: "Global guidance",
             guidanceChunk = guidance,
             urgentReviewMayBeNeeded = guidance?.let { isUrgentGuidance(it) } == true
         )

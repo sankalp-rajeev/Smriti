@@ -642,7 +642,7 @@ private fun SmritiApp(
                     is SmritiScreen.UrgentProtocolLookup -> {
                         UrgentProtocolLookupScreen(
                             patientName = screen.patient?.name,
-                            patientContextLabel = screen.patient?.protocolContextLabel() ?: "Global local guidance",
+                            patientContextLabel = screen.patient?.protocolContextLabel() ?: "Global guidance",
                             result = screen.result,
                             onLookup = { signs, freeText ->
                                 currentScreen = screen.copy(

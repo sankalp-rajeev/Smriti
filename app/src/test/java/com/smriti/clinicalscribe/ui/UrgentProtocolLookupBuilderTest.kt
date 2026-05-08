@@ -47,6 +47,7 @@ class UrgentProtocolLookupBuilderTest {
         assertEquals("exact_country", result.guidanceChunk?.id)
         assertTrue(result.urgentReviewMayBeNeeded)
         assertTrue(result.contextLabel.contains("India"))
+        assertTrue(result.contextLabel.contains("global fallback"))
     }
 
     @Test
@@ -60,7 +61,7 @@ class UrgentProtocolLookupBuilderTest {
 
         assertNotNull(result.guidanceChunk)
         assertEquals(ProtocolRegion.GLOBAL_CORE.name, result.guidanceChunk?.region)
-        assertEquals("Global local guidance", result.contextLabel)
+        assertEquals("Global guidance", result.contextLabel)
         assertTrue(result.guidanceChunk?.citation.orEmpty().contains("WHO"))
     }
 
@@ -91,6 +92,8 @@ class UrgentProtocolLookupBuilderTest {
         assertTrue(combined.contains("Urgent review may be needed"))
         assertTrue(combined.contains("This is not a diagnosis"))
         assertTrue(combined.contains("No visit, referral flag, or follow-up task is saved from this lookup."))
+        assertTrue(combined.contains("Contact supervisor or health facility."))
+        assertTrue(combined.contains("Do not delay urgent review when danger signs are present."))
         listOf(
             "diagnosed",
             "treatment",

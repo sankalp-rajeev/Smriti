@@ -30,8 +30,11 @@ data class Patient(
     }
 
     fun protocolContextLabel(): String {
-        val regionLabel = protocolRegion.ifBlank { "GLOBAL_CORE" }
         val countryLabel = country.ifBlank { countryCode.ifBlank { "Local" } }
-        return "$countryLabel / $regionLabel with GLOBAL_CORE fallback"
+        val region = protocolRegion.uppercase().trim()
+        return when {
+            region == "GLOBAL_CORE" || region.isBlank() -> "Global guidance"
+            else -> "$countryLabel guidance with global fallback"
+        }
     }
 }

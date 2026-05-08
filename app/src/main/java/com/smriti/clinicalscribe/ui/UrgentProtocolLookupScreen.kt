@@ -5,19 +5,23 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,11 +47,19 @@ fun UrgentProtocolLookupScreen(
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Urgent protocol lookup", style = MaterialTheme.typography.headlineSmall)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Urgent protocol lookup", style = MaterialTheme.typography.headlineSmall)
+                        TextButton(onClick = onBack) {
+                            Text("Back")
+                        }
+                    }
                     Text("Check urgent guidance from local health guidance.", style = MaterialTheme.typography.bodyLarge)
                     Text(patientName ?: "No patient selected", style = MaterialTheme.typography.bodyMedium)
                     Text(patientContextLabel, style = MaterialTheme.typography.bodyMedium)
-                    SmritiSecondaryButton("Back", onBack)
                 }
             }
 
@@ -69,7 +81,11 @@ fun UrgentProtocolLookupScreen(
                                         selectedSigns + sign
                                     }
                                 },
-                                label = { Text(sign.label) }
+                                label = { Text(sign.label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.errorContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onErrorContainer
+                                )
                             )
                         }
                     }
@@ -105,10 +121,10 @@ private fun LookupResultCard(result: UrgentProtocolLookupResult) {
         SmritiCard(tone = SmritiTone.Caution) {
             Text("No matching local guidance found", fontWeight = FontWeight.SemiBold)
             Text(
-                "Document the observation and contact a supervisor/health facility according to local practice.",
+                "Document the observation and contact a supervisor or health facility.",
                 style = MaterialTheme.typography.bodyLarge
             )
-            Text("This is not a diagnosis. Follow local program protocol and supervisor guidance.", style = MaterialTheme.typography.bodyMedium)
+            Text("This is not a diagnosis. Follow local protocol.", style = MaterialTheme.typography.bodyMedium)
         }
         return
     }
@@ -126,12 +142,11 @@ private fun LookupResultCard(result: UrgentProtocolLookupResult) {
         )
         Text(chunk.text, style = MaterialTheme.typography.bodyLarge)
         Text("Health guidance used: ${chunk.citation}", style = MaterialTheme.typography.bodyMedium)
-        Text("This is not a diagnosis. Follow local program protocol and supervisor guidance.", style = MaterialTheme.typography.bodyMedium)
+        Text("This is not a diagnosis. Follow local protocol and supervisor guidance.", style = MaterialTheme.typography.bodyMedium)
         SmritiSectionHeader("Next steps")
         Text("1. Document the observation.", style = MaterialTheme.typography.bodyMedium)
-        Text("2. Contact supervisor or health facility according to local protocol.", style = MaterialTheme.typography.bodyMedium)
-        Text("3. Do not delay urgent clinical review when danger signs are present.", style = MaterialTheme.typography.bodyMedium)
-        Text("4. Continue with visit note if appropriate.", style = MaterialTheme.typography.bodyMedium)
+        Text("2. Contact supervisor or health facility.", style = MaterialTheme.typography.bodyMedium)
+        Text("3. Do not delay urgent review when danger signs are present.", style = MaterialTheme.typography.bodyMedium)
         Text("No visit, referral flag, or follow-up task is saved from this lookup.", style = MaterialTheme.typography.bodyMedium)
     }
 }

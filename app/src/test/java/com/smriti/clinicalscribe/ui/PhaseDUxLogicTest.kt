@@ -234,7 +234,7 @@ class PhaseDUxLogicTest {
         assertTrue(screen.contains("Check urgent guidance from local health guidance."))
         assertTrue(screen.contains("Health guidance used"))
         assertTrue(screen.contains("Urgent review may be needed"))
-        assertTrue(screen.contains("Document the observation and contact a supervisor/health facility according to local practice."))
+        assertTrue(screen.contains("Document the observation and contact a supervisor or health facility."))
         assertTrue(screen.contains("This is not a diagnosis"))
         assertTrue(screen.contains("No visit, referral flag, or follow-up task is saved from this lookup."))
         listOf(
