@@ -47,6 +47,7 @@ fun PatientListScreen(
     onPatientSelected: (Patient) -> Unit,
     onAddPatient: () -> Unit,
     onImportSupervisorRegister: () -> Unit,
+    onUrgentProtocolLookup: () -> Unit,
     onShowCommunityPanel: () -> Unit,
     onShowSummary: () -> Unit,
     onUserGuide: () -> Unit,
@@ -117,6 +118,7 @@ fun PatientListScreen(
             )
 
             SmritiPrimaryButton("Add patient", onAddPatient, enabled = !isLoading)
+            SmritiSecondaryButton("Urgent protocol lookup", onUrgentProtocolLookup, enabled = !isLoading)
             SmritiTonalButton("Community panel", onShowCommunityPanel, enabled = !isLoading)
             SmritiTonalButton("End-of-day summary", onShowSummary, enabled = !isLoading)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {

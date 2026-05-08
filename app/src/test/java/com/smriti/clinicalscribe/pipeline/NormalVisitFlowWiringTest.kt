@@ -151,6 +151,41 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
+    fun urgentProtocolLookupUsesLocalRetrieverWithoutPersistenceOrInference() {
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+        val lookupModel = appSourceFile("ui/UrgentProtocolLookup.kt").readText()
+        val lookupScreen = appSourceFile("ui/UrgentProtocolLookupScreen.kt").readText()
+
+        val screenStart = mainActivity.indexOf("is SmritiScreen.UrgentProtocolLookup ->")
+        val screenEnd = mainActivity.indexOf("SmritiScreen.AddPatient ->", startIndex = screenStart)
+        val screenBlock = mainActivity.substring(screenStart, screenEnd)
+
+        assertTrue(screenBlock.contains("UrgentProtocolLookupScreen("))
+        assertTrue(screenBlock.contains("UrgentProtocolLookupBuilder.lookup"))
+        assertTrue(screenBlock.contains("retriever = retriever"))
+        assertTrue(lookupModel.contains("ProtocolRetriever"))
+        assertTrue(lookupModel.contains("retriever.retrieve"))
+        assertFalse(screenBlock.contains("visitReasoningPipeline.process"))
+        assertFalse(screenBlock.contains("visitMemoryStore."))
+        assertFalse(screenBlock.contains("ReferralFlag"))
+        assertFalse(screenBlock.contains("FollowUpTask"))
+        assertFalse(screenBlock.contains("PatientLeaveBehindMessageGenerator"))
+        assertFalse(screenBlock.contains("CommunityPanelBuilder"))
+        assertFalse(screenBlock.contains("RealGemma"))
+        assertFalse(screenBlock.contains("LiteRt"))
+        assertFalse(screenBlock.contains("context.startActivity"))
+        assertFalse(screenBlock.contains("Intent.ACTION_SEND"))
+        assertFalse(lookupModel.contains("AppDatabase"))
+        assertFalse(lookupModel.contains("Dao"))
+        assertFalse(lookupModel.contains("insert("))
+        assertFalse(lookupModel.contains("upsert"))
+        assertFalse(lookupModel.contains("RealGemma"))
+        assertFalse(lookupModel.contains("LiteRt"))
+        assertFalse(lookupScreen.contains("Intent.ACTION_SEND"))
+        assertFalse(lookupScreen.contains("context.startActivity"))
+    }
+
+    @Test
     fun visitScreenKeepsSampleManualAndOfflineSpeechTranscriptPaths() {
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
 

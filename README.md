@@ -1,6 +1,6 @@
 # Smriti
 
-Smriti is an offline maternal-health visit copilot for community health workers. It helps a CHW select a patient, review local visit history, capture a voice-note-style observation, generate a structured visit note, surface protocol-grounded referral support, confirm the record, and produce an end-of-day supervisor summary.
+Smriti is an offline maternal-health visit copilot for community health workers. It helps a CHW manage a local village roster, check urgent local protocol guidance, review patient history, capture a voice-note-style observation, generate a structured visit note, surface protocol-grounded referral support, confirm the record, close follow-up loops, prepare patient-friendly messages, view a community panel, and produce an end-of-day supervisor summary.
 
 The filmed/local submission flow now requires `RealGemmaAgent` for app-facing visit and supervisor reasoning. If the local RealGemma model or gates are missing, Smriti shows setup/retry messaging instead of falling back to mock clinical output.
 
@@ -20,14 +20,17 @@ The core runtime must work in airplane mode. Smriti stores patient data locally,
 2. Show Welcome.
 3. Tap `Check offline setup` to show Offline Proof / setup ready, then return to the roster.
 4. Show Patient Roster search, attention chips, and patient-card note language labels.
-5. Open `Amara Tesfaye, 30F` for missed follow-up.
-6. Open `Fatima Begum, 24F` for rising BP history signal.
-7. Open `Meena Sharma, 28F` for a Hindi RealGemma danger-sign note with referral suggested, local guidance citation, and CHW confirm/save.
-8. Open `Lucia Fernandez` for a Spanish RealGemma note after manual validation.
-9. Open `Grace Achieng` for a Swahili routine/no-referral RealGemma note after manual validation.
-10. Use Grace's sample paper-note scan; local Gemma 4 vision extracts structured data for CHW review/save.
-11. Open End-of-Day Summary for urgent, follow-up, and routine priority lists.
-12. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision, direct Gemma audio blocked.
+5. Open `Urgent protocol lookup`; select severe headache and blurred vision to show local health guidance with citation and no save.
+6. Open `Community panel` for local caseload counts, follow-ups, languages/countries, and today's focus.
+7. Open `Amara Tesfaye, 30F` for missed follow-up.
+8. Open `Fatima Begum, 24F` for rising BP history signal.
+9. Open `Meena Sharma, 28F` for a Hindi RealGemma danger-sign note with referral suggested, local guidance citation, and CHW confirm/save.
+10. Open the patient leave-behind message from Summary; review/edit before Copy or Share.
+11. Open `Lucia Fernandez` for a Spanish RealGemma note after manual validation.
+12. Open `Grace Achieng` for a Swahili routine/no-referral RealGemma note after manual validation.
+13. Use Grace's sample paper-note scan; local Gemma 4 vision extracts structured data for CHW review/save.
+14. Open End-of-Day Summary for urgent, follow-up, routine priority lists, and the community panel entry.
+15. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision, direct Gemma audio blocked.
 
 Smriti demonstrates local Android LiteRT-LM text reasoning and local Gemma 4 vision paper-note extraction. Selected languages demonstrated: English, Hindi, Spanish, Swahili. Do not claim direct Gemma 4 audio works, clinical validation, all-language support, or broad camera diagnosis. The input path remains offline speech or editable transcript into RealGemma text reasoning, and vision scan is data-entry support only, not diagnosis.
 
@@ -55,6 +58,10 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 - Protocol pack: 46 local chunks across global, country, and regional tags.
 - Synthetic benchmark: 10 legacy fixture cases through `ProtocolRetriever -> VisitReasoningPipeline -> MockGemmaAgent`; these are tests only, not app-facing reasoning.
 - Phase B memory intelligence: missed follow-up alert for Amara and rising BP trend signal for Fatima are deterministic local logic.
+- Local follow-up scheduling: reviewed follow-up plans create Room/SQLite follow-up tasks after confirm/save; tasks do not count as saved visits.
+- Patient leave-behind: saved visits can produce editable patient messages that are copied/shared only by user action.
+- Community panel: local caseload counts and priority list from patients, visits, referral flags, and follow-up tasks without model inference.
+- Urgent protocol lookup: roster and Visit screen can open a read-only local guidance lookup over the protocol pack; lookup alone creates no visit, referral flag, follow-up task, patient message, or community-panel count.
 - Phase C multilingual demo support: selected patient-specific output languages demonstrated are English, Hindi, Spanish, and Swahili; `preferredLanguage` controls RealGemma visit-note output in fully gated submission mode after manual validation.
 - RealGemma: manual text inference validated; app-facing reasoning now requires build flag + app-private sentinel + app-private model for inference.
 - Supervisor priority: raw local counts remain visible, and the app attempts RealGemma priority reasoning; unavailable output shows retry/setup messaging.
@@ -75,6 +82,7 @@ See [docs/judge_evidence.md](docs/judge_evidence.md).
 - History signal card for a cautious rising BP trend across prior visits.
 - Room/SQLite local storage for patients, visits, referrals, and protocols.
 - Local country/region-aware protocol retrieval from `app/src/main/assets/protocols/maternal_health_demo_protocols.json`.
+- Urgent protocol lookup screen using the same local protocol pack for CHW-facing danger-sign guidance, with no model call and no automatic save.
 - RealGemma visit-note generation through `RealGemmaAgent`; missing setup or invalid output shows retry/setup messaging and does not save.
 - Referral flag generation for pregnancy danger-sign keywords.
 - CHW review/edit/confirm before saving.
@@ -119,6 +127,7 @@ See [docs/litert_status.md](docs/litert_status.md).
 - Outputs are protocol-grounded documentation and referral support only.
 - Every clinical recommendation must include a protocol citation or be treated as uncertain.
 - CHW confirmation is required before saving generated records.
+- Urgent protocol lookup is read-only local guidance; it does not create visits, referral flags, follow-up tasks, patient messages, or summary/community counts.
 - The app-facing agent is `RealGemmaAgent`; no mock clinical output is shown when RealGemma is unavailable.
 - No cloud APIs, remote databases, model download code, or Hugging Face runtime code are used for core runtime.
 

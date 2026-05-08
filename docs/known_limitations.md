@@ -78,6 +78,18 @@ If the offline language pack is unavailable, the UI asks the CHW to type or use 
 
 Global Protocol Pack v1 is a local 46-chunk corpus for maternal/ANC and CHW referral support across global, country, and regional tags. It is still not clinically complete. Before broader use, country-specific content needs review against official program materials and local referral pathways.
 
+## Local Panel And Follow-Up Boundaries
+
+The Community Panel, follow-up tasks, and patient leave-behind messages are local workflow support. They are deterministic summaries of saved roster, visit, referral, and follow-up state. They are not clinical prediction, diagnosis, treatment planning, or validated risk scoring.
+
+Patient leave-behind messages are editable text only. Smriti uses Android's user-initiated share sheet and does not auto-send SMS, WhatsApp, or any other message.
+
+## Urgent Protocol Lookup Boundary
+
+Urgent Protocol Lookup is a local protocol-pack lookup, not an open-ended clinical chatbot. It can show local health guidance and citations for selected danger-sign observations, but it does not diagnose, prescribe, calculate risk, or create records by itself.
+
+Lookup alone must not create saved visits, referral flags, follow-up tasks, patient messages, Summary counts, or Community Panel counts. If no local protocol match is found, Smriti shows a safe no-guidance message instead of guessing. The current lookup quality is limited by the demo protocol corpus and should be reviewed against official local program guidance before broader use.
+
 ## No Real Patient Data
 
 The repository uses demo patients and seeded mock visit history. It must not include real patient data or PHI.

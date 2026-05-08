@@ -81,6 +81,9 @@ import com.smriti.clinicalscribe.ui.ReviewScannedNoteScreen
 import com.smriti.clinicalscribe.ui.SetupGuidanceScreen
 import com.smriti.clinicalscribe.ui.SmritiTheme
 import com.smriti.clinicalscribe.ui.SummaryScreen
+import com.smriti.clinicalscribe.ui.UrgentProtocolLookupBuilder
+import com.smriti.clinicalscribe.ui.UrgentProtocolLookupResult
+import com.smriti.clinicalscribe.ui.UrgentProtocolLookupScreen
 import com.smriti.clinicalscribe.ui.UserGuideScreen
 import com.smriti.clinicalscribe.ui.VisitScreen
 import com.smriti.clinicalscribe.ui.WelcomeScreen
@@ -169,6 +172,10 @@ private sealed interface SmritiScreen {
     data object PatientRoster : SmritiScreen
     data object AddPatient : SmritiScreen
     data object CommunityPanel : SmritiScreen
+    data class UrgentProtocolLookup(
+        val patient: Patient? = null,
+        val result: UrgentProtocolLookupResult? = null
+    ) : SmritiScreen
     data class Visit(val patient: Patient) : SmritiScreen
     data class Review(
         val patient: Patient,
@@ -595,6 +602,9 @@ private fun SmritiApp(
                                 }
                             }
                         },
+                        onUrgentProtocolLookup = {
+                            currentScreen = SmritiScreen.UrgentProtocolLookup()
+                        },
                         onShowCommunityPanel = {
                             currentScreen = SmritiScreen.CommunityPanel
                         },
@@ -626,6 +636,27 @@ private fun SmritiApp(
                                 }
                             },
                             onBack = { currentScreen = SmritiScreen.PatientRoster }
+                        )
+                    }
+
+                    is SmritiScreen.UrgentProtocolLookup -> {
+                        UrgentProtocolLookupScreen(
+                            patientName = screen.patient?.name,
+                            patientContextLabel = screen.patient?.protocolContextLabel() ?: "Global local guidance",
+                            result = screen.result,
+                            onLookup = { signs, freeText ->
+                                currentScreen = screen.copy(
+                                    result = UrgentProtocolLookupBuilder.lookup(
+                                        selectedSigns = signs,
+                                        freeText = freeText,
+                                        patient = screen.patient,
+                                        retriever = retriever
+                                    )
+                                )
+                            },
+                            onBack = {
+                                currentScreen = screen.patient?.let { SmritiScreen.Visit(it) } ?: SmritiScreen.PatientRoster
+                            }
                         )
                     }
 
@@ -731,6 +762,9 @@ private fun SmritiApp(
                                         errorMessage = "Could not reschedule follow-up: ${error.message}"
                                     }
                                 }
+                            },
+                            onCheckUrgentGuidance = {
+                                currentScreen = SmritiScreen.UrgentProtocolLookup(patient = screen.patient)
                             },
                             onGenerate = { observation, voiceNote ->
                                 scope.launch {

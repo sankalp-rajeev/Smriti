@@ -26,7 +26,7 @@ Phase D is implemented as a low-digital-literacy polish pass for the recorded de
 - First launch now starts with a plain Welcome screen: `Smriti`, `Offline health visit assistant`, `Start visits`, `View user guide`, and `Check offline setup`.
 - If the model file is absent after Welcome, Smriti shows one-time Setup Guidance in non-technical language. It explains supervisor-installed model setup and allows limited demo exploration without claiming full on-device reasoning.
 - User Guide is available from Welcome and Patient Roster.
-- Patient Roster now includes search by name, country, or village; section headers for `Needs attention` and `Routine visits`; full-width primary actions; smaller secondary actions for import/user guide/offline setup; and patient-card `Note language` labels.
+- Patient Roster now includes search by name, country, or village; section headers for `Needs attention` and `Routine visits`; full-width primary actions; a `Community panel` action; smaller secondary actions for import/user guide/offline setup; and patient-card `Note language` labels.
 - Roster chips are deterministic local UI logic: `Referral saved`, `Follow-up due`, `History signal`, `Near term`, `Overdue`, and `Routine`.
 - Sorting prioritizes saved urgent referrals, missed follow-ups, history signals, near-term/overdue pregnancies, then routine patients.
 - The old roster language pill was removed because it did not translate the full app UI. Existing patients keep their saved `preferredLanguage`, which remains the source of truth for generated note language.
@@ -34,11 +34,20 @@ Phase D is implemented as a low-digital-literacy polish pass for the recorded de
 - Patient-specific sample transcripts prevent Grace or routine patients from receiving Meena's danger-sign transcript.
 - Generation has a calm loading card, duplicate generation prevention, blank-input inline error, short-input inline warning, and an on-device reasoning failure card that preserves the transcript.
 - Review screen now uses plain cards: `Referral suggested`, `No referral flag`, `More information needed`, and a collapsed `How was this prepared?` source section.
-- Summary screen shows `Saved visits on this device`, `Today's priority list`, urgent cases, follow-ups, routine visits, empty state, a collapsed preparation explanation, local-proof expansion, and a plain fallback when on-device priority reasoning is unavailable.
+- Summary screen shows `Saved visits on this device`, `Today's priority list`, urgent cases, follow-ups, routine visits, empty state, a collapsed preparation explanation, local-proof expansion, `View community panel`, and a plain fallback when on-device priority reasoning is unavailable.
 - Destructive actions now use confirmation dialogs for Reset Demo Data and register import.
 - Offline Proof wording was changed to `Works offline after setup`, `Patient memory: saved on this device`, `Health guidance: stored on this device`, `On-device Gemma: ready/setup needed`, `Cloud APIs: none`, and `Direct Gemma audio: not used`. These details now live behind `Check offline setup` instead of appearing by default on the roster.
 - Source-level unit tests were added/updated for roster filtering/sorting/chips, sample transcript mapping, first-launch screens, validation/error states, review source section, summary fallback, destructive dialogs, and forbidden UI wording.
 - Validation status for this pass: `.\gradlew.bat testDebugUnitTest` passed after the RealGemma gate and UI wording updates. Full build validation is listed in `CONTEXT.md`.
+
+## Final Plan Phase 2-5 Additions
+
+The latest build adds four local workflow features that do not require RealGemma or cloud services:
+
+- Local follow-up tasks are stored in Room/SQLite through `follow_up_tasks`. Confirm/save creates deterministic open tasks from reviewed follow-up plans, seeded Amara follow-up state is restored on reset, roster chips show due/upcoming/overdue state, Visit screen supports Mark done and Reschedule, and Summary counts open/overdue/due-upcoming follow-ups. Follow-up tasks do not count as saved visits.
+- Patient leave-behind messages are generated on demand from the saved reviewed visit, patient context, and local referral flag. The CHW can review/edit, copy, or share through Android's `ACTION_SEND` chooser. Smriti does not auto-send SMS/WhatsApp, does not call RealGemma/LiteRT during save/share, and does not persist message records.
+- Community Panel is a deterministic local caseload view reached from the roster or Summary. It shows patients in roster, pregnancy stage, urgent review saved, follow-ups, history signals, no recent visit, countries, note languages, and a local priority list. It creates no records and does not invoke model inference.
+- Urgent Protocol Lookup is a read-only local protocol-pack flow reached from the roster or Visit screen. The CHW can select danger-sign chips or type an observation, then see local health guidance with a citation or the safe no-guidance fallback. Lookup alone creates no visit, referral flag, follow-up task, leave-behind message, summary count, or community-panel count.
 
 ## Phase 1 Status
 
@@ -133,6 +142,7 @@ Phase B is implemented for the final recorded demo while preserving the safe nor
 - RealGemma submission mode is gated by all of: `-Psmriti.realGemmaSubmissionMode=true`, app-private `files/dev/enable_real_gemma_text_mode`, and app-private `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
 - Fully active submission mode sends visit generation through `VisitReasoningPipeline` with `RealGemmaAgent`; failures show `On-device reasoning unavailable - please retry.` and do not save or silently display mock output as RealGemma.
 - SummaryScreen keeps saved local counts/referral flags visible and attempts RealGemma priority reasoning only when the global gate is free. Failure or busy state shows `On-device priority summary unavailable. Showing saved local visit flags.` without mock priority output.
+- CommunityPanelScreen uses only local patients, visits, referral flags, and follow-up tasks. It does not call RealGemma, LiteRT, protocol retrieval, or supervisor priority reasoning.
 - Offline Proof reports active reasoning mode, RealGemma text mode, submission mode, inference, model found/missing, and direct Gemma audio blocked with offline speech/transcript fallback.
 
 ## Phase C Multilingual Output
@@ -160,9 +170,10 @@ Recommended order:
 1. Review and refine the protocol pack and synthetic cases against official country program materials.
 2. Run a final emulator demo smoke test in airplane mode.
 3. If filming RealGemma, sideload the model outside git and verify Offline Proof shows submission mode active before recording.
-4. Improve offline speech setup guidance and device diagnostics.
-5. Revisit direct Gemma 4 audio only if LiteRT-LM exposes or documents a usable preprocessing and prompt-template path.
-6. Keep the paper-note scan flow limited to synthetic/demo paper notes and CHW-reviewed data entry.
+4. Smoke-test Urgent Protocol Lookup in airplane mode and verify lookup-only activity does not change Summary or Community Panel counts.
+5. Improve offline speech setup guidance and device diagnostics.
+6. Revisit direct Gemma 4 audio only if LiteRT-LM exposes or documents a usable preprocessing and prompt-template path.
+7. Keep the paper-note scan flow limited to synthetic/demo paper notes and CHW-reviewed data entry.
 
 ## What Is Real
 
@@ -172,6 +183,7 @@ Recommended order:
 - Local six-patient synthetic caseload and local supervisor-register import from app assets.
 - Manual add-patient path plus Android offline-speech registration fallback.
 - Local JSON protocol corpus and country/region-aware keyword retrieval.
+- Local urgent protocol lookup for danger-sign observations, using the same protocol corpus without model inference or automatic persistence.
 - Synthetic global benchmark cases remain as legacy deterministic fixtures; they are not app-facing reasoning.
 - Judge-facing normal app flow: Patient Roster -> Meena -> sample transcript/offline speech fallback -> local note generation -> Review confirm/save -> Supervisor Summary.
 - Review/edit/confirm save gate.
@@ -183,6 +195,7 @@ Recommended order:
 - RealGemma text UI mode when the submission build flag, local sentinel, and app-private model are present.
 - RealGemma-required filmed/local flow with setup/retry behavior when gates or model readiness are missing.
 - Local Gemma 4 vision paper-note extraction from synthetic images for data entry only.
+- Local urgent protocol lookup over the protocol pack for CHW-facing guidance only.
 
 ## RealGemma Required
 
@@ -225,5 +238,6 @@ These tests require explicit instrumentation arguments and, for inference, a sid
 - Sideload the model and run the manual RealGemma agent and multilingual harnesses before filming.
 - Capture fresh manual RealGemma benchmark Logcat metrics if a sideloaded model is available.
 - Harden the Global Protocol Pack v1 with reviewed country-specific sources and more coverage.
+- Re-run full Phase 5 validation and manual lookup smoke test when Gradle/script escalation is available.
 - Expand the synthetic benchmark suite after protocol content review.
 - If RealGemma fails manual validation, remove that path or language from filmed claims.

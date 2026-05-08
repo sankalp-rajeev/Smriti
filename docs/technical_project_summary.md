@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-Smriti is an offline maternal-health visit copilot for community health workers (CHWs), designed for the Gemma 4 Good Hackathon demo scope. The app helps a CHW select a patient, review local visit history, capture or enter a visit observation, retrieve local protocol context, generate a structured visit note with referral support, require CHW review before saving, and produce an end-of-day supervisor summary.
+Smriti is an offline maternal-health visit copilot for community health workers (CHWs), designed for the Gemma 4 Good Hackathon demo scope. The app helps a CHW manage a local patient roster, check urgent local protocol guidance, review visit history, capture or enter a visit observation, retrieve local protocol context, generate a structured visit note with referral support, require CHW review before saving, create local follow-up loops, prepare patient-friendly leave-behind messages, view a community panel, and produce an end-of-day supervisor summary.
 
 The central product idea is local patient memory plus a local protocol pack plus a structured documentation workflow. Smriti is not diagnostic AI. It provides protocol-grounded documentation and referral support only, and every generated record must be reviewed and confirmed by the CHW before it is persisted.
 
@@ -30,7 +30,9 @@ The demo includes:
 - Local supervisor-register JSON import from app assets.
 - Add-patient registration with voice-first offline speech prompts and manual fallback.
 - Patient detail flow with local prior visit history.
+- Urgent Protocol Lookup from the roster or Visit screen for read-only local danger-sign guidance with citations.
 - Missed follow-up alert on patient open for overdue incomplete follow-ups.
+- Local follow-up task scheduling after confirmed saves, with due/upcoming/overdue roster state and mark done/reschedule actions.
 - Cautious rising BP history signal card from prior visit readings.
 - Manual transcript entry and sample danger-sign transcript.
 - Android offline speech fallback through `SpeechRecognizer` when device support and language packs are available.
@@ -43,6 +45,8 @@ The demo includes:
 - Return-visit history that shows newly confirmed visits.
 - End-of-day supervisor summary from confirmed local records.
 - RealGemma priority follow-up queue attempt in the app-facing summary flow, with raw local counts retained when RealGemma supervisor reasoning is unavailable.
+- Patient leave-behind message generated from saved reviewed visit data, editable before copy/share.
+- Community Panel / Village Panel view derived from local patients, visits, referral flags, and follow-up tasks.
 - Reset Demo Data for repeatable filming/demo runs.
 - Local JSON export for visit and summary data.
 - Local Gemma 4 vision paper-note extraction from synthetic paper notes for data-entry support only.
@@ -80,11 +84,14 @@ Key modules:
 
 - `MainActivity`: wires the app state, patient selection, visit generation, review/save flow, summary flow, model status, and RealGemma developer gates.
 - `PatientListScreen`: shows the local roster, patient-card note language labels, Add Patient, local supervisor-register import, and a `Check offline setup` path to Offline Proof.
+- `CommunityPanelBuilder` / `CommunityPanelScreen`: derive and show a local village-level caseload panel without model inference.
+- `UrgentProtocolLookupBuilder` / `UrgentProtocolLookupScreen`: provide read-only CHW-facing local protocol lookup from danger-sign chips or typed observations without model inference or persistence.
 - `AddPatientScreen`: collects a new local patient through EN/HI/ES/SW offline speech prompts or manual fields.
 - `VisitScreen`: shows prior history, transcript controls, sample transcript, offline speech fallback, local reasoning context, and generate action.
 - `PatientMemoryInsights`: deterministic missed follow-up and rising BP history-signal logic.
 - `ReviewScreen`: displays editable generated output, referral support, protocol citation, safety gate, and confirm/save action.
-- `SummaryScreen`: shows the supervisor brief, urgent cases, follow-ups, export, reset, and Offline Proof.
+- `SummaryScreen`: shows the supervisor brief, urgent cases, follow-ups, patient-message entry point after save, community panel entry point, export, reset, and Offline Proof.
+- `PatientLeaveBehindMessageGenerator` / `PatientMessageScreen`: generate a safe local patient message from saved reviewed data and provide editable Share/Copy controls.
 - `OfflineProofCard`: summarizes local/offline status, protocol source, active reasoning mode, RealGemma readiness, and direct-audio limitation.
 - `VisitReasoningPipeline`: coordinates transcript text or local audio path, protocol retrieval, and `GemmaAgent` invocation. It writes nothing to storage.
 - `ProtocolRetriever`: deterministic local keyword retrieval over JSON protocol chunks.
@@ -112,13 +119,14 @@ Smriti uses Room/SQLite for local storage. The repository includes seeded synthe
 - patient country/language/protocol-region metadata for localization and protocol context,
 - confirmed visit logs,
 - referral flags linked to saved visits,
+- follow-up tasks linked to saved visits or seeded history,
 - local protocol chunks from JSON assets,
 - no PHI,
 - no cloud runtime.
 
 The six synthetic patients are Meena Sharma (India/Hindi danger-sign referral demo), Fatima Begum (Bangladesh rising BP trend), Amara Tesfaye (Ethiopia overdue follow-up data for Phase B), Grace Achieng (Kenya/Swahili routine no-referral history), Priya Devi (India/Hindi sparse early ANC history), and Lucia Fernandez (Peru/Spanish South America/global fallback context). Brazil is not used for Spanish-language Lucia.
 
-The CHW confirm/save action is the only persistence gate. Speech input and note generation do not save data automatically. `VisitReasoningPipeline` is intentionally UI-independent and storage-free; only the Review screen confirmation path persists records through `LocalVisitMemoryStore`.
+The CHW confirm/save action is the only persistence gate. Speech input, note generation, and urgent protocol lookup do not save data automatically. `VisitReasoningPipeline` is intentionally UI-independent and storage-free; only the Review screen confirmation path persists records through `LocalVisitMemoryStore`. Follow-up tasks are created only after a visit is saved and remain separate from saved visit counts. Patient leave-behind messages are generated on demand from saved reviewed data and are not persisted as visits or follow-ups. Community Panel counts are read-only derivations from local state, and lookup-only activity is not counted.
 
 ## 6. Reasoning Architecture
 
@@ -229,6 +237,22 @@ Retrieval is keyword-based and fully local. There is no cloud RAG, remote search
 
 The protocol corpus is a demo scaffold. It is not clinically complete and is not clinical validation.
 
+## 9A. Urgent Protocol Lookup
+
+Phase 5 adds a read-only urgent local guidance path:
+
+```text
+PatientListScreen or VisitScreen
+-> UrgentProtocolLookupScreen
+-> quick danger-sign chips or optional typed observation
+-> ProtocolRetriever with patient context or GLOBAL_CORE fallback
+-> local guidance card with citation or safe no-guidance fallback
+```
+
+The quick-select observations are severe headache, blurred vision, high blood pressure, reduced fetal movement, bleeding, convulsions, severe abdominal pain, and fever. Patient-launched lookup uses the selected patient's `ProtocolRetrievalContext`; roster-launched lookup uses `GLOBAL_CORE` fallback. The result can say `Urgent review may be needed` only when the retrieved local chunk contains urgent/danger/referral language.
+
+The lookup is intentionally not an emergency chatbot. It does not call RealGemma, LiteRT, supervisor reasoning, Android share intents, cloud APIs, or protocol generation. It does not write to Room and does not create visits, referral flags, follow-up tasks, patient messages, Summary counts, or Community Panel counts.
+
 ## 10. Synthetic Global Benchmark Suite
 
 The Phase 3 synthetic benchmark suite contains 10 local test cases covering:
@@ -299,6 +323,17 @@ Manual vision probe evidence:
 - No cloud OCR/API is used.
 - Direct Gemma audio remains blocked.
 
+## 12A. Local Follow-Up, Patient Message, Community Panel, And Lookup
+
+The final workflow additions are deterministic local app logic:
+
+- `FollowUpTask` is a Room entity in `follow_up_tasks`. Tasks can be sourced from saved visits, seeded history, or manual/local flows. Active tasks drive roster chips, Visit screen cards, and Summary counts. They do not count as saved visits.
+- `PatientLeaveBehindMessageGenerator` creates a patient-friendly message after a saved visit exists. It uses the saved reviewed `VisitLog`, patient context, and linked `ReferralFlag` only. The message is editable before sharing, and Android sharing is user-initiated through `ACTION_SEND` / `text/plain`.
+- `CommunityPanelBuilder` derives total patients, pregnancy stage, urgent review saved, follow-up counts, history-signal count, no-recent-visit count, languages, countries, and a priority list from local state. It does not call RealGemma, LiteRT, protocol retrieval, or network APIs.
+- `UrgentProtocolLookupBuilder` derives lookup results from selected CHW observations and local protocol chunks. It does not call RealGemma, LiteRT, cloud APIs, or any persistence API.
+
+These features do not add diagnosis, treatment, dosage, clinical prediction, cloud APIs, or new model calls.
+
 ## 13. Safety Model
 
 Smriti's safety model is explicit:
@@ -308,6 +343,9 @@ Smriti's safety model is explicit:
 - Clinical recommendations must include a protocol citation or remain uncertain.
 - CHW review/edit/confirm is required before saving.
 - Speech and generation never auto-save.
+- Follow-up tasks, patient messages, and Community Panel counts do not bypass CHW confirm/save.
+- Urgent protocol lookup is read-only local guidance and does not create saved records or counts.
+- Patient message sharing is user-initiated only; Smriti does not auto-send SMS or WhatsApp.
 - Data is local-only.
 - Repository data is synthetic; no PHI is included.
 - No cloud runtime, cloud ASR, cloud RAG, or remote database is used.
@@ -369,14 +407,17 @@ Recommended filmed/live flow:
 2. Show Welcome.
 3. Tap `Check offline setup` to show Offline Proof / setup ready, then return to the roster.
 4. Show Patient Roster search, attention chips, and patient-card note language labels.
-5. Show Amara missed follow-up alert.
-6. Show Fatima rising BP history signal.
-7. Show Meena Hindi RealGemma note with referral suggested, citation/local guidance, and CHW confirm/save.
-8. Show Lucia Spanish RealGemma note after manual validation.
-9. Show Grace Swahili routine/no-referral RealGemma note after manual validation.
-10. Show Grace sample paper-note scan: local Gemma vision extracts structured paper-note data for CHW review/save.
-11. Show End-of-Day Summary urgent/follow-up/routine priority list.
-12. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision, and direct Gemma audio blocked.
+5. Open Urgent Protocol Lookup to show local danger-sign guidance with citation and no automatic save.
+6. Open Community Panel to show local caseload counts, follow-ups, languages/countries, and priority list.
+7. Show Amara missed follow-up alert.
+8. Show Fatima rising BP history signal.
+9. Show Meena Hindi RealGemma note with referral suggested, citation/local guidance, and CHW confirm/save.
+10. Open the post-save patient message for review/edit/share controls.
+11. Show Lucia Spanish RealGemma note after manual validation.
+12. Show Grace Swahili routine/no-referral RealGemma note after manual validation.
+13. Show Grace sample paper-note scan: local Gemma vision extracts structured paper-note data for CHW review/save.
+14. Show End-of-Day Summary urgent/follow-up/routine priority list and Community Panel entry.
+15. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision, and direct Gemma audio blocked.
 
 Core spoken claim:
 
@@ -388,6 +429,7 @@ Avoid claiming:
 
 - diagnosis,
 - autonomous treatment,
+- urgent lookup as emergency AI, AI triage, treatment guidance, or a risk score,
 - direct Gemma audio,
 - clinical validation,
 - broad all-language support,
@@ -400,6 +442,7 @@ Avoid claiming:
 - Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin audio preprocessing and prompt-template path.
 - Android offline speech depends on device/emulator recognizer support and installed offline language packs.
 - The protocol corpus is a scaffold, not a complete reviewed guideline library.
+- Urgent Protocol Lookup is limited by the scaffold protocol corpus and must not be treated as clinical validation or an emergency chatbot.
 - RealGemma text reasoning is required for app-facing output; missing setup shows retry/setup messaging.
 - Target-device GPU benchmark results are pending.
 - GPU backend is not default; it is an isolated experiment unless target-device evidence proves stable improvement.
@@ -424,4 +467,3 @@ Primary entry points:
 - [docs/offline_safety.md](offline_safety.md): offline and safety constraints.
 - [docs/known_limitations.md](known_limitations.md): limitations and future work.
 - [docs/local_model_setup.md](local_model_setup.md): sideloaded model and manual RealGemma setup.
-

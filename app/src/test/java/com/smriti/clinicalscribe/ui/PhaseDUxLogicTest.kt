@@ -223,6 +223,35 @@ class PhaseDUxLogicTest {
     }
 
     @Test
+    fun urgentProtocolLookupUsesChwFacingOfflineCopy() {
+        val roster = appSourceFile("ui/PatientListScreen.kt").readText()
+        val visit = appSourceFile("ui/VisitScreen.kt").readText()
+        val screen = appSourceFile("ui/UrgentProtocolLookupScreen.kt").readText()
+
+        assertTrue(roster.contains("Urgent protocol lookup"))
+        assertTrue(visit.contains("Check urgent guidance"))
+        assertTrue(screen.contains("Urgent protocol lookup"))
+        assertTrue(screen.contains("Check urgent guidance from local health guidance."))
+        assertTrue(screen.contains("Health guidance used"))
+        assertTrue(screen.contains("Urgent review may be needed"))
+        assertTrue(screen.contains("Document the observation and contact a supervisor/health facility according to local practice."))
+        assertTrue(screen.contains("This is not a diagnosis"))
+        assertTrue(screen.contains("No visit, referral flag, or follow-up task is saved from this lookup."))
+        listOf(
+            "diagnosed",
+            "treatment",
+            "dosage",
+            "dose",
+            "risk score",
+            "AI triage",
+            "Emergency AI",
+            "life-saving recommendation"
+        ).forEach { forbidden ->
+            assertFalse("Found forbidden urgent lookup wording: $forbidden", screen.contains(forbidden, ignoreCase = true))
+        }
+    }
+
+    @Test
     fun finalRecordingUiFlagCanHideInternalDemoControlsWithoutRemovingThem() {
         val mainActivity = appSourceFile("MainActivity.kt").readText()
         val visit = appSourceFile("ui/VisitScreen.kt").readText()

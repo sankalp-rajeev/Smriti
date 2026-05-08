@@ -15,14 +15,17 @@ Show: airplane mode still on, Smriti launching.
 ## 0:45-1:45 Live App Demo
 
 1. Show Patient Roster and Offline Proof.
-2. Select `Meena, 28F`.
-3. Show prior ANC visit history.
-4. Use the sample danger-sign transcript.
-5. Generate the visit note.
-6. Show structured note, referral suggestion, and protocol citation.
-7. Confirm/save the visit.
-8. Open End-of-Day Supervisor Summary.
-9. Show concise urgent case and Offline Proof again.
+2. Open `Urgent protocol lookup`; select severe headache and blurred vision; show local health guidance with citation and no automatic save.
+3. Open `Community panel` and show local caseload counts: follow-ups, urgent review saved, pregnancy stage, languages, and today's focus.
+4. Select `Meena, 28F`.
+5. Show prior ANC visit history.
+6. Use the sample danger-sign transcript.
+7. Generate the visit note.
+8. Show structured note, referral suggestion, and protocol citation.
+9. Confirm/save the visit.
+10. Open the patient message, show it is editable, then return.
+11. Open End-of-Day Supervisor Summary.
+12. Show concise urgent case, `View community panel`, and Offline Proof again.
 
 Voiceover: "Every generated record is reviewed by the CHW before saving. The wording is protocol-grounded support, not diagnosis."
 
@@ -34,9 +37,9 @@ Show: Offline Proof lines and maybe a quick architecture slide.
 
 ## 2:20-2:45 Impact
 
-"There are millions of CHWs globally. Smriti gives them a local memory for each patient, a protocol citation for each recommendation, and a supervisor-ready summary at the end of the day, even when the phone has no signal."
+"There are millions of CHWs globally. Smriti gives them local urgent guidance lookup, a local memory for each patient, a protocol citation for each recommendation, a patient message after the visit, a village panel for follow-up loops, and a supervisor-ready summary at the end of the day, even when the phone has no signal."
 
-Show: supervisor summary and local export.
+Show: community panel, supervisor summary, and local export.
 
 ## 2:45-3:00 Closing Line
 

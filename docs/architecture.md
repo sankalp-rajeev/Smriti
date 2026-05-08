@@ -100,6 +100,19 @@ editable transcript
 
 The corpus is local JSON, not cloud RAG or a vector database. It currently includes global, India, Bangladesh, Ethiopia, Africa-region, and South-America-region maternal/ANC referral-support chunks. Recommendations must be grounded in retrieved protocol chunks or returned as uncertain.
 
+## Urgent Protocol Lookup Flow
+
+```text
+PatientListScreen or VisitScreen
+-> UrgentProtocolLookupScreen
+-> danger-sign chips and optional observation text
+-> ProtocolRetrievalContext(patient country/region or GLOBAL_CORE)
+-> ProtocolRetriever local JSON lookup
+-> guidance card with citation or no-guidance fallback
+```
+
+This flow is read-only. It does not call RealGemma, LiteRT, supervisor reasoning, Android share intents, or cloud APIs. It does not write to Room and does not create visits, referral flags, follow-up tasks, patient messages, or community-panel counts. If no local protocol chunk matches, Smriti tells the CHW to document the observation and contact a supervisor/health facility according to local practice.
+
 ## Local Storage Flow
 
 ```text
@@ -107,12 +120,13 @@ AppDatabase
 -> PatientDao
 -> VisitLogDao
 -> ReferralFlagDao
+-> FollowUpTaskDao
 -> ProtocolChunkDao
 ```
 
 `LocalVisitMemoryStore` owns seed demo data, confirmed visit saves, confirmed referral saves, snapshot refresh, reset demo data, and patient history filtering.
 
-Only Review confirm/save writes generated visit data.
+Only Review confirm/save writes generated visit data. Urgent protocol lookup is outside the save path and is intentionally non-persistent.
 
 ## Safety And Citation Enforcement Flow
 

@@ -12,13 +12,18 @@ The recorded-demo UI was simplified for community health workers and low-digital
 - User Guide gives six short steps: choose patient, speak/type visit, generate note, review carefully, confirm/save, end of day.
 - Setup Guidance appears when the model file is absent on first launch and avoids internal runtime terms.
 - Patient Roster has local search, large primary actions, smaller secondary actions, attention/routine sections, empty states, patient status chips, and patient-card `Note language` labels.
+- Patient Roster exposes `Urgent protocol lookup`, a local read-only health guidance check over protocol assets.
+- Patient Roster exposes `Community panel`, a local caseload view for saved roster counts, follow-ups, urgent review saved, pregnancy stage, languages, countries, and today's focus.
 - Status chips are deterministic from local data: Amara shows `Follow-up due`, Fatima shows `History signal`, Grace shows `Routine`, and Meena shows `Referral saved` after a confirmed referral visit.
 - Visit screen places missed follow-up and history-signal cards above transcript input, then shows a simple instruction card.
+- Visit screen also shows local follow-up task cards when generated or seeded follow-ups are open, with CHW actions to mark done or reschedule.
 - Sample transcripts are patient-specific, so Grace never receives Meena's danger-sign sample.
 - Loading copy is calm and sequential; generation is disabled while running.
 - RealGemma failure shows a retry card and preserves the transcript. It does not display mock output.
 - Review screen uses plain cards for `Referral suggested`, `No referral flag`, and `More information needed`, plus a collapsed source section explaining what information was used.
-- Summary screen shows priority list, urgent cases, follow-ups, routine visits, and a plain fallback when on-device summary reasoning is unavailable.
+- Summary screen shows priority list, urgent cases, follow-ups, routine visits, `View community panel`, and a plain fallback when on-device summary reasoning is unavailable.
+- After confirm/save, Summary can offer `Prepare patient message`; the CHW can review/edit/copy/share the text through Android's share sheet. Smriti does not auto-send messages.
+- Urgent Protocol Lookup can also be opened from the Visit screen as `Check urgent guidance`; it does not save data, create referral flags, create follow-up tasks, or change Summary/Community Panel counts.
 - Offline Proof uses CHW-facing wording and avoids confusing model/internal status labels. It is available from `Check offline setup` and is not shown by default on the roster.
 - Destructive actions are confirmed before import/reset.
 - No cloud APIs, runtime downloads, direct Gemma audio, PHI, or invalid-output save path was added. The paper-note scan flow is local Gemma vision data entry only and requires CHW review before save.
@@ -37,6 +42,8 @@ Patient Roster
 -> ReviewScreen
 -> CHW confirm/save
 -> LocalVisitMemoryStore
+-> local follow-up task creation if reviewed follow-up text exists
+-> patient message/community panel options from saved local state
 -> Raw local counts + RealGemma priority queue attempt
 ```
 
@@ -49,6 +56,8 @@ Evidence:
 - RealGemma has loaded and returned output on the emulator. The most recent observed failure mode was schema adherence: output omitted required `referralFlag`, so the hardened parser rejected it safely.
 - When the gated model is present, Smriti starts a background RealGemma preload and keeps the shared engine/client warm for subsequent patient generations and supervisor priority attempts. The first RealGemma call may still be slower because model/session initialization is expensive; later calls should avoid repeated cold loads when memory allows.
 - Confirm/save is a local Room/SQLite write only. It never invokes RealGemma, never re-runs retrieval, and never auto-exports JSON; the CHW confirm/save gate remains required.
+- Follow-up scheduling, patient leave-behind messages, and Community Panel counts are deterministic local logic after save. They do not invoke RealGemma, LiteRT, protocol retrieval, cloud APIs, or mock clinical output.
+- Urgent Protocol Lookup is deterministic local `ProtocolRetriever` logic before or during visit documentation. It invokes no RealGemma/LiteRT/cloud path and writes no local records.
 - `SmritiLatency` logs timing markers for readiness, preload/init, protocol retrieval, history formatting, prompt build, generation, parser/safety/citation validation, ReviewScreen navigation, local save, and summary refresh without logging transcripts or raw clinical text.
 - A native LiteRT-LM crash was observed after overlapping/retried RealGemma calls piled up behind `Conversation.sendMessage(prompt)`. The app now uses one global non-queueing RealGemma inference gate across visit notes, supervisor priority generation, paper-note vision extraction, manual test paths, and preload. Busy requests return a friendly wait message instead of entering another native call.
 - UI actions disable overlapping generation/scan/save paths. Confirm/save remains local Room/SQLite only and is guarded against double taps.
@@ -63,6 +72,8 @@ Evidence:
 - Generated notes and referral support go to ReviewScreen before saving.
 - CHW confirm/save is required before visits or referral flags persist.
 - Summary uses CHW-facing wording: `Saved visits on this device`, urgent cases, follow-ups, routine visits, and a collapsed explanation of saved visit notes, patient history, and local health guidance.
+- Community Panel uses CHW-facing wording such as `Saved on this device`, `Needs attention`, `Follow-ups`, `No recent visit`, and `Urgent review saved`; it avoids diagnosis, prediction, treatment, and risk-score claims.
+- Urgent Protocol Lookup uses CHW-facing wording such as `Urgent protocol lookup`, `Check urgent guidance`, `Local guidance checked`, `Health guidance used`, and `Urgent review may be needed`; it avoids emergency-AI, AI-triage, diagnosis, treatment, dose, and risk-score claims.
 - Offline Proof reports local/offline status, RealGemma model status, setup state, and blocked direct audio.
 - The core runtime does not require a cloud API.
 
@@ -101,6 +112,8 @@ Global Protocol Pack v1 is local JSON:
 - Required tags: `GLOBAL_CORE`, `INDIA`, `BANGLADESH`, `ETHIOPIA`, `AFRICA_REGION`, `SOUTH_AMERICA_REGION`.
 - Retrieval ranks exact country first, then region, then `GLOBAL_CORE`.
 - No vector DB, remote search, or runtime download is used.
+
+Urgent Protocol Lookup uses this same pack directly. Patient-launched lookup passes the selected patient's country/region context; roster-launched lookup uses a `GLOBAL_CORE` fallback. If no local match exists, the UI shows a safe no-guidance state instead of guessing.
 
 This is a protocol scaffold for the demo. It is not clinical validation.
 

@@ -2,7 +2,7 @@
 
 ## Health And Sciences Fit
 
-Smriti addresses a real last-mile health workflow: community health workers document visits on paper, often without internet, EHR access, or immediate clinical backup. The demo focuses on maternal-health ANC visits, longitudinal patient memory, protocol-grounded referral support, and end-of-day supervisor reporting.
+Smriti addresses a real last-mile health workflow: community health workers document visits on paper, often without internet, EHR access, or immediate clinical backup. The demo focuses on maternal-health ANC visits, longitudinal patient memory, urgent local protocol lookup, protocol-grounded referral support, local follow-up loops, patient leave-behind messages, village panel management, and end-of-day supervisor reporting.
 
 ## LiteRT Track Fit
 
@@ -14,20 +14,26 @@ The app is structured for local Gemma 4 through LiteRT-LM behind a replaceable `
 - Maternal danger signs require timely referral support.
 - Local visit history reduces reliance on memory and paper.
 - Protocol citations make recommendations reviewable by CHWs and supervisors.
-- The phone becomes a local patient-memory and documentation aid, not a cloud chatbot.
+- The phone becomes a local patient-memory, panel-management, and documentation aid, not a cloud chatbot.
 
 ## Video Pitch Points
 
 - Open with the field problem: no signal, no EHR, paper records, high-stakes maternal visits.
 - Show airplane mode before launching.
+- Show Urgent Protocol Lookup as a local guidance check that does not save or create referral flags by itself.
+- Show Community Panel to prove Smriti supports whole-roster village work, not only one patient note.
 - Show Meena's prior history before generating a new visit note.
 - Use the danger-sign transcript to trigger referral support.
 - Show the protocol citation and CHW confirmation step.
+- Show the post-save patient message as editable and user-shared only.
 - End with the supervisor summary and Offline Proof.
 
 ## Technical Depth Points
 
 - Android native app with Kotlin, Jetpack Compose, Room/SQLite, local assets, Android TTS, and local JSON export.
+- Urgent Protocol Lookup uses deterministic `ProtocolRetriever` lookups over the local protocol pack with patient country/region context or `GLOBAL_CORE` fallback.
+- Local follow-up scheduling and Community Panel counts are deterministic Room/local-state logic, not model inference.
+- Patient leave-behind messages are generated locally from saved reviewed records and shared only by user action.
 - `GemmaAgent` abstraction separates reasoning from UI.
 - `RealGemmaAgent` is the app-facing visit-note and supervisor-priority reasoning engine.
 - Real Gemma 4 LiteRT-LM text inference has been validated on-device through manual instrumentation with a sideloaded app-private model.
@@ -42,7 +48,7 @@ The app is structured for local Gemma 4 through LiteRT-LM behind a replaceable `
 
 ## Not A Generic Chatbot
 
-Smriti is patient-contextual and workflow-bound. It starts from a selected patient, reads local history, retrieves local protocol snippets, generates a structured visit record, requires CHW confirmation, saves locally, and builds a supervisor summary from confirmed records.
+Smriti is patient-contextual and workflow-bound. It starts from a local roster, urgent protocol lookup, or community panel, reads local history, retrieves local protocol snippets, generates a structured visit record, requires CHW confirmation, saves locally, creates follow-up tasks when reviewed plans require them, prepares editable patient messages after save, and builds a supervisor summary from confirmed records. Lookup-only activity remains read-only and does not create visits, referral flags, follow-up tasks, or counts.
 
 ## Not Gemini Live
 

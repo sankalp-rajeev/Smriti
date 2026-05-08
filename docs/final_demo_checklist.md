@@ -15,6 +15,7 @@ Use this checklist for the final filmed or live judge demo. The app-facing reaso
 | Latency evidence | Filter Logcat for `SmritiLatency` during a gated RealGemma run. | Recent emulator/local setup evidence: preload/init 1.885 s; Meena generation 21.726 s; Lucia after preload/reuse 14.434 s; validation 4-31 ms; Room save 49 ms; protocol retrieval and prompt build 1-3 ms. Device performance may vary. | Logs include transcript/PHI, save triggers Gemma, or timing claims imply clinical validation. |
 | Optional GPU experiment | Run `ManualRealGemmaBackendLatencyInstrumentedTest` only with explicit `allowExperimentalGpuBackend=true` on the target device/emulator. | CPU baseline remains available; GPU logs under `SmritiBackendLatency` and `SmritiLatency` only if it succeeds. | GPU becomes default without evidence, CPU fallback is removed, or unsupported APIs are invented. |
 | RealGemma schema hardening | If testing manual RealGemma, filter Logcat for `SmritiRealGemma` after a parser failure. | Debug/dev logs show raw output preview and parser reason; UI shows only concise retry/setup text. | Raw model output is shown to the CHW, invalid output is saved, or mock output appears as RealGemma. |
+| Urgent protocol lookup boundary | Open `Urgent protocol lookup`, select severe headache + blurred vision, and check guidance. | Guidance comes from local protocol assets with a citation, no save occurs, and Summary/Community Panel counts do not change from lookup alone. | Lookup calls RealGemma/network, creates a visit/referral/follow-up, or uses diagnosis/treatment/risk-score wording. |
 | Paper-note scan boundary | Open Grace or another patient and use `Use sample paper note`. | Local Gemma vision extracts synthetic paper-note fields, then Review Scanned Note requires edit/review and explicit patient-record confirmation before save. | Image bytes are saved, referral/diagnosis appears, or note saves without confirmation. |
 
 Optional RealGemma submission setup after sideloading the model outside git:
@@ -44,14 +45,17 @@ Use this as the primary final filming order:
 | A. Welcome screen | `Smriti`, `Offline health visit assistant`, then `Start visits`. | 5 seconds. |
 | B. Offline Proof / setup ready | Tap `Check offline setup`; show works offline after setup, local patient memory, local guidance, RealGemma ready/setup, paper-note scan available, cloud APIs none; return to roster. | 8 seconds. |
 | C. Patient roster | Search, primary actions, smaller secondary actions, attention chips, `Needs attention` before routine visits, and patient-card `Note language` labels. | 10 seconds. |
-| D. Amara Tesfaye | Missed follow-up alert. | 8 seconds. |
-| E. Fatima Begum | Rising BP history signal. | 8 seconds; say this is a local history signal, not diagnosis. |
-| F. Meena Sharma | Hindi RealGemma note, referral suggested, citation/local guidance, CHW confirm/save. | Main sequence, about 50 seconds. |
-| G. Lucia Fernandez | Spanish RealGemma note after manual validation. | 15 seconds. |
-| H. Grace Achieng | Swahili routine/no-referral RealGemma note after manual validation. | 15 seconds. |
-| I. Grace paper-note scan | Use sample paper note; local Gemma vision extracts Grace/BP/symptoms/follow-up; CHW reviews and saves. | 20 seconds; data-entry support only. |
-| J. End-of-day Summary | Urgent, follow-up, and routine priority list. | 15 seconds. |
-| K. Closing Offline Proof | No cloud APIs, local patient memory, local guidance, RealGemma text and vision, direct Gemma audio blocked. | 10 seconds. |
+| D. Urgent protocol lookup | Open `Urgent protocol lookup`; select severe headache + blurred vision; show local guidance, citation, safety copy, and no-save boundary. | 10 seconds; local lookup, not diagnosis. |
+| E. Community panel | Open `Community panel`; show local caseload counts, follow-ups, languages/countries, and priority list. | 10 seconds; saved-on-device panel, not prediction. |
+| F. Amara Tesfaye | Missed follow-up alert. | 8 seconds. |
+| G. Fatima Begum | Rising BP history signal. | 8 seconds; say this is a local history signal, not diagnosis. |
+| H. Meena Sharma | Hindi RealGemma note, referral suggested, citation/local guidance, CHW confirm/save. | Main sequence, about 50 seconds. |
+| I. Patient message | From post-save Summary, open `Prepare patient message`; show editable text and Share/Copy. | 12 seconds; user-initiated share only. |
+| J. Lucia Fernandez | Spanish RealGemma note after manual validation. | 15 seconds. |
+| K. Grace Achieng | Swahili routine/no-referral RealGemma note after manual validation. | 15 seconds. |
+| L. Grace paper-note scan | Use sample paper note; local Gemma vision extracts Grace/BP/symptoms/follow-up; CHW reviews and saves. | 20 seconds; data-entry support only. |
+| M. End-of-day Summary | Urgent, follow-up, routine priority list, and `View community panel`. | 15 seconds. |
+| N. Closing Offline Proof | No cloud APIs, local patient memory, local guidance, RealGemma text and vision, direct Gemma audio blocked. | 10 seconds. |
 
 It is acceptable to shorten RealGemma waits in editing if the result is real and the video shows:
 
@@ -72,6 +76,8 @@ On-device Gemma 4 inference - sped up for demo.
 | Show Amara alert | Select `Amara Tesfaye, 30F`. | Missed follow-up card appears above transcript input with `Mark Confirmed` and `Note as Ongoing`. | No alert appears after Reset Demo Data or action saves a generated visit automatically. |
 | Show Fatima history signal | Select `Fatima Begum, 24F`. | History signal card appears for rising BP trend with cautious ANC monitoring wording. | Card diagnoses disease, says preeclampsia, or appears for routine Grace. |
 | Show roster purpose | On Patient Roster, show `Smriti`, `Offline health visit assistant`, search, sorted sections, and patient chips. | Purpose, next step, and attention list are clear. | Screen looks empty, misleading, or lacks patient list. |
+| Show community panel | Tap `Community panel` from Patient Roster. | Panel opens with `Today's focus`, `Needs attention`, `Follow-ups`, pregnancy stage, languages/countries, and priority list from local data. | Panel requires internet/model inference, uses diagnosis/risk-score wording, or counts do not match local state. |
+| Show urgent protocol lookup | Tap `Urgent protocol lookup` from Patient Roster. Select `Severe headache` and `Blurred vision`, then tap `Check urgent guidance`. | Lookup opens offline, retrieves local health guidance with a citation, shows `This is not a diagnosis`, and states no visit/referral/follow-up is saved. | Lookup saves data, creates a referral/follow-up, changes Summary/Community Panel counts, calls RealGemma, or uses treatment/dose/risk-score wording. |
 | Note language labels | Check patient cards for `Note language: Hindi`, `Note language: Spanish`, `Note language: Swahili`, or `Note language: English`. | Generated notes follow each patient's saved preferred language. | Roster implies the whole app UI language changed. |
 | Empty states | Search for a missing patient. | Roster shows `No patient found for ...` and offers `Add patient`. | Blank list appears with no explanation. |
 | Show Offline Proof | Tap `Check offline setup`. | Dedicated setup screen shows works offline after setup, patient memory saved on device, guidance stored on device, on-device Gemma ready/setup needed, paper-note scan available, cloud APIs none, direct Gemma audio not used. | Technical proof details appear by default on the roster or imply cloud runtime/direct Gemma audio. |
@@ -87,9 +93,11 @@ On-device Gemma 4 inference - sped up for demo.
 | Show referral support | Point to `Referral suggested`. | Referral card appears for Meena with danger signs and health guidance used. | Danger-sign case does not produce referral support. |
 | Show source details | Expand `How was this prepared?`. | Shows today's observation, prior visit count, local country guidance, on-device note preparation, and guidance ID. | Raw citation ID is the primary display or technical wording appears. |
 | Confirm/save | Tap `Confirm and save`. | Visit is saved and Summary screen opens. | Save happens before confirmation, button fails, or summary does not open. |
+| Patient leave-behind | On post-save Summary, tap `Prepare patient message`. | Editable `Patient message` screen opens with Share and Copy; sharing uses Android chooser and does not auto-send. | Message appears before save, is not editable, auto-sends SMS/WhatsApp, or contains treatment/dosage claims. |
 | Double save guard | Tap `Confirm and save` once; do not tap again while it says `Saving locally...`. | Button is disabled immediately and only one local visit is saved. | Duplicate saved-history cards appear for one ReviewScreen confirmation. |
 | Save latency boundary | Watch the save step after Review. | The app shows local saving only briefly; save uses Room/SQLite and does not call RealGemma or re-run protocol retrieval. | Confirm/save triggers another inference wait or auto-exports JSON. |
 | Show summary counts | On Summary screen, show `Today's priority list`, urgent cases, follow-ups, and routine visits. | Counts reflect confirmed local data after save. | Counts do not update after save. |
+| Summary community panel link | Tap `View community panel` from Summary. | Community Panel opens using local saved roster/visit/referral/follow-up state. | Summary counts change unexpectedly or the panel triggers model inference. |
 | Priority fallback | If on-device priority queue fails or another inference is running, show the fallback card. | It says `On-device priority summary unavailable. Showing saved local visit flags.` | Mock priority reasoning is presented as RealGemma. |
 | Optional multilingual RealGemma output | Only after manual validation, show a Hindi, Swahili, or Spanish patient in fully gated submission mode. | User-facing generated note/safety wording appears in the selected patient language, while protocol citation IDs stay English. | A language fails manual validation, citation IDs are translated, or the video implies all-language support. |
 | Lucia Spanish note | Open `Lucia Fernandez` after manual validation and generate/review a Spanish RealGemma note. | Spanish user-facing note appears; citation IDs remain English; CHW review/save gate remains visible. | Video implies all languages, translates citation IDs, or skips review. |
@@ -114,6 +122,9 @@ On-device Gemma 4 inference - sped up for demo.
 - `The first RealGemma call can be slower because the local engine is initializing; Smriti preloads and keeps the engine warm so later calls should be faster.`
 - `In our emulator/local setup, Meena generation was about 21.7 seconds and Lucia after preload/reuse was about 14.4 seconds; local retrieval, validation, and save were milliseconds. Device performance may vary.`
 - `Saving is local Room/SQLite only and does not invoke Gemma.`
+- `Follow-up tasks and Community Panel counts are local state and do not count as saved visits.`
+- `Urgent protocol lookup is a local protocol check; it does not save a visit or create a referral flag.`
+- `Patient messages are editable and shared only by user action through the Android share sheet.`
 - `Selected languages demonstrated: English, Hindi, Spanish, Swahili.`
 - `These are patient-specific generated note languages; Smriti does not claim full app UI translation.`
 - `Protocol citation IDs remain stable in English; no cloud translation API is used.`
@@ -125,6 +136,7 @@ On-device Gemma 4 inference - sped up for demo.
 
 - Do not claim clinical validation.
 - Do not claim autonomous diagnosis or treatment.
+- Do not call urgent lookup emergency AI, AI triage, diagnosis, treatment guidance, or a risk score.
 - Do not claim direct Gemma 4 audio works.
 - Do not say no other team has this.
 - Do not claim clinical image diagnosis or referral decisions from paper-note images.

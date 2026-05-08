@@ -76,6 +76,7 @@ fun VisitScreen(
     onMarkFollowUpConfirmed: (Long) -> Unit,
     onMarkFollowUpTaskDone: (String) -> Unit,
     onRescheduleFollowUpTask: (String, String) -> Unit,
+    onCheckUrgentGuidance: () -> Unit,
     onGenerate: (String, VoiceNoteMetadata?) -> Unit,
     onScanPaperNote: () -> Unit,
     onUseSamplePaperNote: () -> Unit,
@@ -315,6 +316,15 @@ fun VisitScreen(
                             enabled = !isGenerating && !isReadingPaperNote
                         ) {
                             Text(if (isGenerating) "Preparing note..." else "Generate visit note")
+                        }
+                        OutlinedButton(
+                            onClick = onCheckUrgentGuidance,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp),
+                            enabled = !isGenerating && !isReadingPaperNote
+                        ) {
+                            Text("Check urgent guidance")
                         }
                         OutlinedButton(
                             onClick = onScanPaperNote,
