@@ -91,4 +91,30 @@ class ManualInferenceWiringSafetyTest {
             filesWithConversationOrSendMessage
         )
     }
+
+    @Test
+    fun speculativeDecodingProbeIsNotWiredIntoNormalAppFlow() {
+        val appRoot = File("src/main/java/com/smriti/clinicalscribe")
+            .takeIf { it.exists() }
+            ?: File("app/src/main/java/com/smriti/clinicalscribe")
+        val normalFlowFiles = listOf(
+            File(appRoot, "MainActivity.kt"),
+            File(appRoot, "ui/PatientListScreen.kt"),
+            File(appRoot, "ui/VisitScreen.kt"),
+            File(appRoot, "ui/ReviewScreen.kt"),
+            File(appRoot, "ui/SummaryScreen.kt"),
+            File(appRoot, "reasoning/LiteRtGemmaTextClient.kt"),
+            File(appRoot, "reasoning/RealGemmaDeveloperMode.kt")
+        )
+        val combined = normalFlowFiles.joinToString(separator = "\n") { it.readText() }
+        val engineConfigFactory = File(appRoot, "reasoning/LiteRtEngineConfigFactory.kt").readText()
+
+        assertFalse(combined.contains("enableSpeculativeDecoding"))
+        assertFalse(combined.contains("hasSpeculativeDecodingSupport"))
+        assertFalse(combined.contains("ManualRealGemmaSpeculativeLatencyInstrumentedTest"))
+        assertFalse(combined.contains("SmritiSpeculativeLatency"))
+        assertTrue(engineConfigFactory.contains("private val backendMode: LiteRtBackendMode = LiteRtBackendMode.CPU"))
+        assertTrue(engineConfigFactory.contains("backend = backendMode.toBackend()"))
+        assertFalse(engineConfigFactory.contains("enableSpeculativeDecoding"))
+    }
 }

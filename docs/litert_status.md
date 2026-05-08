@@ -15,6 +15,7 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
 - If a model is present, Offline Proof says `Real Gemma model: Found`, `Engine: Loads on demand`, and `Inference: Enabled; on-device RealGemma text reasoning` when gates are active. After a successful generation in the app session, engine status can show `Loaded`.
 - Direct LiteRT-LM API types now compile through a passive type probe:
   `Engine`, `EngineConfig`, `Backend`, `Content.Text`, `Content.ImageBytes`, `Content.ImageFile`, `Content.AudioBytes`, `Content.AudioFile`, `InputData.Image`, `InputData.Audio`, `Conversation`, `ConversationConfig`, `ToolCall`, `OpenApiTool`, `SamplerConfig`, `SessionConfig`, `Capabilities`, and `ExperimentalFlags`.
+- Local 0.11.0 AAR inspection confirms `ExperimentalFlags.enableSpeculativeDecoding` and `Capabilities.hasSpeculativeDecodingSupport()` are public. No separate public draft-model, target-model, MTP-specific, or multi-token configuration class was confirmed in the name/signature scan.
 - `LiteRtEngineConfigFactory` defaults to a real `EngineConfig` with `Backend.CPU()` when the model file is found.
 - `LiteRtEngineInitializationChecker` can initialize and immediately close `Engine` only when an explicit manual-test flag is true.
 - `LiteRtGemmaTextClient.generateTextManual(...)` can run one text-only `sendMessage` call only when an explicit manual inference flag is true.
@@ -113,6 +114,17 @@ The app now includes a narrow paper-note scan flow using `RealGemmaVisionPaperNo
 Stable text inference remains CPU by default. The pinned LiteRT-LM artifact exposes `Backend.GPU()`, and Smriti now keeps it behind `LiteRtBackendMode.GPU_EXPERIMENTAL` plus the manual-only `ManualRealGemmaBackendLatencyInstrumentedTest`.
 
 The experiment logs CPU and optional GPU timings under `SmritiBackendLatency` and `SmritiLatency`. If GPU crashes, is unsupported, or does not improve timing meaningfully, CPU remains the documented stable backend. The app does not invent generation-options APIs or remove CPU fallback.
+
+## Speculative Decoding / MTP Probe
+
+LiteRT-LM Android `0.11.0` exposes a usable Kotlin/Android-level speculative hook through:
+
+- `ExperimentalFlags.enableSpeculativeDecoding`
+- `Capabilities.hasSpeculativeDecodingSupport()`
+
+Smriti added `ManualRealGemmaSpeculativeLatencyInstrumentedTest` as a manual/developer-only latency probe. It requires `allowManualTextInference=true` and `allowSpeculativeDecoding=true`, runs CPU baseline first, checks model capability support, then runs CPU with speculative/MTP enabled only if the model reports support. Optional GPU + speculative remains behind `allowExperimentalGpuBackend=true`.
+
+The probe logs under `SmritiSpeculativeLatency` and `SmritiLatency`, uses existing safe RealGemma text scenarios, runs through the existing RealGemma parser, citation validation, and safety post-processing, and does not write to Room or update UI. CPU remains the stable default app path. This probe has compile support only until it is manually run on a target device with the sideloaded model; do not claim faster latency yet.
 
 Phase 2 starts the fallback architecture for voice visits:
 

@@ -207,6 +207,30 @@ adb logcat -s SmritiBackendLatency:I SmritiLatency:I "*:S"
 
 If GPU crashes, is unsupported, or has no meaningful improvement, keep CPU documented as stable. The experiment uses real `Backend.GPU()` from the pinned LiteRT-LM artifact and does not invent unsupported generation APIs.
 
+## Manual Speculative Decoding / MTP Latency Probe
+
+LiteRT-LM Android `0.11.0` exposes `ExperimentalFlags.enableSpeculativeDecoding` and `Capabilities.hasSpeculativeDecodingSupport()`. Smriti wires these only into a manual instrumentation probe. CPU remains the stable default app path.
+
+Run CPU baseline plus CPU speculative/MTP only after the app-private model is sideloaded:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaSpeculativeLatencyInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true" "-Pandroid.testInstrumentationRunnerArguments.allowSpeculativeDecoding=true"
+```
+
+Optionally include the isolated experimental GPU path:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaSpeculativeLatencyInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true" "-Pandroid.testInstrumentationRunnerArguments.allowSpeculativeDecoding=true" "-Pandroid.testInstrumentationRunnerArguments.allowExperimentalGpuBackend=true" "-Pandroid.testInstrumentationRunnerArguments.speculativeScenarioLimit=2"
+```
+
+View logs:
+
+```powershell
+adb logcat -s SmritiSpeculativeLatency:I SmritiLatency:I "*:S"
+```
+
+The probe does not write to Room, update UI, change the default backend, or bypass parser/safety/citation validation. If the model reports no speculative support, the harness logs the blocker after CPU baseline and stops. Do not claim faster latency unless this manual probe succeeds on the target device/emulator.
+
 ## Manual Multilingual RealGemma Test
 
 Phase C adds a manual multilingual validation harness for the recorded demo:

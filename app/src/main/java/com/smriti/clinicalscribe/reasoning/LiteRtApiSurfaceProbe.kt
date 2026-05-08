@@ -70,6 +70,14 @@ data class LiteRtApiSurfaceProbe(
             "Runtime raw InputData.Audio may fail with: Audio must be preprocessed before being used in SessionAdvanced."
         )
 
+    val speculativeApiFindings: List<String>
+        get() = listOf(
+            "ExperimentalFlags.enableSpeculativeDecoding is public in litertlm-android 0.11.0.",
+            "Capabilities.hasSpeculativeDecodingSupport() is public in litertlm-android 0.11.0.",
+            "No public draft-model, target-model, MTP-specific, or multi-token configuration class was found in the 0.11.0 classes.jar name scan.",
+            "Smriti keeps speculative decoding manual-only until the gated latency probe is run on a target device."
+        )
+
     val imageApiFindings: List<String>
         get() = listOf(
             "Content.ImageBytes and Content.ImageFile are public image content containers.",

@@ -59,6 +59,12 @@ This reduces the likely overlapping-call crash condition, but a true native abor
 
 CPU is the stable documented backend for the filmed path. `Backend.GPU()` is available only through an isolated manual latency experiment and is not default. If GPU is unsupported, crashes, or does not provide meaningful stable improvement on the target device/emulator, keep CPU for filming and documentation.
 
+## Speculative Decoding / MTP Probe
+
+LiteRT-LM Android `0.11.0` exposes `ExperimentalFlags.enableSpeculativeDecoding` and `Capabilities.hasSpeculativeDecodingSupport()`, but Smriti has not benchmark-validated faster latency yet. The current support is an explicit manual instrumentation probe only. CPU remains the stable default, and speculative/MTP must not be used for app-facing behavior or filming claims unless the manual target-device benchmark succeeds with parser, citation, and safety validation intact.
+
+No public draft-model, target-model, MTP-specific, or multi-token configuration class was confirmed in the local 0.11.0 AAR name/signature scan.
+
 ## RealGemma Schema Adherence
 
 RealGemma can load and return text on the emulator, but output schema adherence is still being tuned. A recent RealGemma response omitted the required `referralFlag` field, so the app rejected it as invalid output. This is expected safe behavior: invalid RealGemma output is not saved, is not shown as a clinical result, and does not trigger a mock fallback.
