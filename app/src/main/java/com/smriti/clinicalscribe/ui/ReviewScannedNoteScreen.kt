@@ -55,11 +55,11 @@ fun ReviewScannedNoteScreen(
     }
     val matchedCurrent = matchedPatient?.id == currentPatient.id
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    SmritiScreenSurface {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(SmritiSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
         ) {
             item {
                 Row(
@@ -84,92 +84,69 @@ fun ReviewScannedNoteScreen(
             }
 
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(extraction.confidence.chwMessage, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "No diagnosis or referral decision was generated from this image.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                SmritiCard(tone = SmritiTone.Info) {
+                    Text(extraction.confidence.chwMessage, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "No diagnosis or referral decision was generated from this image.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
 
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        if (matchedCurrent || matchedPatient == null) {
-                            Text("Save this scanned note to ${currentPatient.name}?", fontWeight = FontWeight.SemiBold)
-                            Button(
-                                onClick = { targetPatient = currentPatient },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 48.dp),
-                                enabled = !isSaving
-                            ) {
-                                Text("Yes, save to this patient")
-                            }
-                        } else {
-                            Text(
-                                "This looks like ${matchedPatient.name} in your roster. Link this note to her record?",
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Button(
-                                onClick = { targetPatient = matchedPatient },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 48.dp),
-                                enabled = !isSaving
-                            ) {
-                                Text("Yes, link")
-                            }
-                            OutlinedButton(
-                                onClick = { targetPatient = currentPatient },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 48.dp),
-                                enabled = !isSaving
-                            ) {
-                                Text("Save to current patient")
-                            }
-                        }
-                        OutlinedButton(
-                            onClick = onCancel,
+                SmritiCard {
+                    if (matchedCurrent || matchedPatient == null) {
+                        Text("Save this scanned note to ${currentPatient.name}?", fontWeight = FontWeight.SemiBold)
+                        Button(
+                            onClick = { targetPatient = currentPatient },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 48.dp),
                             enabled = !isSaving
                         ) {
-                            Text("Cancel")
+                            Text("Yes, save to this patient")
                         }
-                        targetPatient?.let { target ->
-                            Text("Selected record: ${target.name}", style = MaterialTheme.typography.bodyMedium)
+                    } else {
+                        Text(
+                            "This looks like ${matchedPatient.name} in your roster. Link this note to her record?",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Button(
+                            onClick = { targetPatient = matchedPatient },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp),
+                            enabled = !isSaving
+                        ) {
+                            Text("Yes, link")
                         }
+                        OutlinedButton(
+                            onClick = { targetPatient = currentPatient },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp),
+                            enabled = !isSaving
+                        ) {
+                            Text("Save to current patient")
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = onCancel,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp),
+                        enabled = !isSaving
+                    ) {
+                        Text("Cancel")
+                    }
+                    targetPatient?.let { target ->
+                        SmritiStatusChip("Selected record: ${target.name}", tone = SmritiTone.Info)
                     }
                 }
             }
 
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
+                SmritiCard {
                         OutlinedTextField(
                             value = patientName,
                             onValueChange = { patientName = it },
@@ -206,7 +183,6 @@ fun ReviewScannedNoteScreen(
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Follow-up plan") }
                         )
-                    }
                 }
             }
 

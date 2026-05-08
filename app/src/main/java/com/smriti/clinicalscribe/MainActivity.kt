@@ -70,6 +70,7 @@ import com.smriti.clinicalscribe.ui.PatientListScreen
 import com.smriti.clinicalscribe.ui.ReviewScreen
 import com.smriti.clinicalscribe.ui.ReviewScannedNoteScreen
 import com.smriti.clinicalscribe.ui.SetupGuidanceScreen
+import com.smriti.clinicalscribe.ui.SmritiTheme
 import com.smriti.clinicalscribe.ui.SummaryScreen
 import com.smriti.clinicalscribe.ui.UserGuideScreen
 import com.smriti.clinicalscribe.ui.VisitScreen
@@ -445,7 +446,7 @@ private fun SmritiApp(
         isLoading = false
     }
 
-    MaterialTheme {
+    SmritiTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             Box(
                 modifier = Modifier

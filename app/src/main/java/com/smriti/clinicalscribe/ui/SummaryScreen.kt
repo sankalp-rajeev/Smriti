@@ -72,11 +72,11 @@ fun SummaryScreen(
         )
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    SmritiScreenSurface {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(SmritiSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
         ) {
             item {
                 Column(
@@ -85,65 +85,40 @@ fun SummaryScreen(
                 ) {
                     Text("End-of-day summary", style = MaterialTheme.typography.headlineSmall)
                     Text("Saved visits on this device", style = MaterialTheme.typography.bodyLarge)
-                    Button(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 52.dp),
-                        enabled = !isResettingDemoData
-                    ) {
-                        Text("Back to patients")
-                    }
+                    SmritiPrimaryButton("Back to patients", onBack, enabled = !isResettingDemoData)
                 }
             }
 
             if (summary.totalVisits == 0) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("No visits recorded today.", style = MaterialTheme.typography.titleMedium)
-                            Text("Visit a patient and confirm a note to see today's summary.", style = MaterialTheme.typography.bodyLarge)
-                        }
+                    SmritiCard {
+                        Text("No visits recorded today.", style = MaterialTheme.typography.titleMedium)
+                        Text("Visit a patient and confirm a note to see today's summary.", style = MaterialTheme.typography.bodyLarge)
+                        SmritiStatusChip("Referral suggested: 0", tone = SmritiTone.Success)
                     }
                 }
             } else {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text("Today's priority list", fontWeight = FontWeight.SemiBold)
-                            Text("Total visits saved today: ${summary.totalVisits}", style = MaterialTheme.typography.bodyLarge)
-                            Text("Referral suggested: ${summary.referralsFlagged}", style = MaterialTheme.typography.bodyLarge)
-                            Text("Follow-ups due: ${summary.followUpsDue.size}", style = MaterialTheme.typography.bodyLarge)
-                        }
+                    SmritiCard(tone = SmritiTone.Info) {
+                        Text("Today's priority list", fontWeight = FontWeight.SemiBold)
+                        Text("Total visits saved today: ${summary.totalVisits}", style = MaterialTheme.typography.bodyLarge)
+                        Text("Referral suggested: ${summary.referralsFlagged}", style = MaterialTheme.typography.bodyLarge)
+                        Text("Follow-ups due: ${summary.followUpsDue.size}", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
 
             priorityUnavailableMessage?.let {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE3B0)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("On-device priority summary unavailable. Showing saved local visit flags.", fontWeight = FontWeight.SemiBold)
-                            Text("Try summary again after the current note finishes.", style = MaterialTheme.typography.bodyLarge)
-                        }
+                    SmritiCard(tone = SmritiTone.Caution) {
+                        Text("On-device priority summary unavailable. Showing saved local visit flags.", fontWeight = FontWeight.SemiBold)
+                        Text("Try summary again after the current note finishes.", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
 
             priorityQueue?.items?.takeIf { it.isNotEmpty() }?.let { items ->
-                item { Text("Urgent cases", style = MaterialTheme.typography.titleMedium) }
+                item { SmritiSectionHeader("Urgent cases") }
                 items(items) { item ->
                     SummaryItem(
                         title = item.patientName,
@@ -167,7 +142,7 @@ fun SummaryScreen(
                 }
             }
 
-            item { Text("Urgent cases", style = MaterialTheme.typography.titleMedium) }
+            item { SmritiSectionHeader("Urgent cases") }
             if (summary.urgentCases.isEmpty()) {
                 item { SummaryItem("No urgent cases", "No immediate referral cases saved yet.", SummaryTone.Routine) }
             } else {
@@ -176,7 +151,7 @@ fun SummaryScreen(
                 }
             }
 
-            item { Text("Follow-ups", style = MaterialTheme.typography.titleMedium) }
+            item { SmritiSectionHeader("Follow-ups") }
             if (summary.followUpsDue.isEmpty()) {
                 item { SummaryItem("No follow-ups", "No follow-up tasks saved yet.", SummaryTone.Routine) }
             } else {
@@ -203,15 +178,11 @@ fun SummaryScreen(
                     Text("How was this prepared?")
                 }
                 if (showPreparationDetails) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
+                    SmritiCard(
+                        tone = SmritiTone.Muted,
+                        modifier = Modifier.padding(top = 8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("This summary uses saved visit notes, patient history, and local health guidance on this device.")
-                        }
+                        Text("This summary uses saved visit notes, patient history, and local health guidance on this device.")
                     }
                 }
             }
@@ -306,21 +277,13 @@ private fun SummaryItem(
     body: String,
     tone: SummaryTone
 ) {
-    val color = when (tone) {
-        SummaryTone.Urgent -> MaterialTheme.colorScheme.errorContainer
-        SummaryTone.Caution -> Color(0xFFFFE3B0)
-        SummaryTone.Routine -> MaterialTheme.colorScheme.surfaceVariant
+    val cardTone = when (tone) {
+        SummaryTone.Urgent -> SmritiTone.Urgent
+        SummaryTone.Caution -> SmritiTone.Caution
+        SummaryTone.Routine -> SmritiTone.Muted
     }
-    Card(
-        colors = CardDefaults.cardColors(containerColor = color),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(title, fontWeight = FontWeight.SemiBold)
-            Text(body, style = MaterialTheme.typography.bodyLarge)
-        }
+    SmritiCard(tone = cardTone) {
+        Text(title, fontWeight = FontWeight.SemiBold)
+        Text(body, style = MaterialTheme.typography.bodyLarge)
     }
 }

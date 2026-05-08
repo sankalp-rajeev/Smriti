@@ -50,42 +50,32 @@ fun ReviewScreen(
     var followUpText by remember(result) { mutableStateOf(result.suggestedFollowUp) }
     var showSourceDetails by remember(result) { mutableStateOf(false) }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    SmritiScreenSurface {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(SmritiSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Review visit note", style = MaterialTheme.typography.headlineSmall)
-                    Text(
-                        "Smriti does not diagnose. Health worker must review before saving.",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(patient.displayLabel(), style = MaterialTheme.typography.bodyLarge)
-                    OutlinedButton(
-                        onClick = onBack,
-                        enabled = !isSaving,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                    ) {
-                        Text("Back to visit")
+                    SmritiCard(tone = SmritiTone.Info) {
+                        Text("Review before saving", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Smriti does not diagnose. Health worker must review before saving.",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(patient.displayLabel(), style = MaterialTheme.typography.bodyMedium)
                     }
+                    SmritiSecondaryButton("Back to visit", onBack, enabled = !isSaving)
                 }
             }
 
             result.clarificationPrompt?.takeIf { it.isNotBlank() }?.let { question ->
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE3B0)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("More information needed", fontWeight = FontWeight.SemiBold)
-                            Text(question, style = MaterialTheme.typography.bodyLarge)
-                        }
+                    SmritiCard(tone = SmritiTone.Caution) {
+                        Text("More information needed", fontWeight = FontWeight.SemiBold)
+                        Text(question, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
@@ -93,46 +83,30 @@ fun ReviewScreen(
             val referralFlag = result.referralFlag
             if (referralFlag != null) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                    SmritiCard(tone = SmritiTone.Urgent) {
+                        Text("Referral suggested", fontWeight = FontWeight.SemiBold)
+                        Text(referralFlag.reason, style = MaterialTheme.typography.bodyLarge)
+                        if (referralFlag.dangerSigns.isNotBlank()) {
+                            Text("Danger signs: ${referralFlag.dangerSigns}", style = MaterialTheme.typography.bodyLarge)
+                        }
+                        Text("Health guidance used:", fontWeight = FontWeight.SemiBold)
+                        Text(result.protocolChunk?.title ?: referralFlag.protocolBasis, style = MaterialTheme.typography.bodyLarge)
+                        OutlinedButton(
+                            onClick = onReadReferralSuggestion,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
                         ) {
-                            Text("Referral suggested", fontWeight = FontWeight.SemiBold)
-                            Text(referralFlag.reason, style = MaterialTheme.typography.bodyLarge)
-                            if (referralFlag.dangerSigns.isNotBlank()) {
-                                Text("Danger signs: ${referralFlag.dangerSigns}", style = MaterialTheme.typography.bodyLarge)
-                            }
-                            Text("Health guidance used:", fontWeight = FontWeight.SemiBold)
-                            Text(result.protocolChunk?.title ?: referralFlag.protocolBasis, style = MaterialTheme.typography.bodyLarge)
-                            OutlinedButton(
-                                onClick = onReadReferralSuggestion,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 48.dp)
-                            ) {
-                                Text("Read note aloud")
-                            }
+                            Text("Read note aloud")
                         }
                     }
                 }
             } else if (!result.uncertain) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFDCEEDB)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text("No referral flag", fontWeight = FontWeight.SemiBold)
-                            Text("No urgent danger signs were flagged from this note.", style = MaterialTheme.typography.bodyLarge)
-                            Text(followUpText, style = MaterialTheme.typography.bodyLarge)
-                        }
+                    SmritiCard(tone = SmritiTone.Success) {
+                        Text("No referral flag", fontWeight = FontWeight.SemiBold)
+                        Text("No urgent danger signs were flagged from this note.", style = MaterialTheme.typography.bodyLarge)
+                        Text(followUpText, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
@@ -147,31 +121,24 @@ fun ReviewScreen(
                     Text("How was this prepared?")
                 }
                 if (showSourceDetails) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
+                    SmritiCard(
+                        tone = SmritiTone.Muted,
+                        modifier = Modifier.padding(top = 8.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text("This note was prepared using:", fontWeight = FontWeight.SemiBold)
-                            Text("- Today's visit observation")
-                            if (priorVisitCount > 0) {
-                                Text("- Patient history from $priorVisitCount prior visits")
-                            } else {
-                                Text("- No prior visit history (first visit)")
-                            }
-                            val localSource = patient.country.ifBlank { "this country" }
-                            Text("- Local health guidance for $localSource")
-                            Text("- On-device note preparation (no internet used)")
-                            if (result.protocolChunk == null) {
-                                Text("- Global health guidance (no local guidance for this country yet)")
-                            }
-                            Text("Guidance ID: ${result.protocolCitation}", style = MaterialTheme.typography.bodyMedium)
+                        Text("This note was prepared using:", fontWeight = FontWeight.SemiBold)
+                        Text("- Today's visit observation")
+                        if (priorVisitCount > 0) {
+                            Text("- Patient history from $priorVisitCount prior visits")
+                        } else {
+                            Text("- No prior visit history (first visit)")
                         }
+                        val localSource = patient.country.ifBlank { "this country" }
+                        Text("- Local health guidance for $localSource")
+                        Text("- On-device note preparation (no internet used)")
+                        if (result.protocolChunk == null) {
+                            Text("- Global health guidance (no local guidance for this country yet)")
+                        }
+                        Text("Guidance ID: ${result.protocolCitation}", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }

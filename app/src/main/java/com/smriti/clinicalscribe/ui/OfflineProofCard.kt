@@ -71,22 +71,17 @@ fun OfflineProofCard(
     modifier: Modifier = Modifier,
     compact: Boolean = false
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = modifier.fillMaxWidth()
+    SmritiCard(
+        tone = SmritiTone.Muted,
+        modifier = modifier
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)
-        ) {
-            Text("Local proof", fontWeight = FontWeight.SemiBold)
-            val proofLines = if (compact) status.compactDisplayLines else status.displayLines
-            proofLines.forEach { line ->
-                Text(
-                    text = line,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+        Text("Offline setup checklist", fontWeight = FontWeight.SemiBold)
+        val proofLines = if (compact) status.compactDisplayLines else status.displayLines
+        proofLines.forEach { line ->
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }

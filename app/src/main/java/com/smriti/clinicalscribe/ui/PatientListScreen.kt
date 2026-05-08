@@ -87,12 +87,12 @@ fun PatientListScreen(
         )
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    SmritiScreenSurface {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(SmritiSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -112,50 +112,28 @@ fun PatientListScreen(
                 singleLine = true
             )
 
-            Button(
-                onClick = onAddPatient,
-                enabled = !isLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 52.dp)
-            ) {
-                Text("Add patient")
-            }
-            OutlinedButton(
-                onClick = onShowSummary,
-                enabled = !isLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-            ) {
-                Text("End-of-day summary")
-            }
+            SmritiPrimaryButton("Add patient", onAddPatient, enabled = !isLoading)
+            SmritiTonalButton("End-of-day summary", onShowSummary, enabled = !isLoading)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
+                SmritiSecondaryButton(
+                    text = if (isImportingSupervisorRegister) "Importing..." else "Import register",
                     onClick = { showImportDialog = true },
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp),
+                    modifier = Modifier.weight(1f),
                     enabled = !isImportingSupervisorRegister
-                ) {
-                    Text(if (isImportingSupervisorRegister) "Importing..." else "Import register")
-                }
-                OutlinedButton(
-                    onClick = onUserGuide,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp)
-                ) {
-                    Text("User guide")
-                }
+                )
+                SmritiSecondaryButton("User guide", onUserGuide, modifier = Modifier.weight(1f))
             }
             TextButton(onClick = onCheckOfflineSetup, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text("Check offline setup")
             }
-            importStatusMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            importStatusMessage?.let {
+                SmritiStatusChip(it, tone = SmritiTone.Info)
+            }
 
             if (isLoading) {
-                Text("Loading local patient roster...", style = MaterialTheme.typography.bodyLarge)
+                SmritiCard(tone = SmritiTone.Info) {
+                    Text("Loading local patient roster...", style = MaterialTheme.typography.bodyLarge)
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier
@@ -210,33 +188,11 @@ private fun EmptyRosterState(
     onAddPatient: () -> Unit,
     onImportRegister: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text("No patients yet.", style = MaterialTheme.typography.titleLarge)
-            Text("Import a patient register or add your first patient.", style = MaterialTheme.typography.bodyLarge)
-            Button(
-                onClick = onAddPatient,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-            ) {
-                Text("Add patient")
-            }
-            OutlinedButton(
-                onClick = onImportRegister,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-            ) {
-                Text("Import register")
-            }
-        }
+    SmritiCard {
+        Text("No patients yet.", style = MaterialTheme.typography.titleLarge)
+        Text("Import a patient register or add your first patient.", style = MaterialTheme.typography.bodyLarge)
+        SmritiPrimaryButton("Add patient", onAddPatient)
+        SmritiSecondaryButton("Import register", onImportRegister)
     }
 }
 
@@ -245,31 +201,16 @@ private fun SearchEmptyState(
     query: String,
     onAddPatient: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text("No patient found for '$query'", style = MaterialTheme.typography.titleMedium)
-            Text("Check the spelling or add a new patient.", style = MaterialTheme.typography.bodyLarge)
-            OutlinedButton(
-                onClick = onAddPatient,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-            ) {
-                Text("Add patient")
-            }
-        }
+    SmritiCard {
+        Text("No patient found for '$query'", style = MaterialTheme.typography.titleMedium)
+        Text("Check the spelling or add a new patient.", style = MaterialTheme.typography.bodyLarge)
+        SmritiSecondaryButton("Add patient", onAddPatient)
     }
 }
 
 @Composable
 private fun SectionHeader(label: String) {
-    Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    SmritiSectionHeader(label)
 }
 
 @Composable
@@ -281,49 +222,29 @@ private fun PatientRow(
 ) {
     val visitCount = visits.count { it.patientId == patient.id }
     val chips = PatientRosterUiLogic.statusChips(patient, visits, referrals)
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(patient.displayLabel(), style = MaterialTheme.typography.titleLarge)
-            Text(PatientVisitUiText.gestationLabel(patient), style = MaterialTheme.typography.bodyLarge)
-            Text(PatientVisitUiText.countryVillage(patient), style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = "Note language: ${PatientVisitUiText.noteLanguageName(patient)}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                chips.forEach { chip -> PatientChip(chip) }
-            }
-            Text("$visitCount history entr${if (visitCount == 1) "y" else "ies"}", style = MaterialTheme.typography.bodyMedium)
-            Button(
-                onClick = { onPatientSelected(patient) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-            ) {
-                Text("Open visit")
-            }
+    SmritiCard {
+        Text(patient.displayLabel(), style = MaterialTheme.typography.titleLarge)
+        Text(PatientVisitUiText.gestationLabel(patient), style = MaterialTheme.typography.bodyLarge)
+        Text(PatientVisitUiText.countryVillage(patient), style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = "Note language: ${PatientVisitUiText.noteLanguageName(patient)}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            chips.forEach { chip -> PatientChip(chip) }
         }
+        Text("$visitCount history entr${if (visitCount == 1) "y" else "ies"}", style = MaterialTheme.typography.bodyMedium)
+        SmritiPrimaryButton("Open visit", onClick = { onPatientSelected(patient) })
     }
 }
 
 @Composable
 private fun PatientChip(chip: PatientStatusChip) {
-    val color = when (chip.tone) {
-        PatientChipTone.Urgent -> MaterialTheme.colorScheme.errorContainer
-        PatientChipTone.Caution -> Color(0xFFFFE3B0)
-        PatientChipTone.Routine -> Color(0xFFDCEEDB)
+    val tone = when (chip.tone) {
+        PatientChipTone.Urgent -> SmritiTone.Urgent
+        PatientChipTone.Caution -> SmritiTone.Caution
+        PatientChipTone.Routine -> SmritiTone.Success
     }
-    Text(
-        text = chip.label,
-        style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier
-            .background(color, MaterialTheme.shapes.small)
-            .padding(horizontal = 10.dp, vertical = 6.dp)
-    )
+    SmritiStatusChip(chip.label, tone = tone)
 }

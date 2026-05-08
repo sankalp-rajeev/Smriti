@@ -107,9 +107,9 @@ class NormalVisitFlowWiringTest {
         val welcomeScreens = appSourceFile("ui/WelcomeScreens.kt").readText()
         val mainActivity = appSourceFile("MainActivity.kt").readText()
 
-        assertTrue(patientListScreen.contains("Text(\"Add patient\")"))
-        assertTrue(patientListScreen.contains("Text(\"End-of-day summary\")"))
-        assertTrue(patientListScreen.contains("Text(if (isImportingSupervisorRegister) \"Importing...\" else \"Import register\")"))
+        assertTrue(patientListScreen.contains("SmritiPrimaryButton(\"Add patient\""))
+        assertTrue(patientListScreen.contains("SmritiTonalButton(\"End-of-day summary\""))
+        assertTrue(patientListScreen.contains("text = if (isImportingSupervisorRegister) \"Importing...\" else \"Import register\""))
         assertTrue(patientListScreen.contains("Text(\"Check offline setup\")"))
         assertTrue(patientListScreen.contains(".heightIn(min = 48.dp)"))
         assertFalse(patientListScreen.contains("OfflineProofCard("))

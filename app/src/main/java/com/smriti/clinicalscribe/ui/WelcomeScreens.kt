@@ -26,48 +26,34 @@ fun WelcomeScreen(
     onUserGuide: () -> Unit,
     onCheckOfflineSetup: () -> Unit
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    SmritiScreenSurface {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Smriti", style = MaterialTheme.typography.headlineLarge)
                 Text("Offline health visit assistant", style = MaterialTheme.typography.titleMedium)
             }
-            Text(
-                text = "Smriti helps you remember patient history, check local health guidance, prepare visit notes, and decide who needs follow-up.\n\nSmriti does not diagnose. Health worker must review and confirm before saving.",
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Button(
-                onClick = onStartVisits,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 52.dp)
-            ) {
-                Text("Start visits")
+            SmritiCard(tone = SmritiTone.Default) {
+                Text(
+                    "Local patient memory, local health guidance, and CHW review before saving.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    "Smriti does not diagnose. Health worker must review and confirm before saving.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
-            OutlinedButton(
-                onClick = onUserGuide,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-            ) {
-                Text("View user guide")
-            }
-            OutlinedButton(
-                onClick = onCheckOfflineSetup,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-            ) {
-                Text("Check offline setup")
-            }
+            SmritiPrimaryButton("Start visits", onStartVisits)
+            SmritiTonalButton("View user guide", onUserGuide)
+            SmritiSecondaryButton("Check offline setup", onCheckOfflineSetup)
             Text(
                 text = "Works offline after setup - Local patient memory - On-device Gemma 4 reasoning",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -86,28 +72,20 @@ fun UserGuideScreen(
         "End of day" to "Open Summary to see urgent cases and follow-ups for tomorrow."
     )
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    SmritiScreenSurface {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(SmritiSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
         ) {
             item {
                 Text("User guide", style = MaterialTheme.typography.headlineSmall)
             }
             sections.forEachIndexed { index, (title, body) ->
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text("${index + 1}. $title", fontWeight = FontWeight.SemiBold)
-                            Text(body, style = MaterialTheme.typography.bodyLarge)
-                        }
+                    SmritiCard {
+                        Text("${index + 1}. $title", fontWeight = FontWeight.SemiBold)
+                        Text(body, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
@@ -118,14 +96,7 @@ fun UserGuideScreen(
                 )
             }
             item {
-                Button(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp)
-                ) {
-                    Text("Back")
-                }
+                SmritiPrimaryButton("Back", onBack)
             }
         }
     }
@@ -136,11 +107,11 @@ fun SetupGuidanceScreen(
     onContinueWithoutModel: () -> Unit,
     onBack: () -> Unit
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    SmritiScreenSurface {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(SmritiSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -152,29 +123,14 @@ fun SetupGuidanceScreen(
                 }
             }
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("1. Receive the model file from your supervisor")
-                        Text("2. Your supervisor will install it on this device")
-                        Text("3. Return to Smriti - it will be ready")
-                    }
+                SmritiCard {
+                    Text("1. Receive the model file from your supervisor")
+                    Text("2. Your supervisor will install it on this device")
+                    Text("3. Return to Smriti - it will be ready")
                 }
             }
             item {
-                Button(
-                    onClick = onContinueWithoutModel,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 52.dp)
-                ) {
-                    Text("Continue without model (demo mode)")
-                }
+                SmritiPrimaryButton("Continue without model (demo mode)", onContinueWithoutModel)
                 Text(
                     text = "In demo mode, notes use sample guidance. Install the model for full on-device reasoning.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -182,14 +138,7 @@ fun SetupGuidanceScreen(
                 )
             }
             item {
-                OutlinedButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp)
-                ) {
-                    Text("Back")
-                }
+                SmritiSecondaryButton("Back", onBack)
             }
         }
     }
@@ -200,11 +149,11 @@ fun OfflineSetupScreen(
     status: OfflineProofStatus,
     onBack: () -> Unit
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    SmritiScreenSurface {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(SmritiSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -219,14 +168,7 @@ fun OfflineSetupScreen(
                 OfflineProofCard(status = status)
             }
             item {
-                Button(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp)
-                ) {
-                    Text("Back")
-                }
+                SmritiPrimaryButton("Back", onBack)
             }
         }
     }

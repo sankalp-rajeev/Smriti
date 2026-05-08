@@ -179,25 +179,30 @@ fun VisitScreen(
         )
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    SmritiScreenSurface {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(SmritiSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
         ) {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SmritiCard {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(patient.displayLabel(), style = MaterialTheme.typography.headlineSmall)
                             Text(PatientVisitUiText.gestationLabel(patient), style = MaterialTheme.typography.bodyLarge)
                             Text(PatientVisitUiText.countryVillage(patient), style = MaterialTheme.typography.bodyLarge)
+                            SmritiStatusChip(
+                                "Note: ${PatientVisitUiText.noteLanguageDisplayLabel(patient)}",
+                                tone = SmritiTone.Info
+                            )
                             Text(
                                 "Visit note will be prepared in ${PatientVisitUiText.noteLanguageDisplayLabel(patient)}",
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         OutlinedButton(
@@ -230,32 +235,17 @@ fun VisitScreen(
             }
 
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text("What to do now", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Speak or type today's visit observation. Smriti will prepare a note for review.",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+                SmritiCard(tone = SmritiTone.Info) {
+                    Text("What to do now", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Speak or type today's visit observation. Smriti will prepare a note for review.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
 
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
+                SmritiCard {
                         Button(
                             onClick = { tryOfflineSpeech() },
                             modifier = Modifier
@@ -326,69 +316,45 @@ fun VisitScreen(
                         ) {
                             Text("Use sample paper note")
                         }
-                    }
                 }
             }
 
             if (isReadingPaperNote) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text("Reading paper note...", fontWeight = FontWeight.SemiBold)
-                            Text(paperNoteStatusMessage ?: "Extracting visit details...", style = MaterialTheme.typography.bodyLarge)
-                        }
+                    SmritiCard(tone = SmritiTone.Info) {
+                        Text("Reading paper note...", fontWeight = FontWeight.SemiBold)
+                        Text(paperNoteStatusMessage ?: "Extracting visit details...", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
 
             if (isGenerating) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(loadingMessages[loadingStep], fontWeight = FontWeight.SemiBold)
-                            Text(generationStatusMessage ?: "This may take a few seconds.", style = MaterialTheme.typography.bodyLarge)
-                            Text("This may take a few seconds.", style = MaterialTheme.typography.bodyMedium)
-                        }
+                    SmritiCard(tone = SmritiTone.Info) {
+                        Text(loadingMessages[loadingStep], fontWeight = FontWeight.SemiBold)
+                        Text(generationStatusMessage ?: "This may take a few seconds.", style = MaterialTheme.typography.bodyLarge)
+                        Text("This may take a few seconds.", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
 
             errorMessage?.let { message ->
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                    SmritiCard(tone = SmritiTone.Urgent) {
+                        Text("Note could not be prepared", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            message,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text("Transcript was preserved. Please retry.", style = MaterialTheme.typography.bodyMedium)
+                        OutlinedButton(
+                            onClick = { requestGenerate() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp),
+                            enabled = !isGenerating
                         ) {
-                            Text("Note could not be prepared", fontWeight = FontWeight.SemiBold)
-                            Text(
-                                message,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            OutlinedButton(
-                                onClick = { requestGenerate() },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 48.dp),
-                                enabled = !isGenerating
-                            ) {
-                                Text("Try again")
-                            }
+                            Text("Try again")
                         }
                     }
                 }
@@ -403,18 +369,10 @@ fun VisitScreen(
             }
 
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text("Offline setup ready", fontWeight = FontWeight.SemiBold)
-                        Text("On-device Gemma: ${if (modelReady) "ready" else "Setup needed"}")
-                        Text("Local guidance available")
-                    }
+                SmritiCard(tone = SmritiTone.Muted) {
+                    Text("Offline setup ready", fontWeight = FontWeight.SemiBold)
+                    SmritiStatusChip("On-device Gemma: ${if (modelReady) "ready" else "Setup needed"}", tone = if (modelReady) SmritiTone.Success else SmritiTone.Caution)
+                    Text("Local guidance available")
                 }
             }
         }
@@ -427,59 +385,43 @@ private fun MissedFollowUpCard(
     onMarkConfirmed: () -> Unit,
     onNoteOngoing: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE3B0)),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+    SmritiCard(tone = SmritiTone.Caution) {
+        Text("Missed follow-up", fontWeight = FontWeight.SemiBold)
+        Text(
+            "Referred to health facility ${alert.daysOverdue} days ago. Outcome unknown. Confirm before today's visit.",
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Button(
+            onClick = onMarkConfirmed,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
         ) {
-            Text("Missed follow-up", fontWeight = FontWeight.SemiBold)
-            Text(
-                "Referred to health facility ${alert.daysOverdue} days ago. Outcome unknown. Confirm before today's visit.",
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Button(
-                onClick = onMarkConfirmed,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-            ) {
-                Text("Mark confirmed")
-            }
-            OutlinedButton(
-                onClick = onNoteOngoing,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-            ) {
-                Text("Note as ongoing")
-            }
+            Text("Mark confirmed")
+        }
+        OutlinedButton(
+            onClick = onNoteOngoing,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+        ) {
+            Text("Note as ongoing")
         }
     }
 }
 
 @Composable
 private fun HistorySignalCard(signal: HistorySignal) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE3B0)),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text("History signal", fontWeight = FontWeight.SemiBold)
-            Text(
-                "BP readings have increased across recent visits. Review and monitor per local health guidance.",
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = "Recent BP readings: ${signal.readings.joinToString(" -> ") { it.label }}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
+    SmritiCard(tone = SmritiTone.Caution) {
+        Text("History signal", fontWeight = FontWeight.SemiBold)
+        Text(
+            "BP readings have increased across recent visits. Review and monitor per local health guidance.",
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Text(
+            text = "Recent BP readings: ${signal.readings.joinToString(" -> ") { it.label }}",
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 
@@ -490,16 +432,11 @@ private fun PriorHistorySection(
     onToggle: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Patient history", style = MaterialTheme.typography.titleMedium)
+        SmritiSectionHeader("Patient history")
         if (history.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("No prior visits recorded.", fontWeight = FontWeight.SemiBold)
-                    Text("This is the first visit for this patient.", style = MaterialTheme.typography.bodyLarge)
-                }
+            SmritiCard {
+                Text("No prior visits recorded.", fontWeight = FontWeight.SemiBold)
+                Text("This is the first visit for this patient.", style = MaterialTheme.typography.bodyLarge)
             }
         } else {
             val visibleHistory = if (expanded) history else history.take(2)
@@ -523,33 +460,25 @@ private fun HistoryCard(visit: VisitLog) {
     var showDetails by remember(visit.id) { mutableStateOf(false) }
     val status = historyStatusLabel(visit)
     val followUp = visit.suggestedFollowUp.trim()
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(formatDate(visit.visitDateMillis), fontWeight = FontWeight.SemiBold)
-            Text(status, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            Text(historyObservationSummary(visit), style = MaterialTheme.typography.bodyLarge)
-            if (followUp.isNotBlank()) {
-                Text("Follow-up: $followUp", style = MaterialTheme.typography.bodyMedium)
+    SmritiCard(tone = SmritiTone.Muted) {
+        Text(formatDate(visit.visitDateMillis), fontWeight = FontWeight.SemiBold)
+        SmritiStatusChip(status, tone = if (status == "Referral suggested") SmritiTone.Urgent else SmritiTone.Info)
+        Text(historyObservationSummary(visit), style = MaterialTheme.typography.bodyLarge)
+        if (followUp.isNotBlank()) {
+            Text("Follow-up: $followUp", style = MaterialTheme.typography.bodyMedium)
+        }
+        Text("Not a diagnosis. Health worker reviewed before saving.", style = MaterialTheme.typography.bodyMedium)
+        TextButton(onClick = { showDetails = !showDetails }) {
+            Text(if (showDetails) "Hide details" else "Show details")
+        }
+        if (showDetails) {
+            Text("Full observation: ${visit.observationText.ifBlank { "Review saved note" }}")
+            Text("Patient history checked")
+            Text("Local health guidance checked")
+            if (visit.protocolCitation.isNotBlank()) {
+                Text("Guidance ID: ${visit.protocolCitation}", style = MaterialTheme.typography.bodyMedium)
             }
-            Text("Not a diagnosis. Health worker reviewed before saving.", style = MaterialTheme.typography.bodyMedium)
-            TextButton(onClick = { showDetails = !showDetails }) {
-                Text(if (showDetails) "Hide details" else "Show details")
-            }
-            if (showDetails) {
-                Text("Full observation: ${visit.observationText.ifBlank { "Review saved note" }}")
-                Text("Patient history checked")
-                Text("Local health guidance checked")
-                if (visit.protocolCitation.isNotBlank()) {
-                    Text("Guidance ID: ${visit.protocolCitation}", style = MaterialTheme.typography.bodyMedium)
-                }
-                Text("Source: ${historySourceLabel(visit)}", style = MaterialTheme.typography.bodyMedium)
-            }
+            Text("Source: ${historySourceLabel(visit)}", style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
