@@ -31,12 +31,95 @@ class NormalVisitFlowWiringTest {
         assertTrue(confirmationBlock.contains("applySnapshot(snapshot)"))
         assertTrue(confirmationBlock.contains("buildRawLocalSummary"))
         assertTrue(confirmationBlock.contains("confirmSaveRoomWrite"))
+        assertTrue(confirmationBlock.contains("patientMessageTarget = latestPatientMessageTarget(screen.patient, snapshot)"))
         assertFalse(confirmationBlock.contains("buildSummaryScreen"))
         assertFalse(confirmationBlock.contains("visitReasoningPipeline.process"))
         assertFalse(confirmationBlock.contains("RealGemma"))
         assertFalse(confirmationBlock.contains("retriever."))
         assertFalse(confirmationBlock.contains("ProtocolRetriever"))
         assertFalse(confirmationBlock.contains("jsonExporter.exportVisit"))
+        assertFalse(confirmationBlock.contains("PatientLeaveBehindMessageGenerator.generate"))
+        assertFalse(confirmationBlock.contains("sharePatientMessage"))
+        assertFalse(confirmationBlock.contains("Intent.ACTION_SEND"))
+    }
+
+    @Test
+    fun patientMessageIsGeneratedOnlyFromSavedVisitTarget() {
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+
+        val targetStart = mainActivity.indexOf("fun latestPatientMessageTarget")
+        val targetEnd = mainActivity.indexOf("DisposableEffect", startIndex = targetStart)
+        val targetBlock = mainActivity.substring(targetStart, targetEnd)
+        val patientMessageStart = mainActivity.indexOf("is SmritiScreen.PatientMessage")
+        val patientMessageEnd = mainActivity.indexOf("errorMessage?.let", startIndex = patientMessageStart)
+        val patientMessageBlock = mainActivity.substring(patientMessageStart, patientMessageEnd)
+
+        assertTrue(targetBlock.contains("it.confirmed"))
+        assertTrue(targetBlock.contains("transcriptSource !="))
+        assertTrue(targetBlock.contains("PatientMessageTarget(patient = patient, visit = visit, referral = referral)"))
+        assertTrue(patientMessageBlock.contains("PatientLeaveBehindMessageGenerator.generate"))
+        assertTrue(patientMessageBlock.contains("PatientMessageScreen("))
+        assertFalse(targetBlock.contains("PatientLeaveBehindMessageGenerator.generate"))
+        assertFalse(mainActivity.substring(0, targetStart).contains("PatientLeaveBehindMessageGenerator.generate"))
+    }
+
+    @Test
+    fun patientMessageSharingIsUserInitiatedAndUsesShareIntentOnly() {
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+        val screen = appSourceFile("ui/PatientMessageScreen.kt").readText()
+
+        val shareStart = mainActivity.indexOf("fun sharePatientMessage")
+        val shareEnd = mainActivity.indexOf("fun openVisitsAfterWelcome", startIndex = shareStart)
+        val shareBlock = mainActivity.substring(shareStart, shareEnd)
+        val confirmStart = mainActivity.indexOf("onConfirmSave")
+        val confirmEnd = mainActivity.indexOf("onBack = { currentScreen = SmritiScreen.Visit", startIndex = confirmStart)
+        val confirmBlock = mainActivity.substring(confirmStart, confirmEnd)
+
+        assertTrue(shareBlock.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareBlock.contains("type = \"text/plain\""))
+        assertTrue(shareBlock.contains("Intent.createChooser"))
+        assertTrue(shareBlock.contains("context.startActivity(chooser)"))
+        assertTrue(screen.contains("onClick = { onShare(message) }"))
+        assertTrue(mainActivity.contains("onShare = { message -> sharePatientMessage(message) }"))
+        assertFalse(confirmBlock.contains("context.startActivity"))
+        assertFalse(confirmBlock.contains("Intent.ACTION_SEND"))
+        assertFalse(mainActivity.contains("SmsManager"))
+        assertFalse(mainActivity.contains("sendTextMessage"))
+        assertFalse(mainActivity.contains("ACTION_SENDTO"))
+    }
+
+    @Test
+    fun patientMessageScreenRequiresEditableReviewBeforeSharing() {
+        val screen = appSourceFile("ui/PatientMessageScreen.kt").readText()
+        val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
+
+        assertTrue(screen.contains("OutlinedTextField("))
+        assertTrue(screen.contains("Review before sharing"))
+        assertTrue(screen.contains("Message for patient"))
+        assertTrue(screen.contains("SmritiPrimaryButton("))
+        assertTrue(screen.contains("text = \"Share\""))
+        assertTrue(screen.contains("text = \"Copy\""))
+        assertTrue(summaryScreen.contains("Prepare patient message"))
+        assertTrue(summaryScreen.contains("Smriti will not send it automatically."))
+    }
+
+    @Test
+    fun patientMessageDoesNotPersistAsVisitOrFollowUpTask() {
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+        val generator = appSourceFile("data/PatientLeaveBehindMessage.kt").readText()
+
+        val patientMessageStart = mainActivity.indexOf("is SmritiScreen.PatientMessage")
+        val patientMessageEnd = mainActivity.indexOf("errorMessage?.let", startIndex = patientMessageStart)
+        val patientMessageBlock = mainActivity.substring(patientMessageStart, patientMessageEnd)
+
+        assertFalse(patientMessageBlock.contains("saveConfirmedVisit"))
+        assertFalse(patientMessageBlock.contains("saveConfirmedScannedPaperNote"))
+        assertFalse(patientMessageBlock.contains("FollowUpTask"))
+        assertFalse(patientMessageBlock.contains("visitMemoryStore."))
+        assertFalse(generator.contains("AppDatabase"))
+        assertFalse(generator.contains("Dao"))
+        assertFalse(generator.contains("insert"))
+        assertFalse(generator.contains("FollowUpTask"))
     }
 
     @Test

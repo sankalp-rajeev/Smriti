@@ -35,6 +35,7 @@ fun SummaryScreen(
     summary: SupervisorSummary,
     priorityQueue: SupervisorPriorityQueue?,
     priorityUnavailableMessage: String?,
+    patientMessagePatientName: String?,
     isResettingDemoData: Boolean,
     showDemoControls: Boolean = true,
     offlineProofStatus: OfflineProofStatus,
@@ -42,6 +43,7 @@ fun SummaryScreen(
     exportSummaryPath: String?,
     onReadSummary: () -> Unit,
     onExportSummaryJson: () -> Unit,
+    onPreparePatientMessage: (() -> Unit)?,
     onResetDemoData: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -109,6 +111,20 @@ fun SummaryScreen(
                             "Due/upcoming follow-ups: ${summary.dueTodayFollowUps + summary.upcomingFollowUps}",
                             style = MaterialTheme.typography.bodyLarge
                         )
+                    }
+                }
+            }
+
+            onPreparePatientMessage?.let { preparePatientMessage ->
+                item {
+                    SmritiCard(tone = SmritiTone.Success) {
+                        Text("Patient message", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Prepare a simple message for ${patientMessagePatientName ?: "the patient"} to review before sharing.",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text("Review before sharing. Smriti will not send it automatically.", style = MaterialTheme.typography.bodyMedium)
+                        SmritiPrimaryButton("Prepare patient message", preparePatientMessage)
                     }
                 }
             }

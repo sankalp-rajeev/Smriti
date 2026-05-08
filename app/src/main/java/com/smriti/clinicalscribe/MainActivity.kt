@@ -1,6 +1,9 @@
 package com.smriti.clinicalscribe
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import com.smriti.clinicalscribe.BuildConfig
@@ -31,6 +34,7 @@ import com.smriti.clinicalscribe.data.FollowUpTask
 import com.smriti.clinicalscribe.data.FollowUpTaskScheduler
 import com.smriti.clinicalscribe.data.LocalVisitMemoryStore
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.PatientLeaveBehindMessageGenerator
 import com.smriti.clinicalscribe.data.PatientMemoryInsights
 import com.smriti.clinicalscribe.data.ReferralFlag
 import com.smriti.clinicalscribe.data.VisitLog
@@ -69,6 +73,7 @@ import com.smriti.clinicalscribe.ui.AddPatientScreen
 import com.smriti.clinicalscribe.ui.OfflineSetupScreen
 import com.smriti.clinicalscribe.ui.OfflineProofStatus
 import com.smriti.clinicalscribe.ui.PatientListScreen
+import com.smriti.clinicalscribe.ui.PatientMessageScreen
 import com.smriti.clinicalscribe.ui.ReviewScreen
 import com.smriti.clinicalscribe.ui.ReviewScannedNoteScreen
 import com.smriti.clinicalscribe.ui.SetupGuidanceScreen
@@ -174,9 +179,19 @@ private sealed interface SmritiScreen {
     data class Summary(
         val summary: SupervisorSummary,
         val priorityQueue: SupervisorPriorityQueue? = null,
-        val priorityUnavailableMessage: String? = null
+        val priorityUnavailableMessage: String? = null,
+        val patientMessageTarget: PatientMessageTarget? = null
+    ) : SmritiScreen
+    data class PatientMessage(
+        val target: PatientMessageTarget
     ) : SmritiScreen
 }
+
+private data class PatientMessageTarget(
+    val patient: Patient,
+    val visit: VisitLog,
+    val referral: ReferralFlag?
+)
 
 @Composable
 private fun SmritiApp(
@@ -366,6 +381,8 @@ private fun SmritiApp(
     var ttsStatusMessage by remember { mutableStateOf<String?>(null) }
     var exportVisitPath by remember { mutableStateOf<String?>(null) }
     var exportSummaryPath by remember { mutableStateOf<String?>(null) }
+    var patientMessageCopyStatus by remember { mutableStateOf<String?>(null) }
+    var patientMessageShareStatus by remember { mutableStateOf<String?>(null) }
     val paperNoteImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -410,6 +427,27 @@ private fun SmritiApp(
         }
     }
 
+    fun copyPatientMessage(text: String) {
+        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("Smriti patient message", text))
+        patientMessageCopyStatus = "Copied. Review before sharing."
+    }
+
+    fun sharePatientMessage(text: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        val chooser = Intent.createChooser(shareIntent, "Share patient message")
+        runCatching {
+            context.startActivity(chooser)
+        }.onSuccess {
+            patientMessageShareStatus = "Choose an app to share. Nothing is sent automatically."
+        }.onFailure {
+            patientMessageShareStatus = "No share app available. You can copy the message."
+        }
+    }
+
     fun openVisitsAfterWelcome() {
         firstLaunchPrefs.edit().putBoolean("welcome_seen", true).apply()
         currentScreen = if (!modelFileReady && !firstLaunchPrefs.getBoolean("setup_seen", false)) {
@@ -435,6 +473,18 @@ private fun SmritiApp(
         return SmritiScreen.Summary(
             summary = buildRawLocalSummary(summaryPatients, summaryVisits, summaryReferrals, summaryFollowUpTasks)
         )
+    }
+
+    fun latestPatientMessageTarget(
+        patient: Patient,
+        snapshot: VisitMemorySnapshot
+    ): PatientMessageTarget? {
+        val visit = snapshot.visits
+            .filter { it.patientId == patient.id && it.confirmed && it.transcriptSource != com.smriti.clinicalscribe.data.TranscriptSource.SEEDED_PRIOR_HISTORY }
+            .maxByOrNull { it.visitDateMillis }
+            ?: return null
+        val referral = snapshot.referrals.firstOrNull { it.visitLogId == visit.id }
+        return PatientMessageTarget(patient = patient, visit = visit, referral = referral)
     }
 
     DisposableEffect(voiceOutput) {
@@ -802,7 +852,8 @@ private fun SmritiApp(
                                             snapshot.visits,
                                             snapshot.referrals,
                                             snapshot.followUpTasks
-                                        )
+                                        ),
+                                        patientMessageTarget = latestPatientMessageTarget(screen.patient, snapshot)
                                     )
                                     SmritiLatencyLogger.log(
                                         label = "summaryRefresh",
@@ -849,9 +900,19 @@ private fun SmritiApp(
                                             )
                                         }
                                         applySnapshot(snapshot)
-                                    }.onSuccess {
                                         scannedNoteSaveStatusMessage = "Saved to patient history."
-                                        currentScreen = SmritiScreen.Visit(targetPatient)
+                                        SmritiScreen.Summary(
+                                            summary = buildRawLocalSummary(
+                                                snapshot.patients,
+                                                snapshot.visits,
+                                                snapshot.referrals,
+                                                snapshot.followUpTasks
+                                            ),
+                                            patientMessageTarget = latestPatientMessageTarget(targetPatient, snapshot)
+                                        )
+                                    }.onSuccess { summary ->
+                                        scannedNoteSaveStatusMessage = "Saved to patient history."
+                                        currentScreen = summary
                                     }.onFailure { error ->
                                         errorMessage = "Could not save scanned note: ${error.message}"
                                     }
@@ -866,6 +927,7 @@ private fun SmritiApp(
                         summary = screen.summary,
                         priorityQueue = screen.priorityQueue,
                         priorityUnavailableMessage = screen.priorityUnavailableMessage,
+                        patientMessagePatientName = screen.patientMessageTarget?.patient?.name,
                         isResettingDemoData = isResettingDemoData,
                         showDemoControls = !finalRecordingUi,
                         offlineProofStatus = offlineProofStatus,
@@ -883,6 +945,13 @@ private fun SmritiApp(
                                 exportSummaryPath = file.absolutePath
                             }.onFailure { error ->
                                 exportSummaryPath = "Export failed: ${error.message}"
+                            }
+                        },
+                        onPreparePatientMessage = screen.patientMessageTarget?.let { target ->
+                            {
+                                patientMessageCopyStatus = null
+                                patientMessageShareStatus = null
+                                currentScreen = SmritiScreen.PatientMessage(target)
                             }
                         },
                         onResetDemoData = {
@@ -905,6 +974,29 @@ private fun SmritiApp(
                         },
                         onBack = { currentScreen = SmritiScreen.PatientRoster }
                     )
+
+                    is SmritiScreen.PatientMessage -> {
+                        val initialMessage = remember(screen.target) {
+                            PatientLeaveBehindMessageGenerator.generate(
+                                patient = screen.target.patient,
+                                visit = screen.target.visit,
+                                referral = screen.target.referral
+                            )
+                        }
+                        PatientMessageScreen(
+                            patientName = screen.target.patient.name,
+                            initialMessage = initialMessage,
+                            copyStatusMessage = patientMessageCopyStatus,
+                            shareStatusMessage = patientMessageShareStatus,
+                            onCopy = { message -> copyPatientMessage(message) },
+                            onShare = { message -> sharePatientMessage(message) },
+                            onBack = {
+                                patientMessageCopyStatus = null
+                                patientMessageShareStatus = null
+                                currentScreen = buildSummaryScreen(patients, visits, referrals, followUpTasks)
+                            }
+                        )
+                    }
                 }
 
                 errorMessage?.let { message ->
