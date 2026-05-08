@@ -55,7 +55,7 @@ Use this as the primary final filming order:
 | K. Grace Achieng | Swahili routine/no-referral RealGemma note after manual validation. | 15 seconds. |
 | L. Grace paper-note scan | Use sample paper note; local Gemma vision extracts Grace/BP/symptoms/follow-up; CHW reviews and saves. | 20 seconds; data-entry support only. |
 | M. End-of-day Summary | Urgent, follow-up, routine priority list, and `View community panel`. | 15 seconds. |
-| N. Closing Offline Proof | No cloud APIs, local patient memory, local guidance, RealGemma text and vision, direct Gemma audio blocked. | 10 seconds. |
+| N. Closing Offline Proof | No cloud APIs, local patient memory, local guidance, RealGemma text + vision + audio transcription validated, CHW review/confirm/save required. | 10 seconds. |
 
 It is acceptable to shorten RealGemma waits in editing if the result is real and the video shows:
 
@@ -128,7 +128,8 @@ On-device Gemma 4 inference - sped up for demo.
 - `Selected languages demonstrated: English, Hindi, Spanish, Swahili.`
 - `These are patient-specific generated note languages; Smriti does not claim full app UI translation.`
 - `Protocol citation IDs remain stable in English; no cloud translation API is used.`
-- `Direct Gemma audio is not used, so Smriti uses offline speech or editable transcript fallback into text reasoning.`
+- `Gemma audio transcription is validated through a manual probe. Audio fills an editable transcript only; clinical note generation still goes through text reasoning and CHW review.`
+- `App-facing microphone recording into the editable transcript is next-phase work.`
 - `Vision scan is data-entry support only, not diagnosis.`
 - `Local Gemma 4 vision paper-note extraction requires CHW review before saving.`
 
@@ -137,7 +138,7 @@ On-device Gemma 4 inference - sped up for demo.
 - Do not claim clinical validation.
 - Do not claim autonomous diagnosis or treatment.
 - Do not call urgent lookup emergency AI, AI triage, diagnosis, treatment guidance, or a risk score.
-- Do not claim direct Gemma 4 audio works.
+- Do not claim direct audio diagnosis, treatment, or referral.
 - Do not say no other team has this.
 - Do not claim clinical image diagnosis or referral decisions from paper-note images.
 - Do not claim broad camera diagnosis.

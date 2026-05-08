@@ -1,16 +1,20 @@
 # Known Limitations
 
-## Direct Gemma 4 Audio
+## Gemma Audio Transcription
 
-Direct Gemma 4 audio transcription is not enabled in the normal app flow. LiteRT-LM Android `0.10.2` exposed audio container classes but the manual runtime path hit:
+Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe. `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()` succeeded on-device.
+
+Transcript preview from the probe:
 
 ```text
-Audio must be preprocessed before being used in SessionAdvanced.
+Meena is seven months pregnant. She has severe headache and blurred vision and this is a demo.
 ```
 
-**0.11.0 update:** `EngineConfig.audioBackend` is now a public field (was absent in 0.10.2). `ExperimentalFlags.overwritePromptTemplate` is also available. No public `AudioPreprocessor` class was found in the 0.11.0 AAR inspection. The Phase 6 audio transcript probe has been updated to set `audioBackend = Backend.CPU()` and prioritise Route 2 (Conversation+AudioBytes). Runtime probe is pending on-device execution.
+**Claim boundary:** Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Production-grade multilingual audio quality is not yet claimed.
 
-Phase 6 `ManualRealGemmaAudioTranscriptInstrumentedTest` tries four routes (Conversation+AudioBytes, Conversation+AudioFile, Session+InputData.Audio, WAV PCM extraction) with `audioBackend = Backend.CPU()`. If the runtime still blocks, audio is permanently closed for this submission and the safe product path remains: local audio → Android offline speech / manual transcript → editable field → existing text reasoning pipeline → CHW review/save.
+**App-facing status:** The manual probe succeeded. The next phase will wire real microphone recording into the editable transcript field. Audio never saves or creates clinical output by itself.
+
+**History:** LiteRT-LM 0.10.2 blocked audio with `Audio must be preprocessed before being used in SessionAdvanced.` because `EngineConfig.audioBackend` was not available. The 0.11.0 upgrade added `audioBackend` as a public field, and the probe with `Backend.CPU()` resolved the preprocessing blocker.
 
 ## Gemma 4 Vision Scope
 

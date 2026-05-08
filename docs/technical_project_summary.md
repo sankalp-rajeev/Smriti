@@ -1,4 +1,4 @@
-﻿# Smriti Technical Project Summary
+# Smriti Technical Project Summary
 
 ## 1. Executive Summary
 
@@ -6,7 +6,7 @@ Smriti is an offline maternal-health visit copilot for community health workers 
 
 The central product idea is local patient memory plus a local protocol pack plus a structured documentation workflow. Smriti is not diagnostic AI. It provides protocol-grounded documentation and referral support only, and every generated record must be reviewed and confirmed by the CHW before it is persisted.
 
-The filmed/local submission flow uses `RealGemmaAgent` as the app-facing reasoning engine. Real Gemma 4 LiteRT-LM text inference has been validated through manual paths, and app inference requires the submission build flag, app-private sentinel, and app-private model. Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin artifact/API path and is not claimed as working.
+The filmed/local submission flow uses `RealGemmaAgent` as the app-facing reasoning engine. Real Gemma 4 LiteRT-LM text inference has been validated through manual paths, and app inference requires the submission build flag, app-private sentinel, and app-private model. Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe; audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment.
 
 ## 2. Problem And Use Case
 
@@ -59,7 +59,7 @@ Out of scope for the current submission:
 - Remote databases, Firebase, Supabase, OpenAI API, Gemini API, cloud ASR, cloud RAG, or model downloads.
 - Real patient data or PHI.
 - Full clinical guideline validation.
-- Direct Gemma 4 audio through the current public LiteRT-LM Android/Kotlin path.
+- Direct audio diagnosis, treatment, or referral.
 - Bundling the RealGemma model or bypassing local setup gates.
 - Broad all-language support or untested Amharic, Oromo, or Bangla output.
 - Broad camera diagnosis or clinical image diagnosis.
@@ -145,7 +145,7 @@ Phase C adds selected multilingual output support for the recorded demo. `Patien
 LiteRT-LM dependency:
 
 ```text
-com.google.ai.edge.litertlm:litertlm-android:0.10.2
+com.google.ai.edge.litertlm:litertlm-android:0.11.0
 ```
 
 Expected app-private model path:
@@ -185,34 +185,31 @@ If submission gates are closed, the app shows RealGemma setup-required messaging
 
 Manual multilingual RealGemma validation is available through `ManualRealGemmaMultilingualInstrumentedTest`. It runs Meena/Hindi, Grace/Swahili, and Lucia/Spanish with the sideloaded app-private model, logs requested language, raw output preview, parser status, citation presence, safety wording, and a simple language heuristic. These results must pass before a language is claimed in the video.
 
-## 8. Direct Audio Limitation
+## 8. Gemma Audio Transcription
 
-LiteRT-LM Android `0.10.2` exposes audio-related public types:
+Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe. `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()` succeeded on-device.
 
-- `Content.AudioBytes`
-- `Content.AudioFile`
-- `InputData.Audio`
-- `InputData.Text`
-
-However, the manual raw-audio runtime attempt hit:
+Transcript preview from the probe:
 
 ```text
-Audio must be preprocessed before being used in SessionAdvanced.
+Meena is seven months pregnant. She has severe headache and blurred vision and this is a demo.
 ```
 
-Local inspection of the `litertlm-android-0.10.2` AAR did not find a public `AudioPreprocessor`, `AudioProcessor`, `Preprocessor`, or `preprocess(...)` API. The current Kotlin API path also does not expose the prompt-template customization needed for multimodal placeholder injection.
-
-Therefore, direct Gemma 4 audio through the current public LiteRT-LM Android/Kotlin path is blocked. Smriti uses this fallback architecture instead:
+Smriti's safe audio path:
 
 ```text
-Android offline speech or editable transcript
--> transcript text
--> local protocol retrieval
--> Gemma text reasoning
--> CHW review/confirm
+local microphone audio
+-> Gemma audio transcription
+-> editable transcript field
+-> existing RealGemma text reasoning pipeline
+-> protocol retrieval / citation validation
+-> ReviewScreen
+-> CHW confirm/save
 ```
 
-Do not claim direct Gemma 4 audio works.
+Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Production-grade multilingual audio quality is not yet claimed. App-facing microphone recording into the editable transcript is next-phase work.
+
+History: LiteRT-LM 0.10.2 blocked audio with `Audio must be preprocessed before being used in SessionAdvanced.` The 0.11.0 upgrade added `EngineConfig.audioBackend` and the probe with `Backend.CPU()` resolved the blocker.
 
 ## 9. Protocol Retrieval
 
@@ -321,7 +318,7 @@ Manual vision probe evidence:
 - CHW review/edit and explicit patient-record confirmation are required before saving.
 - Image bytes are not persisted.
 - No cloud OCR/API is used.
-- Direct Gemma audio remains blocked.
+- Gemma audio transcription validated as manual probe; audio fills an editable transcript only. The vision path is separate from audio.
 
 ## 12A. Local Follow-Up, Patient Message, Community Panel, And Lookup
 
@@ -417,7 +414,7 @@ Recommended filmed/live flow:
 12. Show Grace Swahili routine/no-referral RealGemma note after manual validation.
 13. Show Grace sample paper-note scan: local Gemma vision extracts structured paper-note data for CHW review/save.
 14. Show End-of-Day Summary urgent/follow-up/routine priority list and Community Panel entry.
-15. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision, and direct Gemma audio blocked.
+15. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision + audio transcription validated.
 
 Core spoken claim:
 
@@ -430,7 +427,7 @@ Avoid claiming:
 - diagnosis,
 - autonomous treatment,
 - urgent lookup as emergency AI, AI triage, treatment guidance, or a risk score,
-- direct Gemma audio,
+- direct audio diagnosis, treatment, or referral,
 - clinical validation,
 - broad all-language support,
 - broad camera diagnosis,
@@ -439,7 +436,7 @@ Avoid claiming:
 
 ## 16. Known Limitations / Future Work
 
-- Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin audio preprocessing and prompt-template path.
+- Gemma audio transcription validated as manual probe through LiteRT-LM 0.11.0; audio fills an editable transcript only. App-facing microphone integration is next-phase work. No direct audio diagnosis, treatment, or referral.
 - Android offline speech depends on device/emulator recognizer support and installed offline language packs.
 - The protocol corpus is a scaffold, not a complete reviewed guideline library.
 - Urgent Protocol Lookup is limited by the scaffold protocol corpus and must not be treated as clinical validation or an emergency chatbot.

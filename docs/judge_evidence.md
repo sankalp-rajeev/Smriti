@@ -74,7 +74,7 @@ Evidence:
 - Summary uses CHW-facing wording: `Saved visits on this device`, urgent cases, follow-ups, routine visits, and a collapsed explanation of saved visit notes, patient history, and local health guidance.
 - Community Panel uses CHW-facing wording such as `Saved on this device`, `Needs attention`, `Follow-ups`, `No recent visit`, and `Urgent review saved`; it avoids diagnosis, prediction, treatment, and risk-score claims.
 - Urgent Protocol Lookup uses CHW-facing wording such as `Urgent protocol lookup`, `Check urgent guidance`, `Local guidance checked`, `Health guidance used`, and `Urgent review may be needed`; it avoids emergency-AI, AI-triage, diagnosis, treatment, dose, and risk-score claims.
-- Offline Proof reports local/offline status, RealGemma model status, setup state, and blocked direct audio.
+- Offline Proof reports local/offline status, RealGemma model status, setup state, Gemma audio transcription validated as manual probe, and vision paper-note scan available.
 - The core runtime does not require a cloud API.
 
 ## Required Local Setup
@@ -161,15 +161,13 @@ Manual multilingual harness:
 
 ## Audio Status
 
-Direct Gemma 4 audio is blocked by the current public LiteRT-LM Android/Kotlin path. Smriti uses offline speech/editable transcript fallback into RealGemma text reasoning.
-
-Do not claim direct Gemma 4 audio works.
+Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe. `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()` succeeded on-device. Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. App-facing microphone recording into the editable transcript is next-phase work.
 
 ## Paper-Note Vision Evidence
 
 Local Gemma 4 vision is claimed only for synthetic paper-note data extraction.
 
-- The `litertlm-android-0.10.2` AAR/classes.jar surface was checked.
+- The `litertlm-android-0.11.0` AAR/classes.jar surface was checked.
 - Found image API holders: `Content.ImageBytes`, `Content.ImageFile`, and `InputData.Image`.
 - Found related `EngineConfig` fields: `visionBackend` and `maxNumImages`.
 - Found transport methods that can carry multimodal-looking inputs: `Conversation.sendMessage(Contents)` and `Session.generateContent(List<InputData>)`.
@@ -183,7 +181,7 @@ Local Gemma 4 vision is claimed only for synthetic paper-note data extraction.
 
 Do not claim clinical image diagnosis, referral decisions from image alone, real patient image support, or cloud OCR.
 
-Direct Gemma audio remains blocked; the vision path does not change the audio limitation.
+Gemma audio transcription validated as manual probe; audio fills an editable transcript only. The vision path is separate from audio.
 
 ## Not Claimed
 
@@ -192,7 +190,7 @@ Smriti does not claim:
 - clinical validation,
 - autonomous diagnosis,
 - autonomous treatment,
-- direct Gemma 4 audio transcription,
+- direct audio diagnosis, treatment, or referral,
 - clinical image diagnosis or referral from paper-note image alone,
 - cloud runtime,
 - mock output as RealGemma,

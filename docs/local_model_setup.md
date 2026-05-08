@@ -343,7 +343,7 @@ adb logcat -s SmritiLiteRtAudioInference:I "*:S"
 
 Phase 6 transcript-extraction probe, updated for LiteRT-LM 0.11.0. Sets `audioBackend = Backend.CPU()` in the EngineConfig (new in 0.11.0, was absent in 0.10.2) and prioritises Route 2 (Conversation+AudioBytes with raw WAV bytes) first. Also tries Conversation+AudioFile, Session+InputData.Audio, and WAV PCM-only extraction. If any route succeeds, the transcript preview is logged. If all routes are blocked, the test skips and logs the blocker. The probe does not write to Room, invoke the visit reasoning pipeline, or change any default app behavior.
 
-Current status: probe updated for 0.11.0 with `audioBackend`. Runtime probe pending on-device execution. If the runtime still blocks, audio is permanently closed for this submission.
+Current status: **succeeded on-device.** `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()` returned transcript: `"Meena is seven months pregnant. She has severe headache and blurred vision and this is a demo."` Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. App-facing microphone recording into the editable transcript is next-phase work.
 
 Run only the Phase 6 audio transcript probe:
 
@@ -359,7 +359,7 @@ adb logcat -s SmritiGemmaAudioTranscript:I "*:S"
 
 ## Manual Vision Probe
 
-Current status: the `litertlm-android-0.10.2` AAR/classes.jar exposes `Content.ImageBytes`, `Content.ImageFile`, `InputData.Image`, `EngineConfig.visionBackend`, and `EngineConfig.maxNumImages`, but no public prompt-template, media-placeholder, multimodal-template, image-preprocessor, or `preprocess(...)` API was found. The manual probe passed on emulator with a sideloaded app-private model: the engine accepted `Conversation` image input and local Gemma 4 vision extracted structured JSON from the synthetic paper note.
+Current status: the `litertlm-android-0.11.0` AAR/classes.jar exposes `Content.ImageBytes`, `Content.ImageFile`, `InputData.Image`, `EngineConfig.visionBackend`, and `EngineConfig.maxNumImages`, but no public prompt-template, media-placeholder, multimodal-template, image-preprocessor, or `preprocess(...)` API was found. The manual probe passed on emulator with a sideloaded app-private model: the engine accepted `Conversation` image input and local Gemma 4 vision extracted structured JSON from the synthetic paper note.
 
 Smriti now exposes a narrow paper-note scan flow for data entry only. It requires CHW review before local save, does not save image bytes, and does not generate diagnosis or referral advice from the image.
 
@@ -397,4 +397,4 @@ It does not create a Conversation and does not call `sendMessage`.
 
 ## Development Note
 
-JDK 21 is required for LiteRT-LM compile/API work because `litertlm-android-0.10.2` exposes Java classfile version 65 API classes.
+JDK 21 is required for LiteRT-LM compile/API work because `litertlm-android-0.11.0` exposes Java classfile version 65 API classes.

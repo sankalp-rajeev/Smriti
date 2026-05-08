@@ -17,7 +17,7 @@ Stability changes now in place:
 - Confirm/save is guarded against double taps and remains a local Room/SQLite write only.
 - CPU remains the stable default backend. GPU remains isolated as an explicit manual experiment and is off by default.
 - Saved-history and Summary wording now use CHW-facing labels such as `Patient history checked`, `Local health guidance checked`, `Health guidance used`, and `Saved visits on this device`.
-- No mock fallback, parser/safety/citation weakening, CHW review bypass, cloud API, direct Gemma audio, or clinical image diagnosis was added.
+- No mock fallback, parser/safety/citation weakening, CHW review bypass, cloud API, or clinical image diagnosis was added.
 
 ## Phase D UX Polish
 
@@ -53,7 +53,7 @@ The latest build adds four local workflow features that do not require RealGemma
 
 Phase 1 validated the local Gemma 4 LiteRT-LM stack behind manual instrumentation only.
 
-- LiteRT-LM Android dependency is pinned to `com.google.ai.edge.litertlm:litertlm-android:0.10.2`.
+- LiteRT-LM Android dependency is pinned to `com.google.ai.edge.litertlm:litertlm-android:0.11.0`.
 - Room annotation processing uses KSP, so LiteRT-LM API references compile without KAPT classfile failures.
 - `EngineConfig` can be prepared with default `Backend.CPU()` when an app-private `.litertlm` model is found.
 - Manual text inference exists through `LiteRtGemmaTextClient.generateTextManual(...)`.
@@ -72,13 +72,13 @@ Phase 1 validated the local Gemma 4 LiteRT-LM stack behind manual instrumentatio
 - Parser failures log the first 1500 characters of raw RealGemma output plus the rejection reason to `SmritiRealGemma` in debug/dev builds only. The UI keeps a concise retry/setup error and never shows raw model text as a clinical result.
 - The latest accepted manual RealGemma benchmark reported `totalScenarios=3`, `successCount=3`, `parserSuccessCount=3`, `referralCount=1`, `citationCount=2`, `singleCitationContractCount=3`, `averageLatencyMs=15812`, and `maxLatencyMs=26272`.
 - Manual probes confirmed native function calling API behavior and long-context memory stress behavior with a sideloaded model.
-- Direct Gemma 4 audio remains blocked by LiteRT-LM audio preprocessing requirements.
+- Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe using `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()`. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. App-facing microphone recording into the editable transcript is next-phase work.
 
 ## Phase H Paper-Note Scan Status
 
 Phase H adds a narrow paper-note scan flow for synthetic paper visit notes only. It is data-entry support, not clinical image diagnosis.
 
-- The local `litertlm-android-0.10.2` AAR/classes.jar surface was inspected for image and multimodal APIs.
+- The local `litertlm-android-0.11.0` AAR/classes.jar surface was inspected for image and multimodal APIs.
 - Found public image holders: `Content.ImageBytes`, `Content.ImageFile`, and `InputData.Image`.
 - Found image-related config fields on `EngineConfig`: `visionBackend` and `maxNumImages`.
 - Found usable-looking transport methods: `Conversation.sendMessage(Contents)` and `Session.generateContent(List<InputData>)`.
@@ -92,7 +92,7 @@ Phase H adds a narrow paper-note scan flow for synthetic paper visit notes only.
 - The scan flow does not call visit-note referral reasoning, supervisor priority reasoning, or RealGemmaOutputParser.
 - The scan flow does not generate diagnosis, referral advice, or treatment recommendations from image alone.
 - No cloud OCR/API, ML Kit OCR, runtime download, PHI, or real patient image was added.
-- Direct Gemma audio remains blocked; the vision path does not change the audio limitation.
+- Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe; audio fills an editable transcript only. The vision path does not change this boundary.
 
 ## Phase 2 Status
 
@@ -143,7 +143,7 @@ Phase B is implemented for the final recorded demo while preserving the safe nor
 - Fully active submission mode sends visit generation through `VisitReasoningPipeline` with `RealGemmaAgent`; failures show `On-device reasoning unavailable - please retry.` and do not save or silently display mock output as RealGemma.
 - SummaryScreen keeps saved local counts/referral flags visible and attempts RealGemma priority reasoning only when the global gate is free. Failure or busy state shows `On-device priority summary unavailable. Showing saved local visit flags.` without mock priority output.
 - CommunityPanelScreen uses only local patients, visits, referral flags, and follow-up tasks. It does not call RealGemma, LiteRT, protocol retrieval, or supervisor priority reasoning.
-- Offline Proof reports active reasoning mode, RealGemma text mode, submission mode, inference, model found/missing, and direct Gemma audio blocked with offline speech/transcript fallback.
+- Offline Proof reports active reasoning mode, RealGemma text mode, submission mode, inference, model found/missing, Gemma audio transcription validated as manual probe, and Gemma vision paper-note scan available.
 
 ## Phase C Multilingual Output
 
@@ -161,7 +161,7 @@ Phase C supports selected patient-specific local-language output for the recorde
 - `RealGemmaSafetyPostProcessor` appends required safety wording in English, Hindi, Spanish, or Swahili if missing.
 - Lightweight localized resources exist for key demo-visible strings, but there is no risky app-wide runtime locale switch.
 - Full app UI translation is not claimed.
-- No cloud translation API, runtime downloads, vector DB, model/audio artifact, PHI, or direct Gemma audio wiring was added.
+- No cloud translation API, runtime downloads, vector DB, model/audio artifact, PHI, or clinical image diagnosis wiring was added.
 - Manual multilingual RealGemma output must be verified before filming; if a language fails manual validation, remove it from the filmed claim.
 - The architecture can extend to more Gemma-supported languages as protocol packs and UI translations are added.
 
@@ -172,7 +172,7 @@ Recommended order:
 3. If filming RealGemma, sideload the model outside git and verify Offline Proof shows submission mode active before recording.
 4. Smoke-test Urgent Protocol Lookup in airplane mode and verify lookup-only activity does not change Summary or Community Panel counts.
 5. Improve offline speech setup guidance and device diagnostics.
-6. Revisit direct Gemma 4 audio only if LiteRT-LM exposes or documents a usable preprocessing and prompt-template path.
+6. Revisit Gemma audio only if app-facing microphone integration into the editable transcript is the next priority.
 7. Keep the paper-note scan flow limited to synthetic/demo paper notes and CHW-reviewed data entry.
 
 ## What Is Real
@@ -208,13 +208,13 @@ Recommended order:
 
 ## What Is Blocked
 
-- Direct Gemma 4 audio transcription is blocked by the current LiteRT-LM public audio preprocessing path.
-- The current LiteRT-LM Android/Kotlin path also does not expose the prompt-template customization needed for multimodal placeholder injection.
+- Gemma audio transcription validated as a manual probe through LiteRT-LM 0.11.0; audio fills an editable transcript only. App-facing microphone integration is next-phase work.
+- The current Kotlin API path now exposes `ExperimentalFlags.overwritePromptTemplate` for future multimodal prompt customization.
 - Paper-note scan is limited to text/data extraction. It must not be used for wounds, rashes, ultrasound, medicine strips, growth charts, photos of people, diagnosis, treatment, or referral decisions from image alone.
 - Android offline speech recognition depends on device/emulator recognizer support and installed offline language packs.
 - Global Protocol Pack v1 is not clinically complete and needs expert/country-program review before broader use.
 - Synthetic global benchmark cases are protocol-scaffold tests, not clinical validation.
-- Judge/demo copy must not claim autonomous diagnosis, treatment, direct Gemma audio, or clinical validation.
+- Judge/demo copy must not claim autonomous diagnosis, treatment, direct audio clinical reasoning, or clinical validation.
 
 ## Manual-Only
 

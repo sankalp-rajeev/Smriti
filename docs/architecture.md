@@ -61,7 +61,7 @@ debug build with -Psmriti.realGemmaSubmissionMode=true
 
 If any required gate or model file is missing, generation is blocked with clear setup/retry messaging. If inference fails or output is rejected, the transcript remains editable and nothing is saved automatically.
 
-## Transcript And Audio Fallback Flow
+## Transcript And Audio Flow
 
 ```text
 manual/sample transcript
@@ -80,12 +80,21 @@ Try Offline Speech
 ```
 
 ```text
+Gemma audio transcription (validated as manual probe, app-facing next phase)
+-> local microphone audio recording
+-> Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))
+-> EngineConfig.audioBackend = Backend.CPU()
+-> Gemma transcription fills editable transcript
+-> CHW reviews/edits transcript before generating note
+```
+
+```text
 recorded .m4a voice note
 -> app-private local file metadata
 -> stored only after CHW confirmation
 ```
 
-Direct Gemma 4 audio is not wired into this flow.
+Gemma audio transcription is validated through LiteRT-LM 0.11.0 manual probe. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment.
 
 ## Protocol Retrieval Flow
 

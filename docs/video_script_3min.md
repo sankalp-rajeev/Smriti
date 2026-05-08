@@ -31,7 +31,7 @@ Voiceover: "Every generated record is reviewed by the CHW before saving. The wor
 
 ## 1:45-2:20 Technical Depth
 
-"Smriti is Android native: Kotlin, Jetpack Compose, Room/SQLite, local protocol JSON, app-private voice notes, local JSON export, and Android TTS. The filmed local flow uses RealGemma text reasoning through LiteRT-LM after local setup. If the model or gates are missing, Smriti shows a retry/setup state instead of mock clinical output."
+"Smriti is Android native: Kotlin, Jetpack Compose, Room/SQLite, local protocol JSON, app-private voice notes, local JSON export, and Android TTS. The filmed local flow uses RealGemma text reasoning through LiteRT-LM after local setup. Gemma audio transcription is validated through a manual probe — audio fills an editable transcript, and the note is generated through text reasoning with CHW review. If the model or gates are missing, Smriti shows a retry/setup state instead of mock clinical output."
 
 Show: Offline Proof lines and maybe a quick architecture slide.
 

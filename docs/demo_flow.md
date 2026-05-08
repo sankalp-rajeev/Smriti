@@ -5,7 +5,7 @@ Use this for the 3-minute edited judge video. Reset Demo Data before filming if 
 ## Three-Minute Sequence
 
 1. **A. Welcome screen** - Show `Smriti` and `Offline health visit assistant`, then tap `Start visits`.
-2. **B. Offline Proof / setup ready** - Tap `Check offline setup`, then show local proof: works offline after setup, patient memory on device, guidance on device, RealGemma ready/setup state, paper-note scan available, no cloud APIs, direct Gemma audio not used. Return to the roster.
+2. **B. Offline Proof / setup ready** - Tap `Check offline setup`, then show local proof: works offline after setup, patient memory on device, guidance on device, RealGemma ready/setup state, paper-note scan available, Gemma audio transcription validated, no cloud APIs. Return to the roster.
 3. **C. Patient roster search and attention chips** - Show search, primary actions, smaller secondary actions, `Needs attention` before routine visits, patient chips, and patient-card `Note language` labels. The roster does not show technical proof details by default.
 4. **D. Urgent protocol lookup** - Tap `Urgent protocol lookup`. Select `Severe headache` and `Blurred vision`, then tap `Check urgent guidance`. Show local health guidance, citation, safety copy, and the line that no visit/referral/follow-up is saved from lookup.
 5. **E. Community panel** - Tap `Community panel`. Show `Today's focus`, `Needs attention`, follow-up counts, pregnancy stage, languages/countries, and the local priority list. Say: this is saved-on-device panel management, not prediction.
@@ -17,7 +17,7 @@ Use this for the 3-minute edited judge video. Reset Demo Data before filming if 
 11. **K. Grace Achieng** - Show a Swahili routine/no-referral RealGemma note after manual validation.
 12. **L. Grace paper-note scan** - Use `Use sample paper note`. Local Gemma vision extracts Grace, BP, symptoms, and follow-up from the synthetic note. CHW reviews and saves. Say: vision scan is data-entry support only, not diagnosis.
 13. **M. End-of-day Summary** - Show urgent, follow-up, and routine priority lists. Meena should appear as urgent after the confirmed referral save; `View community panel` is available from Summary.
-14. **N. Close with Offline Proof** - Close on no cloud APIs, local patient memory, local guidance, RealGemma text and vision, direct Gemma audio blocked, and CHW review/confirm/save always required.
+14. **N. Close with Offline Proof** - Close on no cloud APIs, local patient memory, local guidance, RealGemma text + vision + audio transcription validated, and CHW review/confirm/save always required.
 
 For edited waits, use an on-screen label while keeping the real generated result:
 
@@ -36,7 +36,7 @@ On-device Gemma 4 inference - sped up for demo.
 - `Urgent protocol lookup checks local health guidance only; it does not save a visit or create a referral flag.`
 - `Patient messages are reviewed by the CHW and shared only by user action through Android's share sheet.`
 - `Smriti runs one on-device Gemma request at a time so the filmed path stays stable.`
-- `Direct Gemma audio remains blocked, so Smriti uses offline speech or editable transcript into text reasoning.`
+- `Gemma audio transcription is validated through a manual probe. Audio fills an editable transcript only; clinical note generation still goes through text reasoning and CHW review.`
 
 ## Safety Details To Show
 
@@ -55,7 +55,7 @@ On-device Gemma 4 inference - sped up for demo.
 
 - Do not claim clinical validation.
 - Do not claim autonomous diagnosis or treatment.
-- Do not claim direct Gemma audio works.
+- Do not claim direct audio diagnosis, treatment, or referral.
 - Do not claim broad all-language support.
 - Do not claim clinical image diagnosis, broad camera diagnosis, or referral decisions from images alone.
 - Do not call the lookup emergency AI, AI triage, diagnosis, treatment guidance, or a risk score.
