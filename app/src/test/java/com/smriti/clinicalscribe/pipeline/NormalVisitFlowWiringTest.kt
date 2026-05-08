@@ -123,6 +123,34 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
+    fun communityPanelUsesLocalStateWithoutInferenceOrPersistence() {
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+        val panelModel = appSourceFile("ui/CommunityPanel.kt").readText()
+        val panelScreen = appSourceFile("ui/CommunityPanelScreen.kt").readText()
+
+        val screenStart = mainActivity.indexOf("SmritiScreen.CommunityPanel ->")
+        val screenEnd = mainActivity.indexOf("SmritiScreen.AddPatient ->", startIndex = screenStart)
+        val screenBlock = mainActivity.substring(screenStart, screenEnd)
+
+        assertTrue(screenBlock.contains("CommunityPanelBuilder.build"))
+        assertTrue(screenBlock.contains("patients = patients"))
+        assertTrue(screenBlock.contains("visits = visits"))
+        assertTrue(screenBlock.contains("referrals = referrals"))
+        assertTrue(screenBlock.contains("followUpTasks = followUpTasks"))
+        assertFalse(screenBlock.contains("visitReasoningPipeline.process"))
+        assertFalse(screenBlock.contains("RealGemma"))
+        assertFalse(screenBlock.contains("LiteRt"))
+        assertFalse(screenBlock.contains("retriever."))
+        assertFalse(screenBlock.contains("ProtocolRetriever"))
+        assertFalse(screenBlock.contains("visitMemoryStore."))
+        assertFalse(panelModel.contains("AppDatabase"))
+        assertFalse(panelModel.contains("Dao"))
+        assertFalse(panelModel.contains("insert("))
+        assertFalse(panelModel.contains("upsert"))
+        assertFalse(panelScreen.contains("PatientLeaveBehindMessage"))
+    }
+
+    @Test
     fun visitScreenKeepsSampleManualAndOfflineSpeechTranscriptPaths() {
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
 

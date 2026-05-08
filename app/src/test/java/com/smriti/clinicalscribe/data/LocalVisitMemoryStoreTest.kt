@@ -6,6 +6,7 @@ import com.smriti.clinicalscribe.reasoning.PaperNoteVisionConfidence
 import com.smriti.clinicalscribe.reasoning.PaperNoteVisionExtraction
 import com.smriti.clinicalscribe.reasoning.SupervisorSummaryFormatter
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
+import com.smriti.clinicalscribe.ui.CommunityPanelBuilder
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -495,6 +496,19 @@ class LocalVisitMemoryStoreTest {
         assertEquals(0, summary.referralsFlagged)
         assertTrue(summary.urgentCases.none { it.contains("Meena", ignoreCase = true) })
         assertTrue(summary.paperScanNeedsUrgentReview.none { it.contains("Grace", ignoreCase = true) })
+
+        val communityPanel = CommunityPanelBuilder.build(
+            patients = resetSnapshot.patients,
+            visits = resetSnapshot.visits,
+            referrals = resetSnapshot.referrals,
+            followUpTasks = resetSnapshot.followUpTasks,
+            nowMillis = SEED_TIME
+        )
+        assertEquals(6, communityPanel.totalPatients)
+        assertEquals(0, communityPanel.urgentReferralSavedCount)
+        assertEquals(1, communityPanel.openFollowUpCount)
+        assertEquals("Amara Tesfaye", communityPanel.todayFocus.first().patientName)
+        assertEquals("Follow-up overdue", communityPanel.todayFocus.first().label)
     }
 
     private fun fakeStore(): LocalVisitMemoryStore {

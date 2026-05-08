@@ -44,6 +44,7 @@ fun SummaryScreen(
     onReadSummary: () -> Unit,
     onExportSummaryJson: () -> Unit,
     onPreparePatientMessage: (() -> Unit)?,
+    onShowCommunityPanel: () -> Unit,
     onResetDemoData: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -232,6 +233,10 @@ fun SummaryScreen(
                 exportSummaryPath?.let { path ->
                     Text(text = "Export saved locally: $path", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 6.dp))
                 }
+            }
+
+            item {
+                SmritiTonalButton("View community panel", onShowCommunityPanel)
             }
 
             if (showDemoControls) {

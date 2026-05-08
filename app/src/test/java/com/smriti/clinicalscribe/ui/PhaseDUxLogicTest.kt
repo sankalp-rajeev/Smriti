@@ -184,6 +184,7 @@ class PhaseDUxLogicTest {
 
         assertTrue(summary.contains("On-device priority summary unavailable. Showing saved local visit flags."))
         assertTrue(summary.contains("Needs urgent review"))
+        assertTrue(summary.contains("View community panel"))
         assertTrue(summary.contains("Saved visits on this device"))
         assertTrue(summary.contains("Reset all demo data?"))
         assertTrue(summary.contains("showDemoControls: Boolean = true"))
@@ -191,6 +192,34 @@ class PhaseDUxLogicTest {
         assertTrue(roster.contains("Add patients from file?"))
         assertFalse(summary.contains("mock"))
         assertFalse(summary.contains("Mock"))
+    }
+
+    @Test
+    fun communityPanelUsesChwFacingOfflineCopy() {
+        val roster = appSourceFile("ui/PatientListScreen.kt").readText()
+        val screen = appSourceFile("ui/CommunityPanelScreen.kt").readText()
+        val model = appSourceFile("ui/CommunityPanel.kt").readText()
+
+        assertTrue(roster.contains("Community panel"))
+        assertTrue(screen.contains("Local view of your saved patient roster."))
+        assertTrue(screen.contains("Saved on this device"))
+        assertTrue(screen.contains("Follow-ups overdue"))
+        assertTrue(screen.contains("Urgent review saved"))
+        assertTrue(screen.contains("History signal"))
+        assertTrue(screen.contains("No recent visit"))
+        assertTrue(model.contains("PatientMemoryInsights.risingBloodPressureSignal"))
+        listOf(
+            "diagnosis",
+            "treatment",
+            "dosage",
+            "risk score",
+            "AI triage",
+            "prediction",
+            "validated"
+        ).forEach { forbidden ->
+            assertFalse("Found forbidden community panel wording: $forbidden", screen.contains(forbidden, ignoreCase = true))
+            assertFalse("Found forbidden community panel model wording: $forbidden", model.contains(forbidden, ignoreCase = true))
+        }
     }
 
     @Test

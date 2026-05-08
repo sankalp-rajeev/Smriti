@@ -70,6 +70,8 @@ import com.smriti.clinicalscribe.transcript.SimulatedTranscriptClient
 import com.smriti.clinicalscribe.tts.AndroidVoiceOutput
 import com.smriti.clinicalscribe.tts.VoiceOutputResult
 import com.smriti.clinicalscribe.ui.AddPatientScreen
+import com.smriti.clinicalscribe.ui.CommunityPanelBuilder
+import com.smriti.clinicalscribe.ui.CommunityPanelScreen
 import com.smriti.clinicalscribe.ui.OfflineSetupScreen
 import com.smriti.clinicalscribe.ui.OfflineProofStatus
 import com.smriti.clinicalscribe.ui.PatientListScreen
@@ -166,6 +168,7 @@ private sealed interface SmritiScreen {
     data object OfflineSetup : SmritiScreen
     data object PatientRoster : SmritiScreen
     data object AddPatient : SmritiScreen
+    data object CommunityPanel : SmritiScreen
     data class Visit(val patient: Patient) : SmritiScreen
     data class Review(
         val patient: Patient,
@@ -592,6 +595,9 @@ private fun SmritiApp(
                                 }
                             }
                         },
+                        onShowCommunityPanel = {
+                            currentScreen = SmritiScreen.CommunityPanel
+                        },
                         onShowSummary = {
                             currentScreen = buildSummaryScreen(patients, visits, referrals, followUpTasks)
                         },
@@ -601,6 +607,27 @@ private fun SmritiApp(
                             currentScreen = SmritiScreen.OfflineSetup
                         }
                     )
+
+                    SmritiScreen.CommunityPanel -> {
+                        val panel = remember(patients, visits, referrals, followUpTasks) {
+                            CommunityPanelBuilder.build(
+                                patients = patients,
+                                visits = visits,
+                                referrals = referrals,
+                                followUpTasks = followUpTasks
+                            )
+                        }
+                        CommunityPanelScreen(
+                            panel = panel,
+                            onOpenPatient = { patientId ->
+                                patients.firstOrNull { it.id == patientId }?.let { patient ->
+                                    errorMessage = null
+                                    currentScreen = SmritiScreen.Visit(patient)
+                                }
+                            },
+                            onBack = { currentScreen = SmritiScreen.PatientRoster }
+                        )
+                    }
 
                     SmritiScreen.AddPatient -> AddPatientScreen(
                         audioPermissionGranted = audioPermissionGranted,
@@ -953,6 +980,9 @@ private fun SmritiApp(
                                 patientMessageShareStatus = null
                                 currentScreen = SmritiScreen.PatientMessage(target)
                             }
+                        },
+                        onShowCommunityPanel = {
+                            currentScreen = SmritiScreen.CommunityPanel
                         },
                         onResetDemoData = {
                             scope.launch {
