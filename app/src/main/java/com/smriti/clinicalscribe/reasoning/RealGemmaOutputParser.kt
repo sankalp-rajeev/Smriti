@@ -193,6 +193,15 @@ class RealGemmaOutputParser(
                 ?: return rejected("referralFlag must be null or a complete object.", patient, originalObservationText, protocolChunks)
         }
 
+        val referralConsistencyText = listOf(
+            structuredNote,
+            suggestedFollowUp,
+            clarificationPrompt.orEmpty()
+        ).joinToString(separator = "\n")
+        if (referralFlag == null && ReferralLanguageGuard.containsReferralLikeLanguage(referralConsistencyText)) {
+            return rejected("Referral-like language present while referralFlag=false.", patient, originalObservationText, protocolChunks)
+        }
+
         val combinedSafetyText = listOf(
             structuredNote,
             protocolCitation,

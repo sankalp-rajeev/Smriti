@@ -218,6 +218,107 @@ class RealGemmaOutputParserTest {
     }
 
     @Test
+    fun currentSchemaNoReferralWithReferralLanguageInSummaryIsRejected() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = currentNoReferralJson(
+                summary = "Immediate review at a health facility may be needed."
+            ),
+            patient = grace,
+            originalObservationText = "Grace has routine ANC follow-up. Normal vitals recorded.",
+            protocolChunks = listOf(routineProtocol)
+        )
+
+        assertRejected(result, "Referral-like language present while referralFlag=false.")
+    }
+
+    @Test
+    fun currentSchemaNoReferralWithReferralLanguageInReferralReasonIsRejected() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = currentNoReferralJson(
+                referralReason = "Refer to hospital for urgent review."
+            ),
+            patient = grace,
+            originalObservationText = "Grace has routine ANC follow-up. Normal vitals recorded.",
+            protocolChunks = listOf(routineProtocol)
+        )
+
+        assertRejected(result, "Referral-like language present while referralFlag=false.")
+    }
+
+    @Test
+    fun currentSchemaNoReferralWithReferralLanguageInDangerSignsIsRejected() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = currentNoReferralJson(
+                dangerSigns = "[\"danger sign reported\"]"
+            ),
+            patient = grace,
+            originalObservationText = "Grace has routine ANC follow-up. Normal vitals recorded.",
+            protocolChunks = listOf(routineProtocol)
+        )
+
+        assertRejected(result, "Referral-like language present while referralFlag=false.")
+    }
+
+    @Test
+    fun currentSchemaNoReferralWithReferralLanguageInClarificationIsRejected() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = currentNoReferralJson(
+                clarificationQuestion = "Should the CHW escalate to the facility?"
+            ),
+            patient = grace,
+            originalObservationText = "Grace has routine ANC follow-up. Normal vitals recorded.",
+            protocolChunks = listOf(routineProtocol)
+        )
+
+        assertRejected(result, "Referral-like language present while referralFlag=false.")
+    }
+
+    @Test
+    fun currentSchemaNoReferralWithReferralLanguageInSafetyNoteIsRejected() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = currentNoReferralJson(
+                safetyNote = "Contactar el centro de salud para revisión inmediata."
+            ),
+            patient = grace,
+            originalObservationText = "Grace has routine ANC follow-up. Normal vitals recorded.",
+            protocolChunks = listOf(routineProtocol)
+        )
+
+        assertRejected(result, "Referral-like language present while referralFlag=false.")
+    }
+
+    @Test
+    fun currentSchemaNoReferralWithNegatedDangerSignLanguageRemainsAccepted() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = currentNoReferralJson(
+                summary = "No urgent danger signs were flagged from this note."
+            ),
+            patient = grace,
+            originalObservationText = "Grace has routine ANC follow-up. Normal vitals recorded.",
+            protocolChunks = listOf(routineProtocol)
+        )
+
+        assertTrue("Expected negated routine wording to parse, got: ${result.describe()}", result is RealGemmaParseResult.Success)
+        assertNull((result as RealGemmaParseResult.Success).result.referralFlag)
+    }
+
+    @Test
+    fun legacySchemaNoReferralWithReferralLanguageIsRejected() {
+        val result = parser.parseVisitReasoning(
+            rawOutput = validJson(
+                protocolCitation = protocol.citation,
+                suggestedFollowUp = "Arrange urgent referral support. Health guidance: ${protocol.citation}",
+                referralFlag = "null"
+            ),
+            patient = patient,
+            originalObservationText = "Original observation",
+            protocolChunks = listOf(protocol)
+        )
+
+        assertRejected(result, "Referral-like language present while referralFlag=false.")
+    }
+
+    @Test
     fun graceRoutineNoDangerSignOutputWithSuppliedCitationParsesWithoutReferral() {
         val result = parser.parseVisitReasoning(
             rawOutput = routineCurrentJson(citations = "[\"${routineProtocol.citation}\"]"),
@@ -377,6 +478,7 @@ class RealGemmaOutputParserTest {
     fun semicolonJoinedMultipleCitationsAreRejected() {
         val joined = validJson(
             protocolCitation = "${protocol.citation}; WHO ANC Contact schedule",
+            suggestedFollowUp = "Return for routine ANC follow-up.",
             referralFlag = "null"
         )
 
@@ -553,6 +655,30 @@ class RealGemmaOutputParserTest {
               "dangerSigns":[],
               "followUpPlan":["$followUpPlan"],
               "clarificationQuestion":"",
+              "citations":$citations,
+              "confidence":"MEDIUM",
+              "safetyNote":"$safetyNote"
+            }
+        """.trimIndent()
+    }
+
+    private fun currentNoReferralJson(
+        summary: String = "Routine ANC follow-up with normal vitals and no danger signs reported.",
+        referralReason: String = "",
+        dangerSigns: String = "[]",
+        followUpPlan: String = "Continue routine ANC follow-up and routine monitoring.",
+        clarificationQuestion: String = "",
+        safetyNote: String = "This is not a diagnosis. CHW confirmation is required before saving.",
+        citations: String = "[]"
+    ): String {
+        return """
+            {
+              "summary":"$summary",
+              "referralFlag":false,
+              "referralReason":"$referralReason",
+              "dangerSigns":$dangerSigns,
+              "followUpPlan":["$followUpPlan"],
+              "clarificationQuestion":"$clarificationQuestion",
               "citations":$citations,
               "confidence":"MEDIUM",
               "safetyNote":"$safetyNote"
