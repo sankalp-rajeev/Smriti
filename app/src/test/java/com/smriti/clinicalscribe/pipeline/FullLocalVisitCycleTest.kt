@@ -1,6 +1,8 @@
 package com.smriti.clinicalscribe.pipeline
 
 import com.smriti.clinicalscribe.data.DemoSeedData
+import com.smriti.clinicalscribe.data.FollowUpTask
+import com.smriti.clinicalscribe.data.FollowUpTaskDao
 import com.smriti.clinicalscribe.data.LocalVisitMemoryStore
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.PatientLanguages
@@ -224,6 +226,7 @@ class FullLocalVisitCycleTest {
             patientDao = FakePatientDao(),
             visitLogDao = FakeVisitLogDao(),
             referralFlagDao = FakeReferralFlagDao(),
+            followUpTaskDao = FakeFollowUpTaskDao(),
             protocolChunkDao = FakeProtocolChunkDao()
         )
     }
@@ -322,6 +325,78 @@ class FullLocalVisitCycleTest {
 
         override suspend fun deleteAll() {
             referrals.clear()
+        }
+    }
+
+    private class FakeFollowUpTaskDao : FollowUpTaskDao {
+        private val tasks = mutableListOf<FollowUpTask>()
+
+        override suspend fun getOpenForPatient(
+            patientId: String,
+            activeStatuses: List<String>
+        ): List<FollowUpTask> {
+            return tasks.filter { it.patientId == patientId && it.status in activeStatuses }
+                .sortedBy { it.dueDateMillis }
+        }
+
+        override suspend fun getAllOpen(activeStatuses: List<String>): List<FollowUpTask> {
+            return tasks.filter { it.status in activeStatuses }.sortedBy { it.dueDateMillis }
+        }
+
+        override suspend fun getAll(): List<FollowUpTask> {
+            return tasks.sortedBy { it.dueDateMillis }
+        }
+
+        override suspend fun upsert(task: FollowUpTask) {
+            tasks.removeAll { it.id == task.id }
+            tasks.add(task)
+        }
+
+        override suspend fun upsertAll(tasks: List<FollowUpTask>) {
+            tasks.forEach { upsert(it) }
+        }
+
+        override suspend fun markCompleted(
+            taskId: String,
+            status: String,
+            completedAtMillis: Long,
+            updatedAtMillis: Long
+        ) {
+            val index = tasks.indexOfFirst { it.id == taskId }
+            if (index >= 0) {
+                tasks[index] = tasks[index].copy(
+                    status = status,
+                    completedAtMillis = completedAtMillis,
+                    updatedAtMillis = updatedAtMillis
+                )
+            }
+        }
+
+        override suspend fun reschedule(
+            taskId: String,
+            dueDateMillis: Long,
+            reason: String,
+            status: String,
+            updatedAtMillis: Long
+        ) {
+            val index = tasks.indexOfFirst { it.id == taskId }
+            if (index >= 0) {
+                tasks[index] = tasks[index].copy(
+                    dueDateMillis = dueDateMillis,
+                    reason = reason,
+                    status = status,
+                    completedAtMillis = null,
+                    updatedAtMillis = updatedAtMillis
+                )
+            }
+        }
+
+        override suspend fun deleteAll() {
+            tasks.clear()
+        }
+
+        override suspend fun deleteBySource(source: String) {
+            tasks.removeAll { it.source == source }
         }
     }
 

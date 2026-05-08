@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.smriti.clinicalscribe.data.FollowUpTask
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.ReferralFlag
 import com.smriti.clinicalscribe.data.VisitLog
@@ -39,6 +40,7 @@ fun PatientListScreen(
     patients: List<Patient>,
     visits: List<VisitLog>,
     referrals: List<ReferralFlag>,
+    followUpTasks: List<FollowUpTask>,
     isLoading: Boolean,
     importStatusMessage: String?,
     isImportingSupervisorRegister: Boolean,
@@ -52,17 +54,17 @@ fun PatientListScreen(
 ) {
     var showImportDialog by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
-    val sortedPatients = remember(patients, visits, referrals) {
-        PatientRosterUiLogic.sortPatients(patients, visits, referrals)
+    val sortedPatients = remember(patients, visits, referrals, followUpTasks) {
+        PatientRosterUiLogic.sortPatients(patients, visits, referrals, followUpTasks = followUpTasks)
     }
     val filteredPatients = remember(sortedPatients, query) {
         PatientRosterUiLogic.filterPatients(sortedPatients, query)
     }
     val attentionPatients = filteredPatients.filter {
-        PatientRosterUiLogic.attentionRank(it, visits, referrals) < 4
+        PatientRosterUiLogic.attentionRank(it, visits, referrals, followUpTasks = followUpTasks) < 6
     }
     val routinePatients = filteredPatients.filter {
-        PatientRosterUiLogic.attentionRank(it, visits, referrals) >= 4
+        PatientRosterUiLogic.attentionRank(it, visits, referrals, followUpTasks = followUpTasks) >= 6
     }
 
     if (showImportDialog) {
@@ -166,6 +168,7 @@ fun PatientListScreen(
                                         patient = patient,
                                         visits = visits,
                                         referrals = referrals,
+                                        followUpTasks = followUpTasks,
                                         onPatientSelected = onPatientSelected
                                     )
                                 }
@@ -177,6 +180,7 @@ fun PatientListScreen(
                                         patient = patient,
                                         visits = visits,
                                         referrals = referrals,
+                                        followUpTasks = followUpTasks,
                                         onPatientSelected = onPatientSelected
                                     )
                                 }
@@ -224,10 +228,11 @@ private fun PatientRow(
     patient: Patient,
     visits: List<VisitLog>,
     referrals: List<ReferralFlag>,
+    followUpTasks: List<FollowUpTask>,
     onPatientSelected: (Patient) -> Unit
 ) {
     val visitCount = visits.count { it.patientId == patient.id }
-    val chips = PatientRosterUiLogic.statusChips(patient, visits, referrals)
+    val chips = PatientRosterUiLogic.statusChips(patient, visits, referrals, followUpTasks = followUpTasks)
     SmritiCard {
         Text(patient.displayLabel(), style = MaterialTheme.typography.titleLarge)
         Text(PatientVisitUiText.gestationLabel(patient), style = MaterialTheme.typography.bodyLarge)

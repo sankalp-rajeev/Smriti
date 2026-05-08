@@ -34,6 +34,8 @@ class NormalVisitFlowWiringTest {
         assertFalse(confirmationBlock.contains("buildSummaryScreen"))
         assertFalse(confirmationBlock.contains("visitReasoningPipeline.process"))
         assertFalse(confirmationBlock.contains("RealGemma"))
+        assertFalse(confirmationBlock.contains("retriever."))
+        assertFalse(confirmationBlock.contains("ProtocolRetriever"))
         assertFalse(confirmationBlock.contains("jsonExporter.exportVisit"))
     }
 

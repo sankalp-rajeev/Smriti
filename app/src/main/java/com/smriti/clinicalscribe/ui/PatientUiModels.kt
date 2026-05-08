@@ -1,6 +1,10 @@
 package com.smriti.clinicalscribe.ui
 
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.FollowUpDueState
+import com.smriti.clinicalscribe.data.FollowUpTask
+import com.smriti.clinicalscribe.data.FollowUpTaskScheduler
+import com.smriti.clinicalscribe.data.FollowUpTaskStatus
 import com.smriti.clinicalscribe.data.PatientLanguages
 import com.smriti.clinicalscribe.data.PatientMemoryInsights
 import com.smriti.clinicalscribe.data.ReferralFlag
@@ -38,7 +42,8 @@ object PatientRosterUiLogic {
         patients: List<Patient>,
         visits: List<VisitLog>,
         referrals: List<ReferralFlag>,
-        nowMillis: Long = System.currentTimeMillis()
+        nowMillis: Long = System.currentTimeMillis(),
+        followUpTasks: List<FollowUpTask> = emptyList()
     ): List<Patient> {
         return patients.sortedWith(
             compareBy<Patient> {
@@ -46,7 +51,8 @@ object PatientRosterUiLogic {
                     patient = it,
                     visits = visits,
                     referrals = referrals,
-                    nowMillis = nowMillis
+                    nowMillis = nowMillis,
+                    followUpTasks = followUpTasks
                 )
             }.thenBy { it.name.lowercase() }
         )
@@ -56,14 +62,22 @@ object PatientRosterUiLogic {
         patient: Patient,
         visits: List<VisitLog>,
         referrals: List<ReferralFlag>,
-        nowMillis: Long = System.currentTimeMillis()
+        nowMillis: Long = System.currentTimeMillis(),
+        followUpTasks: List<FollowUpTask> = emptyList()
     ): List<PatientStatusChip> {
         val chips = mutableListOf<PatientStatusChip>()
         if (referrals.any { it.patientId == patient.id }) {
             chips += PatientStatusChip("Referral saved", PatientChipTone.Urgent)
         }
-        if (PatientMemoryInsights.missedFollowUpAlerts(patient.id, visits, nowMillis).isNotEmpty()) {
-            chips += PatientStatusChip("Follow-up due", PatientChipTone.Caution)
+        when (followUpDueState(patient.id, followUpTasks, nowMillis)) {
+            FollowUpDueState.OVERDUE -> chips += PatientStatusChip("Follow-up overdue", PatientChipTone.Urgent)
+            FollowUpDueState.DUE -> chips += PatientStatusChip("Follow-up due", PatientChipTone.Caution)
+            FollowUpDueState.UPCOMING -> chips += PatientStatusChip("Follow-up upcoming", PatientChipTone.Caution)
+            null -> {
+                if (PatientMemoryInsights.missedFollowUpAlerts(patient.id, visits, nowMillis).isNotEmpty()) {
+                    chips += PatientStatusChip("Follow-up due", PatientChipTone.Caution)
+                }
+            }
         }
         if (PatientMemoryInsights.risingBloodPressureSignal(patient, visits) != null) {
             chips += PatientStatusChip("History signal", PatientChipTone.Caution)
@@ -84,14 +98,32 @@ object PatientRosterUiLogic {
         patient: Patient,
         visits: List<VisitLog>,
         referrals: List<ReferralFlag>,
-        nowMillis: Long = System.currentTimeMillis()
+        nowMillis: Long = System.currentTimeMillis(),
+        followUpTasks: List<FollowUpTask> = emptyList()
     ): Int {
         if (referrals.any { it.patientId == patient.id }) return 0
-        if (PatientMemoryInsights.missedFollowUpAlerts(patient.id, visits, nowMillis).isNotEmpty()) return 1
-        if (PatientMemoryInsights.risingBloodPressureSignal(patient, visits) != null) return 2
+        when (followUpDueState(patient.id, followUpTasks, nowMillis)) {
+            FollowUpDueState.OVERDUE -> return 1
+            FollowUpDueState.DUE -> return 2
+            FollowUpDueState.UPCOMING -> return 3
+            null -> if (PatientMemoryInsights.missedFollowUpAlerts(patient.id, visits, nowMillis).isNotEmpty()) return 2
+        }
+        if (PatientMemoryInsights.risingBloodPressureSignal(patient, visits) != null) return 4
         val weeks = patient.pregnancyWeeks
-        if (weeks != null && weeks >= 36) return 3
-        return 4
+        if (weeks != null && weeks >= 36) return 5
+        return 6
+    }
+
+    private fun followUpDueState(
+        patientId: String,
+        followUpTasks: List<FollowUpTask>,
+        nowMillis: Long
+    ): FollowUpDueState? {
+        val task = followUpTasks
+            .filter { it.patientId == patientId && it.status in FollowUpTaskStatus.ACTIVE }
+            .minByOrNull { it.dueDateMillis }
+            ?: return null
+        return FollowUpTaskScheduler.dueState(task, nowMillis)
     }
 }
 

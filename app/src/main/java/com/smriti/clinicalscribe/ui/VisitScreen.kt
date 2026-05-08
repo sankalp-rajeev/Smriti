@@ -38,6 +38,10 @@ import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.data.HistorySignal
 import com.smriti.clinicalscribe.data.MissedFollowUpAlert
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.FollowUpDueState
+import com.smriti.clinicalscribe.data.FollowUpTask
+import com.smriti.clinicalscribe.data.FollowUpTaskScheduler
+import com.smriti.clinicalscribe.data.FollowUpTaskStatus
 import com.smriti.clinicalscribe.data.TranscriptSource
 import com.smriti.clinicalscribe.data.VisitLog
 import com.smriti.clinicalscribe.transcript.AndroidOfflineSpeechRecognizerClient
@@ -63,12 +67,15 @@ fun VisitScreen(
     realGemmaDeveloperWarning: String?,
     protocolContextLabel: String,
     missedFollowUpAlerts: List<MissedFollowUpAlert>,
+    followUpTasks: List<FollowUpTask>,
     historySignal: HistorySignal?,
     isReadingPaperNote: Boolean,
     paperNoteStatusMessage: String?,
     showDemoControls: Boolean = true,
     onRequestAudioPermission: () -> Unit,
     onMarkFollowUpConfirmed: (Long) -> Unit,
+    onMarkFollowUpTaskDone: (String) -> Unit,
+    onRescheduleFollowUpTask: (String, String) -> Unit,
     onGenerate: (String, VoiceNoteMetadata?) -> Unit,
     onScanPaperNote: () -> Unit,
     onUseSamplePaperNote: () -> Unit,
@@ -91,8 +98,12 @@ fun VisitScreen(
         "Running on-device Gemma...",
         "Preparing note for review..."
     )
+    val activeFollowUpTasks = followUpTasks
+        .filter { it.status in FollowUpTaskStatus.ACTIVE }
+        .sortedBy { it.dueDateMillis }
     val visibleFollowUpAlerts = missedFollowUpAlerts
         .filter { it.visitId !in dismissedOngoingFollowUpIds }
+        .filter { alert -> activeFollowUpTasks.none { it.createdFromVisitId == alert.visitId } }
     val modelReady = realGemmaModelStatusLabel.contains("found", ignoreCase = true)
 
     LaunchedEffect(isGenerating) {
@@ -217,9 +228,16 @@ fun VisitScreen(
                 }
             }
 
-            if (visibleFollowUpAlerts.isNotEmpty() || historySignal != null) {
+            if (activeFollowUpTasks.isNotEmpty() || visibleFollowUpAlerts.isNotEmpty() || historySignal != null) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        activeFollowUpTasks.forEach { task ->
+                            FollowUpTaskCard(
+                                task = task,
+                                onMarkDone = { onMarkFollowUpTaskDone(task.id) },
+                                onReschedule = { onRescheduleFollowUpTask(task.id, task.reason) }
+                            )
+                        }
                         visibleFollowUpAlerts.forEach { alert ->
                             MissedFollowUpCard(
                                 alert = alert,
@@ -375,6 +393,41 @@ fun VisitScreen(
                     Text("Local guidance available")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FollowUpTaskCard(
+    task: FollowUpTask,
+    onMarkDone: () -> Unit,
+    onReschedule: () -> Unit
+) {
+    val state = FollowUpTaskScheduler.dueState(task)
+    val title = when (state) {
+        FollowUpDueState.OVERDUE -> "Follow-up overdue"
+        FollowUpDueState.DUE -> "Follow-up due"
+        FollowUpDueState.UPCOMING -> "Follow-up upcoming"
+    }
+    SmritiCard(tone = if (state == FollowUpDueState.OVERDUE) SmritiTone.Urgent else SmritiTone.Caution) {
+        Text(title, fontWeight = FontWeight.SemiBold)
+        Text(task.reason.ifBlank { "Check again" }, style = MaterialTheme.typography.bodyLarge)
+        Text("Check again by ${formatDate(task.dueDateMillis)}.", style = MaterialTheme.typography.bodyMedium)
+        Button(
+            onClick = onMarkDone,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+        ) {
+            Text("Mark done")
+        }
+        OutlinedButton(
+            onClick = onReschedule,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+        ) {
+            Text("Reschedule 1 week")
         }
     }
 }

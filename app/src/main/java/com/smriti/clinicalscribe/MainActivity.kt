@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.data.AppDatabase
 import com.smriti.clinicalscribe.data.DemoSupervisorRegisterImporter
+import com.smriti.clinicalscribe.data.FollowUpTask
+import com.smriti.clinicalscribe.data.FollowUpTaskScheduler
 import com.smriti.clinicalscribe.data.LocalVisitMemoryStore
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.PatientMemoryInsights
@@ -93,12 +95,14 @@ class MainActivity : ComponentActivity() {
 private fun buildRawLocalSummary(
     summaryPatients: List<Patient>,
     summaryVisits: List<VisitLog>,
-    summaryReferrals: List<ReferralFlag>
+    summaryReferrals: List<ReferralFlag>,
+    summaryFollowUpTasks: List<FollowUpTask>
 ): SupervisorSummary {
     return SupervisorSummaryFormatter.buildLocalSavedSummary(
         patients = summaryPatients,
         visits = summaryVisits,
         referrals = summaryReferrals,
+        followUpTasks = summaryFollowUpTasks,
         nowMillis = System.currentTimeMillis()
     )
 }
@@ -347,6 +351,7 @@ private fun SmritiApp(
     var patients by remember { mutableStateOf<List<Patient>>(emptyList()) }
     var visits by remember { mutableStateOf<List<VisitLog>>(emptyList()) }
     var referrals by remember { mutableStateOf<List<ReferralFlag>>(emptyList()) }
+    var followUpTasks by remember { mutableStateOf<List<FollowUpTask>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isGenerating by remember { mutableStateOf(false) }
     var generationStatusMessage by remember { mutableStateOf<String?>(null) }
@@ -418,15 +423,17 @@ private fun SmritiApp(
         patients = snapshot.patients
         visits = snapshot.visits
         referrals = snapshot.referrals
+        followUpTasks = snapshot.followUpTasks
     }
 
     fun buildSummaryScreen(
         summaryPatients: List<Patient>,
         summaryVisits: List<VisitLog>,
-        summaryReferrals: List<ReferralFlag>
+        summaryReferrals: List<ReferralFlag>,
+        summaryFollowUpTasks: List<FollowUpTask>
     ): SmritiScreen.Summary {
         return SmritiScreen.Summary(
-            summary = buildRawLocalSummary(summaryPatients, summaryVisits, summaryReferrals)
+            summary = buildRawLocalSummary(summaryPatients, summaryVisits, summaryReferrals, summaryFollowUpTasks)
         )
     }
 
@@ -502,6 +509,7 @@ private fun SmritiApp(
                         patients = patients,
                         visits = visits,
                         referrals = referrals,
+                        followUpTasks = followUpTasks,
                         isLoading = isLoading,
                         importStatusMessage = importStatusMessage,
                         isImportingSupervisorRegister = isImportingSupervisorRegister,
@@ -535,7 +543,7 @@ private fun SmritiApp(
                             }
                         },
                         onShowSummary = {
-                            currentScreen = buildSummaryScreen(patients, visits, referrals)
+                            currentScreen = buildSummaryScreen(patients, visits, referrals, followUpTasks)
                         },
                         onUserGuide = { currentScreen = SmritiScreen.UserGuide },
                         onAboutSmriti = { currentScreen = SmritiScreen.Welcome },
@@ -567,7 +575,7 @@ private fun SmritiApp(
                     )
 
                     is SmritiScreen.Visit -> {
-                        val visitMemorySnapshot = VisitMemorySnapshot(patients, visits, referrals)
+                        val visitMemorySnapshot = VisitMemorySnapshot(patients, visits, referrals, followUpTasks)
                         val visitHistory = remember(screen.patient.id, visits, referrals) {
                             SmritiLatencyLogger.measure(
                                 label = "patientHistoryLoadFormat",
@@ -596,6 +604,7 @@ private fun SmritiApp(
                                 patientId = screen.patient.id,
                                 visits = visits
                             ),
+                            followUpTasks = followUpTasks.filter { it.patientId == screen.patient.id },
                             historySignal = PatientMemoryInsights.risingBloodPressureSignal(
                                 patient = screen.patient,
                                 visits = visits
@@ -615,6 +624,34 @@ private fun SmritiApp(
                                         applySnapshot(snapshot)
                                     }.onFailure { error ->
                                         errorMessage = "Could not update follow-up status: ${error.message}"
+                                    }
+                                }
+                            },
+                            onMarkFollowUpTaskDone = { taskId ->
+                                scope.launch {
+                                    errorMessage = null
+                                    runCatching {
+                                        visitMemoryStore.markFollowUpTaskCompleted(taskId)
+                                    }.onSuccess { snapshot ->
+                                        applySnapshot(snapshot)
+                                    }.onFailure { error ->
+                                        errorMessage = "Could not update follow-up task: ${error.message}"
+                                    }
+                                }
+                            },
+                            onRescheduleFollowUpTask = { taskId, reason ->
+                                scope.launch {
+                                    errorMessage = null
+                                    runCatching {
+                                        visitMemoryStore.rescheduleFollowUpTask(
+                                            taskId = taskId,
+                                            dueDateMillis = FollowUpTaskScheduler.defaultRescheduleDate(System.currentTimeMillis()),
+                                            reason = reason
+                                        )
+                                    }.onSuccess { snapshot ->
+                                        applySnapshot(snapshot)
+                                    }.onFailure { error ->
+                                        errorMessage = "Could not reschedule follow-up: ${error.message}"
                                     }
                                 }
                             },
@@ -763,7 +800,8 @@ private fun SmritiApp(
                                         summary = buildRawLocalSummary(
                                             snapshot.patients,
                                             snapshot.visits,
-                                            snapshot.referrals
+                                            snapshot.referrals,
+                                            snapshot.followUpTasks
                                         )
                                     )
                                     SmritiLatencyLogger.log(
@@ -856,7 +894,7 @@ private fun SmritiApp(
                                     val snapshot = visitMemoryStore.resetDemoData(retriever.allChunks())
                                     applySnapshot(snapshot)
                                     importStatusMessage = "Reset Demo Data restored the six-patient synthetic roster."
-                                    buildSummaryScreen(snapshot.patients, snapshot.visits, snapshot.referrals)
+                                    buildSummaryScreen(snapshot.patients, snapshot.visits, snapshot.referrals, snapshot.followUpTasks)
                                 }.onSuccess { summary ->
                                     currentScreen = summary
                                 }.onFailure { error ->

@@ -8,6 +8,7 @@ import com.smriti.clinicalscribe.reasoning.SupervisorSummaryFormatter
 import com.smriti.clinicalscribe.reasoning.VisitReasoningResult
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -197,6 +198,143 @@ class LocalVisitMemoryStoreTest {
     }
 
     @Test
+    fun confirmedVisitWithFollowUpPlanCreatesLocalFollowUpTask() = runBlocking {
+        val store = fakeStore()
+        store.addPatient(patient)
+        val result = visitResultWithoutReferral(
+            suggestedFollowUp = "Check again in 3 days."
+        )
+
+        val snapshot = store.saveConfirmedVisit(
+            result = result,
+            editedNote = result.structuredNote,
+            editedFollowUp = result.suggestedFollowUp,
+            voiceNote = null,
+            nowMillis = RETURN_VISIT_TIME
+        )
+
+        val task = snapshot.followUpTasks.single()
+        assertEquals(patient.id, task.patientId)
+        assertEquals(FollowUpTaskStatus.OPEN, task.status)
+        assertEquals(FollowUpTaskSource.SAVED_VISIT, task.source)
+        assertEquals(snapshot.visits.single().id, task.createdFromVisitId)
+        assertTrue(task.reason.contains("Check again"))
+        assertEquals(PatientLanguages.Hindi.code, task.language)
+    }
+
+    @Test
+    fun confirmedVisitWithoutFollowUpPlanCreatesNoTask() = runBlocking {
+        val store = fakeStore()
+        store.addPatient(patient)
+        val result = visitResultWithoutReferral(suggestedFollowUp = "")
+
+        val snapshot = store.saveConfirmedVisit(
+            result = result,
+            editedNote = result.structuredNote,
+            editedFollowUp = "",
+            voiceNote = null,
+            nowMillis = RETURN_VISIT_TIME
+        )
+
+        assertEquals(1, snapshot.visits.size)
+        assertEquals(emptyList<FollowUpTask>(), snapshot.followUpTasks)
+    }
+
+    @Test
+    fun repeatedSameSaveDoesNotCreateDuplicateOpenFollowUpTask() = runBlocking {
+        val store = fakeStore()
+        store.addPatient(patient)
+        val result = visitResultWithoutReferral(
+            suggestedFollowUp = "Check again in 3 days."
+        )
+
+        store.saveConfirmedVisit(
+            result = result,
+            editedNote = result.structuredNote,
+            editedFollowUp = result.suggestedFollowUp,
+            voiceNote = null,
+            nowMillis = RETURN_VISIT_TIME
+        )
+        val snapshot = store.saveConfirmedVisit(
+            result = result,
+            editedNote = result.structuredNote,
+            editedFollowUp = result.suggestedFollowUp,
+            voiceNote = null,
+            nowMillis = RETURN_VISIT_TIME
+        )
+
+        assertEquals(2, snapshot.visits.size)
+        assertEquals(1, snapshot.followUpTasks.count { it.status in FollowUpTaskStatus.ACTIVE })
+    }
+
+    @Test
+    fun followUpTaskDoesNotCountAsTodaysSavedVisit() {
+        val task = followUpTask(dueDateMillis = RETURN_VISIT_TIME - (2L * 24L * 60L * 60L * 1000L))
+
+        val summary = SupervisorSummaryFormatter.buildLocalSavedSummary(
+            patients = listOf(patient),
+            visits = emptyList(),
+            referrals = emptyList(),
+            followUpTasks = listOf(task),
+            nowMillis = RETURN_VISIT_TIME
+        )
+
+        assertEquals(0, summary.totalVisits)
+        assertEquals(1, summary.openFollowUps)
+        assertEquals(1, summary.overdueFollowUps)
+        assertTrue(summary.followUpsDue.single().contains("Check again"))
+    }
+
+    @Test
+    fun markDoneCompletesFollowUpTaskAndClearsAmaraVisitAlert() = runBlocking {
+        val store = fakeStore()
+        val seeded = store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)
+        val amaraTask = seeded.followUpTasks.single { it.patientId == "patient-amara" }
+
+        val updated = store.markFollowUpTaskCompleted(amaraTask.id, nowMillis = RETURN_VISIT_TIME)
+
+        val completed = updated.followUpTasks.single { it.id == amaraTask.id }
+        assertEquals(FollowUpTaskStatus.COMPLETED, completed.status)
+        assertEquals(RETURN_VISIT_TIME, completed.completedAtMillis)
+        assertEquals(
+            emptyList<MissedFollowUpAlert>(),
+            PatientMemoryInsights.missedFollowUpAlerts(
+                patientId = "patient-amara",
+                visits = updated.visits,
+                nowMillis = RETURN_VISIT_TIME
+            )
+        )
+    }
+
+    @Test
+    fun rescheduleUpdatesDueDateStatusReasonAndTimestamp() = runBlocking {
+        val store = fakeStore()
+        store.addPatient(patient)
+        val saved = store.saveConfirmedVisit(
+            result = visitResultWithoutReferral("Check again in 3 days."),
+            editedNote = "Saved note. This is not a diagnosis.",
+            editedFollowUp = "Check again in 3 days.",
+            voiceNote = null,
+            nowMillis = RETURN_VISIT_TIME
+        )
+        val task = saved.followUpTasks.single()
+        val newDueDate = RETURN_VISIT_TIME + (14L * 24L * 60L * 60L * 1000L)
+
+        val updated = store.rescheduleFollowUpTask(
+            taskId = task.id,
+            dueDateMillis = newDueDate,
+            reason = "Check again after family visit.",
+            nowMillis = RETURN_VISIT_TIME + 5_000L
+        )
+
+        val rescheduled = updated.followUpTasks.single()
+        assertEquals(newDueDate, rescheduled.dueDateMillis)
+        assertEquals(FollowUpTaskStatus.RESCHEDULED, rescheduled.status)
+        assertEquals("Check again after family visit.", rescheduled.reason)
+        assertEquals(RETURN_VISIT_TIME + 5_000L, rescheduled.updatedAtMillis)
+    }
+
+    @Test
     fun returningToSamePatientIncludesLatestSavedVisitInHistory() = runBlocking {
         val store = fakeStore()
         store.resetDemoData(listOf(protocolChunk), nowMillis = SEED_TIME)
@@ -343,11 +481,14 @@ class LocalVisitMemoryStoreTest {
         assertTrue(resetHistory.none { it.structuredNote.contains("Temporary saved test visit") })
         assertTrue(resetSnapshot.visits.none { it.transcriptSource == TranscriptSource.PAPER_SCAN })
         assertTrue(resetSnapshot.visits.all { it.transcriptSource == TranscriptSource.SEEDED_PRIOR_HISTORY })
+        assertEquals(1, resetSnapshot.followUpTasks.count { it.source == FollowUpTaskSource.SEEDED_HISTORY })
+        assertFalse(resetSnapshot.followUpTasks.any { it.reason.contains("Temporary follow-up") })
 
         val summary = SupervisorSummaryFormatter.buildLocalSavedSummary(
             patients = resetSnapshot.patients,
             visits = resetSnapshot.visits,
             referrals = resetSnapshot.referrals,
+            followUpTasks = resetSnapshot.followUpTasks,
             nowMillis = RETURN_VISIT_TIME
         )
         assertEquals(0, summary.totalVisits)
@@ -361,6 +502,7 @@ class LocalVisitMemoryStoreTest {
             patientDao = FakePatientDao(),
             visitLogDao = FakeVisitLogDao(),
             referralFlagDao = FakeReferralFlagDao(),
+            followUpTaskDao = FakeFollowUpTaskDao(),
             protocolChunkDao = FakeProtocolChunkDao()
         )
     }
@@ -385,6 +527,38 @@ class LocalVisitMemoryStoreTest {
             protocolChunk = protocolChunk,
             uncertain = false,
             clarificationPrompt = null
+        )
+    }
+
+    private fun visitResultWithoutReferral(
+        suggestedFollowUp: String = "Continue routine ANC follow-up."
+    ): VisitReasoningResult {
+        return VisitReasoningResult(
+            patientId = patient.id,
+            observationText = "Meena reports routine ANC follow-up.",
+            structuredNote = "Observation support only. This is not a diagnosis. CHW confirmation required.",
+            referralFlag = null,
+            protocolCitation = protocolChunk.citation,
+            suggestedFollowUp = suggestedFollowUp,
+            protocolChunk = protocolChunk,
+            uncertain = false,
+            clarificationPrompt = null
+        )
+    }
+
+    private fun followUpTask(dueDateMillis: Long): FollowUpTask {
+        return FollowUpTask(
+            id = "test-task",
+            patientId = patient.id,
+            patientName = patient.name,
+            createdFromVisitId = null,
+            dueDateMillis = dueDateMillis,
+            reason = "Check again",
+            language = patient.preferredLanguage,
+            status = FollowUpTaskStatus.OPEN,
+            createdAtMillis = RETURN_VISIT_TIME,
+            updatedAtMillis = RETURN_VISIT_TIME,
+            source = FollowUpTaskSource.MANUAL
         )
     }
 
@@ -476,6 +650,81 @@ class LocalVisitMemoryStoreTest {
 
         override suspend fun deleteAll() {
             referrals.clear()
+        }
+    }
+
+    private class FakeFollowUpTaskDao : FollowUpTaskDao {
+        private val tasks = mutableListOf<FollowUpTask>()
+
+        override suspend fun getOpenForPatient(
+            patientId: String,
+            activeStatuses: List<String>
+        ): List<FollowUpTask> {
+            return tasks
+                .filter { it.patientId == patientId && it.status in activeStatuses }
+                .sortedBy { it.dueDateMillis }
+        }
+
+        override suspend fun getAllOpen(activeStatuses: List<String>): List<FollowUpTask> {
+            return tasks
+                .filter { it.status in activeStatuses }
+                .sortedBy { it.dueDateMillis }
+        }
+
+        override suspend fun getAll(): List<FollowUpTask> {
+            return tasks.sortedBy { it.dueDateMillis }
+        }
+
+        override suspend fun upsert(task: FollowUpTask) {
+            tasks.removeAll { it.id == task.id }
+            tasks.add(task)
+        }
+
+        override suspend fun upsertAll(tasks: List<FollowUpTask>) {
+            tasks.forEach { upsert(it) }
+        }
+
+        override suspend fun markCompleted(
+            taskId: String,
+            status: String,
+            completedAtMillis: Long,
+            updatedAtMillis: Long
+        ) {
+            val index = tasks.indexOfFirst { it.id == taskId }
+            if (index >= 0) {
+                tasks[index] = tasks[index].copy(
+                    status = status,
+                    completedAtMillis = completedAtMillis,
+                    updatedAtMillis = updatedAtMillis
+                )
+            }
+        }
+
+        override suspend fun reschedule(
+            taskId: String,
+            dueDateMillis: Long,
+            reason: String,
+            status: String,
+            updatedAtMillis: Long
+        ) {
+            val index = tasks.indexOfFirst { it.id == taskId }
+            if (index >= 0) {
+                tasks[index] = tasks[index].copy(
+                    dueDateMillis = dueDateMillis,
+                    reason = reason,
+                    status = status,
+                    completedAtMillis = null,
+                    updatedAtMillis = updatedAtMillis
+                )
+            }
+        }
+
+        override suspend fun deleteAll() {
+            tasks.clear()
+        }
+
+        override suspend fun deleteBySource(source: String) {
+            tasks.removeAll { it.source == source }
         }
     }
 

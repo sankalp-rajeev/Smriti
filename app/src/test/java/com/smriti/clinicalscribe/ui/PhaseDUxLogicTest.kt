@@ -1,6 +1,9 @@
 package com.smriti.clinicalscribe.ui
 
 import com.smriti.clinicalscribe.data.DemoSeedData
+import com.smriti.clinicalscribe.data.FollowUpTask
+import com.smriti.clinicalscribe.data.FollowUpTaskSource
+import com.smriti.clinicalscribe.data.FollowUpTaskStatus
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.ReferralFlag
 import java.io.File
@@ -32,6 +35,31 @@ class PhaseDUxLogicTest {
     }
 
     @Test
+    fun rosterPrioritySortsOverdueAndDueFollowUpTasksBeforeHistorySignalAndRoutine() {
+        val taskPatients = listOf(
+            patients.first { it.id == "patient-fatima" },
+            patients.first { it.id == "patient-grace" },
+            patients.first { it.id == "patient-lucia" }
+        )
+        val tasks = listOf(
+            followUpTask(patientId = "patient-grace", dueDateMillis = now - 2_000L),
+            followUpTask(patientId = "patient-lucia", dueDateMillis = now)
+        )
+
+        val sorted = PatientRosterUiLogic.sortPatients(
+            patients = taskPatients,
+            visits = visits,
+            referrals = emptyList(),
+            nowMillis = now,
+            followUpTasks = tasks
+        )
+
+        assertEquals("Grace Achieng", sorted[0].name)
+        assertEquals("Lucia Fernandez", sorted[1].name)
+        assertEquals("Fatima Begum", sorted[2].name)
+    }
+
+    @Test
     fun patientChipsMatchDemoCases() {
         val referrals = listOf(meenaReferral())
 
@@ -39,6 +67,26 @@ class PhaseDUxLogicTest {
         assertLabels("Fatima Begum", referrals, "History signal")
         assertLabels("Grace Achieng", referrals, "Routine")
         assertLabels("Meena Sharma", referrals, "Referral saved")
+    }
+
+    @Test
+    fun patientChipsUseLocalFollowUpTaskState() {
+        val grace = patients.first { it.id == "patient-grace" }
+        val upcoming = followUpTask(
+            patientId = grace.id,
+            dueDateMillis = now + (7L * 24L * 60L * 60L * 1000L)
+        )
+
+        val labels = PatientRosterUiLogic.statusChips(
+            patient = grace,
+            visits = emptyList(),
+            referrals = emptyList(),
+            nowMillis = now,
+            followUpTasks = listOf(upcoming)
+        ).map { it.label }
+
+        assertTrue(labels.contains("Follow-up upcoming"))
+        assertFalse(labels.contains("Routine"))
     }
 
     @Test
@@ -110,6 +158,9 @@ class PhaseDUxLogicTest {
         assertTrue(visit.contains("Try again"))
         assertTrue(visit.contains("Note is being prepared"))
         assertTrue(visit.contains("Please wait until Smriti finishes."))
+        assertTrue(visit.contains("Follow-up due"))
+        assertTrue(visit.contains("Mark done"))
+        assertTrue(visit.contains("Reschedule 1 week"))
     }
 
     @Test
@@ -201,6 +252,25 @@ class PhaseDUxLogicTest {
             recommendedFacility = "Nearest health facility",
             dangerSigns = "severe headache, blurred vision, reduced fetal movement",
             createdAtMillis = now
+        )
+    }
+
+    private fun followUpTask(
+        patientId: String,
+        dueDateMillis: Long
+    ): FollowUpTask {
+        return FollowUpTask(
+            id = "task-$patientId-$dueDateMillis",
+            patientId = patientId,
+            patientName = patients.first { it.id == patientId }.name,
+            createdFromVisitId = null,
+            dueDateMillis = dueDateMillis,
+            reason = "Check again",
+            language = "en",
+            status = FollowUpTaskStatus.OPEN,
+            createdAtMillis = now,
+            updatedAtMillis = now,
+            source = FollowUpTaskSource.MANUAL
         )
     }
 

@@ -10,12 +10,14 @@ class LocalVisitMemoryStore(
     private val patientDao: PatientDao,
     private val visitLogDao: VisitLogDao,
     private val referralFlagDao: ReferralFlagDao,
+    private val followUpTaskDao: FollowUpTaskDao,
     private val protocolChunkDao: ProtocolChunkDao
 ) {
     constructor(database: AppDatabase) : this(
         patientDao = database.patientDao(),
         visitLogDao = database.visitLogDao(),
         referralFlagDao = database.referralFlagDao(),
+        followUpTaskDao = database.followUpTaskDao(),
         protocolChunkDao = database.protocolChunkDao()
     )
 
@@ -46,6 +48,7 @@ class LocalVisitMemoryStore(
         if (phaseBackfills.isNotEmpty()) {
             visitLogDao.upsertAll(phaseBackfills)
         }
+        seedMissingFollowUpTasks(nowMillis)
         return refresh()
     }
 
@@ -56,6 +59,44 @@ class LocalVisitMemoryStore(
 
     suspend fun markFollowUpConfirmed(visitId: Long): VisitMemorySnapshot {
         visitLogDao.updateFollowUpCompleted(visitId = visitId, completed = true)
+        followUpTaskDao.markCompleted(
+            taskId = FollowUpTaskScheduler.seededVisitTaskId(visitId),
+            status = FollowUpTaskStatus.COMPLETED,
+            completedAtMillis = System.currentTimeMillis(),
+            updatedAtMillis = System.currentTimeMillis()
+        )
+        return refresh()
+    }
+
+    suspend fun markFollowUpTaskCompleted(
+        taskId: String,
+        nowMillis: Long = System.currentTimeMillis()
+    ): VisitMemorySnapshot {
+        followUpTaskDao.markCompleted(
+            taskId = taskId,
+            status = FollowUpTaskStatus.COMPLETED,
+            completedAtMillis = nowMillis,
+            updatedAtMillis = nowMillis
+        )
+        refresh().followUpTasks.firstOrNull { it.id == taskId }?.createdFromVisitId?.let { visitId ->
+            visitLogDao.updateFollowUpCompleted(visitId = visitId, completed = true)
+        }
+        return refresh()
+    }
+
+    suspend fun rescheduleFollowUpTask(
+        taskId: String,
+        dueDateMillis: Long,
+        reason: String,
+        nowMillis: Long = System.currentTimeMillis()
+    ): VisitMemorySnapshot {
+        followUpTaskDao.reschedule(
+            taskId = taskId,
+            dueDateMillis = dueDateMillis,
+            reason = reason.trim().ifBlank { "Check again" },
+            status = FollowUpTaskStatus.RESCHEDULED,
+            updatedAtMillis = nowMillis
+        )
         return refresh()
     }
 
@@ -64,6 +105,7 @@ class LocalVisitMemoryStore(
     ): SupervisorRegisterImportResult {
         patientDao.upsertAll(register.patients)
         visitLogDao.upsertAll(register.priorVisits)
+        seedMissingFollowUpTasks(nowMillis = System.currentTimeMillis())
         val snapshot = refresh()
         return SupervisorRegisterImportResult(
             patientCount = register.patients.size,
@@ -100,9 +142,31 @@ class LocalVisitMemoryStore(
                 }
             )
         )
-        result.referralFlag?.let { flag ->
-            referralFlagDao.insert(flag.copy(visitLogId = visitId))
+        val savedReferral = result.referralFlag?.let { flag ->
+            flag.copy(visitLogId = visitId).also { referralFlagDao.insert(it) }
         }
+        val savedVisit = VisitLog(
+            id = visitId,
+            patientId = result.patientId,
+            visitDateMillis = nowMillis,
+            observationText = result.observationText,
+            structuredNote = editedNote,
+            protocolCitation = result.protocolCitation,
+            suggestedFollowUp = editedFollowUp,
+            confirmed = true,
+            audioFilePath = voiceNote?.audioFilePath,
+            audioDurationSeconds = voiceNote?.audioDurationSeconds,
+            transcriptSource = if (voiceNote == null) {
+                TranscriptSource.SIMULATED
+            } else {
+                TranscriptSource.REAL_ASR_PENDING
+            }
+        )
+        createFollowUpTaskForSavedVisit(
+            visit = savedVisit,
+            referral = savedReferral,
+            nowMillis = nowMillis
+        )
         return refresh()
     }
 
@@ -127,8 +191,7 @@ class LocalVisitMemoryStore(
             followUpPlan = editedFollowUpPlan.trim(),
             needsReview = true
         )
-        visitLogDao.insert(
-            VisitLog(
+        val savedVisit = VisitLog(
                 patientId = patientId,
                 visitDateMillis = nowMillis,
                 observationText = confirmedExtraction.toObservationText(),
@@ -139,7 +202,12 @@ class LocalVisitMemoryStore(
                 },
                 confirmed = true,
                 transcriptSource = TranscriptSource.PAPER_SCAN
-            )
+        )
+        val visitId = visitLogDao.insert(savedVisit)
+        createFollowUpTaskForSavedVisit(
+            visit = savedVisit.copy(id = visitId),
+            referral = null,
+            nowMillis = nowMillis
         )
         return refresh()
     }
@@ -149,11 +217,13 @@ class LocalVisitMemoryStore(
         nowMillis: Long = System.currentTimeMillis()
     ): VisitMemorySnapshot {
         referralFlagDao.deleteAll()
+        followUpTaskDao.deleteAll()
         visitLogDao.deleteAll()
         patientDao.deleteAll()
         patientDao.upsertAll(DemoSeedData.patients)
         protocolChunkDao.upsertAll(protocolChunks)
         visitLogDao.upsertAll(DemoSeedData.initialVisitLogs(nowMillis))
+        seedMissingFollowUpTasks(nowMillis)
         return refresh()
     }
 
@@ -161,7 +231,8 @@ class LocalVisitMemoryStore(
         return VisitMemorySnapshot(
             patients = patientDao.getAll(),
             visits = visitLogDao.getAll(),
-            referrals = referralFlagDao.getAll()
+            referrals = referralFlagDao.getAll(),
+            followUpTasks = followUpTaskDao.getAll()
         )
     }
 
@@ -179,12 +250,57 @@ class LocalVisitMemoryStore(
             followUpCompleted = followUpCompleted ?: demoVisit.followUpCompleted
         )
     }
+
+    private suspend fun seedMissingFollowUpTasks(nowMillis: Long) {
+        val existingTaskIds = followUpTaskDao.getAll().map { it.id }.toSet()
+        val patientsById = patientDao.getAll().associateBy { it.id }
+        val tasks = visitLogDao.getAll()
+            .filter { it.transcriptSource == TranscriptSource.SEEDED_PRIOR_HISTORY }
+            .mapNotNull { visit ->
+                FollowUpTaskScheduler.taskForSeededVisit(
+                    patient = patientsById[visit.patientId],
+                    visit = visit,
+                    nowMillis = nowMillis
+                )
+            }
+            .filter { it.id !in existingTaskIds }
+        if (tasks.isNotEmpty()) {
+            followUpTaskDao.upsertAll(tasks)
+        }
+    }
+
+    private suspend fun createFollowUpTaskForSavedVisit(
+        visit: VisitLog,
+        referral: ReferralFlag?,
+        nowMillis: Long
+    ) {
+        val patient = patientDao.getAll().firstOrNull { it.id == visit.patientId }
+        val task = FollowUpTaskScheduler.taskForSavedVisit(
+            patient = patient,
+            visit = visit,
+            referralFlag = referral,
+            language = patient?.preferredLanguage.orEmpty(),
+            nowMillis = nowMillis
+        ) ?: return
+        val duplicateActiveTask = followUpTaskDao.getOpenForPatient(
+            patientId = visit.patientId,
+            activeStatuses = FollowUpTaskStatus.ACTIVE
+        ).any { existing ->
+            existing.source == FollowUpTaskSource.SAVED_VISIT &&
+                existing.reason == task.reason &&
+                existing.dueDateMillis == task.dueDateMillis
+        }
+        if (!duplicateActiveTask) {
+            followUpTaskDao.upsert(task)
+        }
+    }
 }
 
 data class VisitMemorySnapshot(
     val patients: List<Patient>,
     val visits: List<VisitLog>,
-    val referrals: List<ReferralFlag>
+    val referrals: List<ReferralFlag>,
+    val followUpTasks: List<FollowUpTask> = emptyList()
 )
 
 data class SupervisorRegister(

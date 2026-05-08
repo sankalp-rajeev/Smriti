@@ -1,6 +1,9 @@
 package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.DemoSeedData
+import com.smriti.clinicalscribe.data.FollowUpTask
+import com.smriti.clinicalscribe.data.FollowUpTaskSource
+import com.smriti.clinicalscribe.data.FollowUpTaskStatus
 import com.smriti.clinicalscribe.data.ReferralFlag
 import com.smriti.clinicalscribe.data.TranscriptSource
 import com.smriti.clinicalscribe.data.VisitLog
@@ -141,6 +144,33 @@ class SupervisorSummaryFormatterTest {
     }
 
     @Test
+    fun localSavedSummaryIncludesOpenOverdueAndUpcomingFollowUpTaskCounts() {
+        val now = 1_800_000_000_000L
+        val tasks = listOf(
+            followUpTask(id = "overdue", dueDateMillis = now - 86_400_000L),
+            followUpTask(id = "due", dueDateMillis = now),
+            followUpTask(id = "upcoming", dueDateMillis = now + 7L * 86_400_000L),
+            followUpTask(id = "done", dueDateMillis = now, status = FollowUpTaskStatus.COMPLETED)
+        )
+
+        val summary = SupervisorSummaryFormatter.buildLocalSavedSummary(
+            patients = DemoSeedData.patients,
+            visits = emptyList(),
+            referrals = emptyList(),
+            followUpTasks = tasks,
+            nowMillis = now
+        )
+
+        assertEquals(0, summary.totalVisits)
+        assertEquals(3, summary.openFollowUps)
+        assertEquals(1, summary.overdueFollowUps)
+        assertEquals(1, summary.dueTodayFollowUps)
+        assertEquals(1, summary.upcomingFollowUps)
+        assertEquals(3, summary.followUpsDue.size)
+        assertTrue(summary.followUpsDue.first().contains("overdue"))
+    }
+
+    @Test
     fun highRiskConfirmedPaperScanSurfacesNeedsUrgentReviewLineAndSkipsFollowUpCard() {
         val riskyPaper = VisitLog(
             id = 900L,
@@ -269,6 +299,27 @@ class SupervisorSummaryFormatterTest {
             protocolCitation = "WHO ANC Contact schedule",
             suggestedFollowUp = followUp,
             confirmed = true
+        )
+    }
+
+    private fun followUpTask(
+        id: String,
+        dueDateMillis: Long,
+        status: String = FollowUpTaskStatus.OPEN
+    ): FollowUpTask {
+        return FollowUpTask(
+            id = id,
+            patientId = patient.id,
+            patientName = patient.name,
+            createdFromVisitId = null,
+            dueDateMillis = dueDateMillis,
+            reason = "Check again",
+            language = "en",
+            status = status,
+            createdAtMillis = dueDateMillis,
+            completedAtMillis = null,
+            updatedAtMillis = dueDateMillis,
+            source = FollowUpTaskSource.MANUAL
         )
     }
 }

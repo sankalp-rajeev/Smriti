@@ -6,5 +6,9 @@ data class SupervisorSummary(
     val urgentCases: List<String>,
     val followUpsDue: List<String>,
     val narrative: String,
-    val paperScanNeedsUrgentReview: List<String> = emptyList()
+    val paperScanNeedsUrgentReview: List<String> = emptyList(),
+    val openFollowUps: Int = 0,
+    val overdueFollowUps: Int = 0,
+    val dueTodayFollowUps: Int = 0,
+    val upcomingFollowUps: Int = 0
 )

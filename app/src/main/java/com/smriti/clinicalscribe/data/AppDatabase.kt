@@ -15,15 +15,17 @@ import com.smriti.clinicalscribe.rag.ProtocolChunk
         Patient::class,
         VisitLog::class,
         ReferralFlag::class,
+        FollowUpTask::class,
         ProtocolChunk::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun patientDao(): PatientDao
     abstract fun visitLogDao(): VisitLogDao
     abstract fun referralFlagDao(): ReferralFlagDao
+    abstract fun followUpTaskDao(): FollowUpTaskDao
     abstract fun protocolChunkDao(): ProtocolChunkDao
 
     companion object {
@@ -89,6 +91,52 @@ interface ReferralFlagDao {
 
     @Query("DELETE FROM referral_flags")
     suspend fun deleteAll()
+}
+
+@Dao
+interface FollowUpTaskDao {
+    @Query("SELECT * FROM follow_up_tasks WHERE patientId = :patientId AND status IN (:activeStatuses) ORDER BY dueDateMillis ASC")
+    suspend fun getOpenForPatient(
+        patientId: String,
+        activeStatuses: List<String>
+    ): List<FollowUpTask>
+
+    @Query("SELECT * FROM follow_up_tasks WHERE status IN (:activeStatuses) ORDER BY dueDateMillis ASC")
+    suspend fun getAllOpen(
+        activeStatuses: List<String>
+    ): List<FollowUpTask>
+
+    @Query("SELECT * FROM follow_up_tasks ORDER BY dueDateMillis ASC")
+    suspend fun getAll(): List<FollowUpTask>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(task: FollowUpTask)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(tasks: List<FollowUpTask>)
+
+    @Query("UPDATE follow_up_tasks SET status = :status, completedAtMillis = :completedAtMillis, updatedAtMillis = :updatedAtMillis WHERE id = :taskId")
+    suspend fun markCompleted(
+        taskId: String,
+        status: String,
+        completedAtMillis: Long,
+        updatedAtMillis: Long
+    )
+
+    @Query("UPDATE follow_up_tasks SET dueDateMillis = :dueDateMillis, reason = :reason, status = :status, completedAtMillis = NULL, updatedAtMillis = :updatedAtMillis WHERE id = :taskId")
+    suspend fun reschedule(
+        taskId: String,
+        dueDateMillis: Long,
+        reason: String,
+        status: String,
+        updatedAtMillis: Long
+    )
+
+    @Query("DELETE FROM follow_up_tasks")
+    suspend fun deleteAll()
+
+    @Query("DELETE FROM follow_up_tasks WHERE source = :source")
+    suspend fun deleteBySource(source: String)
 }
 
 @Dao

@@ -1,6 +1,10 @@
 package com.smriti.clinicalscribe.reasoning
 
 import com.smriti.clinicalscribe.data.Patient
+import com.smriti.clinicalscribe.data.FollowUpDueState
+import com.smriti.clinicalscribe.data.FollowUpTask
+import com.smriti.clinicalscribe.data.FollowUpTaskScheduler
+import com.smriti.clinicalscribe.data.FollowUpTaskStatus
 import com.smriti.clinicalscribe.data.ReferralFlag
 import com.smriti.clinicalscribe.data.TranscriptSource
 import com.smriti.clinicalscribe.data.VisitLog
@@ -11,6 +15,7 @@ object SupervisorSummaryFormatter {
         patients: List<Patient>,
         visits: List<VisitLog>,
         referrals: List<ReferralFlag>,
+        followUpTasks: List<FollowUpTask> = emptyList(),
         narrative: String = "Saved visits, patient history, and local health guidance on this device.",
         nowMillis: Long = summaryAnchorMillis(visits, referrals)
     ): SupervisorSummary {
@@ -26,7 +31,14 @@ object SupervisorSummaryFormatter {
             .filter { PaperNoteUrgencyClassifier.needsUrgentReview(it) }
             .sortedByDescending { it.visitDateMillis }
         val paperUrgentVisitIds = paperUrgent.map { it.id }.toSet()
-        val followUpsDue = savedVisitsToday
+        val activeFollowUpTasks = followUpTasks
+            .filter { it.status in FollowUpTaskStatus.ACTIVE }
+            .sortedBy { it.dueDateMillis }
+        val taskFollowUpsDue = activeFollowUpTasks.map { task ->
+            val patientName = task.patientName.ifBlank { patientNamesById[task.patientId] ?: task.patientId }
+            "$patientName: ${task.reason.ifBlank { "Check again" }} (${followUpStateLabel(task, nowMillis)})"
+        }
+        val savedVisitFollowUpsDue = savedVisitsToday
             .filter {
                 it.confirmed &&
                     it.suggestedFollowUp.isNotBlank() &&
@@ -37,10 +49,12 @@ object SupervisorSummaryFormatter {
                 val patientName = patientNamesById[visit.patientId] ?: visit.patientId
                 "$patientName: ${visit.suggestedFollowUp}"
             }
+        val followUpsDue = taskFollowUpsDue.ifEmpty { savedVisitFollowUpsDue }
         val paperLines = paperUrgent.map { visit ->
             val name = patientNamesById[visit.patientId] ?: visit.patientId
             paperScanUrgentReviewCardBody(displayName = name, visit = visit)
         }
+        val taskStates = activeFollowUpTasks.map { FollowUpTaskScheduler.dueState(it, nowMillis) }
 
         return SupervisorSummary(
             totalVisits = savedVisitsToday.size,
@@ -48,7 +62,11 @@ object SupervisorSummaryFormatter {
             urgentCases = urgentCases(patients, savedReferralsToday),
             followUpsDue = followUpsDue,
             narrative = narrative,
-            paperScanNeedsUrgentReview = paperLines
+            paperScanNeedsUrgentReview = paperLines,
+            openFollowUps = activeFollowUpTasks.size,
+            overdueFollowUps = taskStates.count { it == FollowUpDueState.OVERDUE },
+            dueTodayFollowUps = taskStates.count { it == FollowUpDueState.DUE },
+            upcomingFollowUps = taskStates.count { it == FollowUpDueState.UPCOMING }
         )
     }
 
@@ -114,6 +132,14 @@ object SupervisorSummaryFormatter {
             .replace(Regex("\\s+"), " ")
             .trim()
             .ifBlank { "Review saved note" }
+    }
+
+    private fun followUpStateLabel(task: FollowUpTask, nowMillis: Long): String {
+        return when (FollowUpTaskScheduler.dueState(task, nowMillis)) {
+            FollowUpDueState.OVERDUE -> "overdue"
+            FollowUpDueState.DUE -> "due today"
+            FollowUpDueState.UPCOMING -> "upcoming"
+        }
     }
 
     private fun VisitLog.isUserSavedVisitToday(todayStart: Long): Boolean {

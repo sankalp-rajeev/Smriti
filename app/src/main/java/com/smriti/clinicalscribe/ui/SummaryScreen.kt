@@ -89,7 +89,7 @@ fun SummaryScreen(
                 }
             }
 
-            if (summary.totalVisits == 0) {
+            if (summary.totalVisits == 0 && summary.openFollowUps == 0) {
                 item {
                     SmritiCard {
                         Text("No visits recorded today.", style = MaterialTheme.typography.titleMedium)
@@ -103,7 +103,12 @@ fun SummaryScreen(
                         Text("Today's priority list", fontWeight = FontWeight.SemiBold)
                         Text("Total visits saved today: ${summary.totalVisits}", style = MaterialTheme.typography.bodyLarge)
                         Text("Referral suggested: ${summary.referralsFlagged}", style = MaterialTheme.typography.bodyLarge)
-                        Text("Follow-ups due: ${summary.followUpsDue.size}", style = MaterialTheme.typography.bodyLarge)
+                        Text("Open follow-ups: ${summary.openFollowUps}", style = MaterialTheme.typography.bodyLarge)
+                        Text("Overdue follow-ups: ${summary.overdueFollowUps}", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Due/upcoming follow-ups: ${summary.dueTodayFollowUps + summary.upcomingFollowUps}",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
                 }
             }
