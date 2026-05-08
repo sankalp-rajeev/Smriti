@@ -198,6 +198,26 @@ class RealGemmaOutputParserTest {
     }
 
     @Test
+    fun currentSchemaNoReferralWithHindiReferralLanguageIsRejected() {
+        assertNoReferralReferralLanguageRejected("तत्काल रेफरल समर्थन की व्यवस्था करें.")
+    }
+
+    @Test
+    fun currentSchemaNoReferralWithEnglishReferralLanguageIsRejected() {
+        assertNoReferralReferralLanguageRejected("Arrange urgent referral support.")
+    }
+
+    @Test
+    fun currentSchemaNoReferralWithSpanishReferralLanguageIsRejected() {
+        assertNoReferralReferralLanguageRejected("Organizar derivación urgente.")
+    }
+
+    @Test
+    fun currentSchemaNoReferralWithSwahiliReferralLanguageIsRejected() {
+        assertNoReferralReferralLanguageRejected("Panga rufaa ya dharura.")
+    }
+
+    @Test
     fun graceRoutineNoDangerSignOutputWithSuppliedCitationParsesWithoutReferral() {
         val result = parser.parseVisitReasoning(
             rawOutput = routineCurrentJson(citations = "[\"${routineProtocol.citation}\"]"),
@@ -222,6 +242,17 @@ class RealGemmaOutputParserTest {
         )
 
         assertRejected(result, "not grounded in a supplied protocol citation")
+    }
+
+    private fun assertNoReferralReferralLanguageRejected(followUpText: String) {
+        val result = parser.parseVisitReasoning(
+            rawOutput = routineCurrentJson(citations = "[]", followUpPlan = followUpText),
+            patient = grace,
+            originalObservationText = "Grace has routine ANC follow-up. Normal vitals and no danger signs.",
+            protocolChunks = listOf(routineProtocol)
+        )
+
+        assertRejected(result, "Referral-like language present while referralFlag=false.")
     }
 
     @Test
@@ -511,6 +542,7 @@ class RealGemmaOutputParserTest {
 
     private fun routineCurrentJson(
         citations: String,
+        followUpPlan: String = "Continue routine ANC follow-up and routine monitoring.",
         safetyNote: String = "Hii si utambuzi wa ugonjwa. Uthibitisho wa mfanyakazi wa afya unahitajika."
     ): String {
         return """
@@ -519,7 +551,7 @@ class RealGemmaOutputParserTest {
               "referralFlag":false,
               "referralReason":"",
               "dangerSigns":[],
-              "followUpPlan":["Continue routine ANC follow-up and routine monitoring."],
+              "followUpPlan":["$followUpPlan"],
               "clarificationQuestion":"",
               "citations":$citations,
               "confidence":"MEDIUM",

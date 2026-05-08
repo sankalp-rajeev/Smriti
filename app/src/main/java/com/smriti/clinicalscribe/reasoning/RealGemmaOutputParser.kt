@@ -81,6 +81,18 @@ class RealGemmaOutputParser(
             return rejected("dangerSigns must be non-empty when referralFlag=true.", patient, originalObservationText, protocolChunks)
         }
 
+        val referralConsistencyText = listOf(
+            summary,
+            referralReason,
+            followUpPlan.joinToString(separator = "\n"),
+            dangerSigns.joinToString(separator = "\n"),
+            clarificationQuestion,
+            safetyNote
+        ).joinToString(separator = "\n")
+        if (!referralFlagBoolean && ReferralLanguageGuard.containsReferralLikeLanguage(referralConsistencyText)) {
+            return rejected("Referral-like language present while referralFlag=false.", patient, originalObservationText, protocolChunks)
+        }
+
         val combinedSafetyText = listOf(
             summary,
             referralReason,

@@ -27,7 +27,12 @@ object SupervisorSummaryFormatter {
             .sortedByDescending { it.visitDateMillis }
         val paperUrgentVisitIds = paperUrgent.map { it.id }.toSet()
         val followUpsDue = savedVisitsToday
-            .filter { it.confirmed && it.suggestedFollowUp.isNotBlank() && it.id !in paperUrgentVisitIds }
+            .filter {
+                it.confirmed &&
+                    it.suggestedFollowUp.isNotBlank() &&
+                    it.id !in paperUrgentVisitIds &&
+                    !ReferralLanguageGuard.containsReferralLikeLanguage(it.suggestedFollowUp)
+            }
             .map { visit ->
                 val patientName = patientNamesById[visit.patientId] ?: visit.patientId
                 "$patientName: ${visit.suggestedFollowUp}"

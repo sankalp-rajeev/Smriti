@@ -119,7 +119,8 @@ class SupervisorSummaryFormatterTest {
             summary.urgentCases.single()
         )
         assertFalse(summary.urgentCases.single().contains("long protocol explanation"))
-        assertEquals(3, summary.followUpsDue.size)
+        assertEquals(2, summary.followUpsDue.size)
+        assertTrue(summary.followUpsDue.none { it.contains("Same-day referral support") })
         assertTrue(summary.paperScanNeedsUrgentReview.isEmpty())
     }
 
@@ -175,6 +176,26 @@ class SupervisorSummaryFormatterTest {
         assertTrue(urgentLine.contains("Review scanned note and local guidance."))
         assertTrue(urgentLine.contains("Not a diagnosis"))
         assertTrue(summary.followUpsDue.none { line -> line.contains("Grace Achieng") })
+    }
+
+    @Test
+    fun referralLikeFollowUpWithoutReferralFlagIsNotShownAsRoutineFollowUp() {
+        val inconsistentVisit = visit(
+            id = 901L,
+            followUp = "तत्काल रेफरल समर्थन की व्यवस्था करें."
+        )
+
+        val summary = SupervisorSummaryFormatter.buildLocalSavedSummary(
+            patients = DemoSeedData.patients,
+            visits = listOf(inconsistentVisit),
+            referrals = emptyList(),
+            nowMillis = inconsistentVisit.visitDateMillis
+        )
+
+        assertEquals(1, summary.totalVisits)
+        assertEquals(0, summary.referralsFlagged)
+        assertTrue(summary.followUpsDue.none { it.contains("रेफरल") })
+        assertTrue(summary.urgentCases.isEmpty())
     }
 
     @Test
