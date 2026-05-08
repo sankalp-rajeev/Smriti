@@ -84,7 +84,7 @@ fun SummaryScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text("End-of-day summary", style = MaterialTheme.typography.headlineSmall)
-                    Text("Saved visits on this device", style = MaterialTheme.typography.bodyLarge)
+                    Text("Confirmed visits and follow-ups from this device.", style = MaterialTheme.typography.bodyLarge)
                     SmritiPrimaryButton("Back to patients", onBack, enabled = !isResettingDemoData)
                 }
             }

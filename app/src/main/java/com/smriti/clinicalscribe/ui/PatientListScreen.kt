@@ -47,6 +47,7 @@ fun PatientListScreen(
     onImportSupervisorRegister: () -> Unit,
     onShowSummary: () -> Unit,
     onUserGuide: () -> Unit,
+    onAboutSmriti: () -> Unit,
     onCheckOfflineSetup: () -> Unit
 ) {
     var showImportDialog by remember { mutableStateOf(false) }
@@ -100,7 +101,7 @@ fun PatientListScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Smriti", style = MaterialTheme.typography.headlineMedium)
-                    Text("Offline health visit assistant", style = MaterialTheme.typography.bodyLarge)
+                    Text("Helping field workers carry care forward.", style = MaterialTheme.typography.bodyLarge)
                 }
             }
 
@@ -123,8 +124,13 @@ fun PatientListScreen(
                 )
                 SmritiSecondaryButton("User guide", onUserGuide, modifier = Modifier.weight(1f))
             }
-            TextButton(onClick = onCheckOfflineSetup, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Check offline setup")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onAboutSmriti, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text("About Smriti")
+                }
+                TextButton(onClick = onCheckOfflineSetup, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text("Check offline setup")
+                }
             }
             importStatusMessage?.let {
                 SmritiStatusChip(it, tone = SmritiTone.Info)

@@ -50,7 +50,7 @@ class NormalVisitFlowWiringTest {
         assertTrue(visitScreen.contains("Speech is not available on this device. Please type manually."))
         assertTrue(visitScreen.contains("No speech detected. Please try again or type manually."))
         assertFalse(visitScreen.contains("Real Gemma 4 audio integration comes next"))
-        assertTrue(visitScreen.contains("What to do now"))
+        assertTrue(visitScreen.contains("Today's observation"))
         assertTrue(visitScreen.contains("Offline setup ready"))
         assertTrue(visitScreen.contains("On-device Gemma:"))
         assertTrue(visitScreen.contains("Local guidance available"))
@@ -63,7 +63,7 @@ class NormalVisitFlowWiringTest {
         val reviewScreen = appSourceFile("ui/ReviewScreen.kt").readText()
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
 
-        assertTrue(patientListScreen.contains("Offline health visit assistant"))
+        assertTrue(patientListScreen.contains("Helping field workers carry care forward."))
         assertTrue(patientListScreen.contains("Note language: \${PatientVisitUiText.noteLanguageName(patient)}"))
         assertTrue(patientListScreen.contains("Check offline setup"))
         assertFalse(patientListScreen.contains("Language set to"))
@@ -111,6 +111,7 @@ class NormalVisitFlowWiringTest {
         assertTrue(patientListScreen.contains("SmritiTonalButton(\"End-of-day summary\""))
         assertTrue(patientListScreen.contains("text = if (isImportingSupervisorRegister) \"Importing...\" else \"Import register\""))
         assertTrue(patientListScreen.contains("Text(\"Check offline setup\")"))
+        assertTrue(patientListScreen.contains("Text(\"About Smriti\")"))
         assertTrue(patientListScreen.contains(".heightIn(min = 48.dp)"))
         assertFalse(patientListScreen.contains("OfflineProofCard("))
         assertTrue(welcomeScreens.contains("OfflineProofCard(status = status)"))
@@ -124,7 +125,7 @@ class NormalVisitFlowWiringTest {
 
         val alertIndex = visitScreen.indexOf("MissedFollowUpCard(")
         val signalIndex = visitScreen.indexOf("HistorySignalCard(signal = signal)")
-        val instructionIndex = visitScreen.indexOf("Text(\"What to do now\"")
+        val instructionIndex = visitScreen.indexOf("Text(\"Today's observation\"")
         val transcriptIndex = visitScreen.indexOf("Text(if (isListeningOfflineSpeech) \"Listening...\" else \"Speak observation\")")
         val historyIndex = visitScreen.indexOf("PriorHistorySection(")
 

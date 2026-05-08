@@ -236,9 +236,9 @@ fun VisitScreen(
 
             item {
                 SmritiCard(tone = SmritiTone.Info) {
-                    Text("What to do now", fontWeight = FontWeight.SemiBold)
+                    Text("Today's observation", fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Speak or type today's visit observation. Smriti will prepare a note for review.",
+                        "Speak or type what you saw today. Smriti will prepare a note for review.",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }

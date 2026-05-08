@@ -538,6 +538,7 @@ private fun SmritiApp(
                             currentScreen = buildSummaryScreen(patients, visits, referrals)
                         },
                         onUserGuide = { currentScreen = SmritiScreen.UserGuide },
+                        onAboutSmriti = { currentScreen = SmritiScreen.Welcome },
                         onCheckOfflineSetup = {
                             currentScreen = SmritiScreen.OfflineSetup
                         }

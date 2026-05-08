@@ -74,7 +74,13 @@ class PhaseDUxLogicTest {
         assertTrue(mainActivity.contains("OfflineSetupScreen("))
         assertFalse(mainActivity.contains("selectedLanguageOverride"))
         assertFalse(mainActivity.contains("copy(preferredLanguage = code)"))
-        assertTrue(welcomeScreens.contains("Offline health visit assistant"))
+        assertTrue(welcomeScreens.contains("For the ones who show up."))
+        assertTrue(welcomeScreens.contains("Smriti means memory."))
+        assertTrue(welcomeScreens.contains("Remember every visit"))
+        assertTrue(welcomeScreens.contains("Support every worker"))
+        assertTrue(welcomeScreens.contains("Close every loop"))
+        assertTrue(mainActivity.contains("firstLaunchPrefs.edit().putBoolean(\"welcome_seen\", true).apply()"))
+        assertTrue(roster.contains("About Smriti"))
         assertTrue(welcomeScreens.contains("One-time setup needed"))
         assertTrue(welcomeScreens.contains("Continue without model (demo mode)"))
         assertTrue(welcomeScreens.contains("Offline setup"))
@@ -162,7 +168,7 @@ class PhaseDUxLogicTest {
         assertTrue(welcomeScreens.contains("Smriti does not diagnose"))
         assertTrue(welcomeScreens.contains("Health worker must review"))
         assertTrue(welcomeScreens.contains("Confirm and save"))
-        assertTrue(welcomeScreens.contains("Works offline after setup - Local patient memory"))
+        assertTrue(welcomeScreens.contains("Works after setup"))
     }
 
     @Test

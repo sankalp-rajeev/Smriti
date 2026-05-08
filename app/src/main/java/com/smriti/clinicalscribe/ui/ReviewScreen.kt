@@ -58,12 +58,16 @@ fun ReviewScreen(
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Review visit note", style = MaterialTheme.typography.headlineSmall)
+                    Text("Review before saving", style = MaterialTheme.typography.headlineSmall)
                     SmritiCard(tone = SmritiTone.Info) {
                         Text("Review before saving", fontWeight = FontWeight.SemiBold)
                         Text(
-                            "Smriti does not diagnose. Health worker must review before saving.",
+                            "Smriti prepares support notes. The health worker stays in control.",
                             style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            "Smriti does not diagnose. Health worker must review before saving.",
+                            style = MaterialTheme.typography.bodyMedium
                         )
                         Text(patient.displayLabel(), style = MaterialTheme.typography.bodyMedium)
                     }
