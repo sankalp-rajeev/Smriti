@@ -44,6 +44,7 @@ import com.smriti.clinicalscribe.pipeline.VisitPipelineInput
 import com.smriti.clinicalscribe.pipeline.VisitReasoningPipeline
 import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import com.smriti.clinicalscribe.reasoning.LiteRtEngineConfigFactory
+import com.smriti.clinicalscribe.reasoning.LiteRtGemmaAudioTranscriptClient
 import com.smriti.clinicalscribe.reasoning.ModelAvailability
 import com.smriti.clinicalscribe.reasoning.ModelStatusKind
 import com.smriti.clinicalscribe.reasoning.RealGemmaReadinessEvaluator
@@ -272,6 +273,19 @@ private fun SmritiApp(
     }
     val paperNoteVisionClient = remember(modelStatus, context.cacheDir.absolutePath, realGemmaLocalGate) {
         RealGemmaVisionPaperNoteClient(
+            modelStatus = modelStatus,
+            cacheDirPath = context.cacheDir.absolutePath,
+            sentinelExists = realGemmaLocalGate
+        )
+    }
+    val gemmaAudioTranscriptClient = remember(
+        realGemmaRequiredModeStatus,
+        modelStatus,
+        context.cacheDir.absolutePath,
+        realGemmaLocalGate
+    ) {
+        LiteRtGemmaAudioTranscriptClient(
+            requiredModeStatus = realGemmaRequiredModeStatus,
             modelStatus = modelStatus,
             cacheDirPath = context.cacheDir.absolutePath,
             sentinelExists = realGemmaLocalGate
@@ -708,6 +722,8 @@ private fun SmritiApp(
                             realGemmaInferenceLabel = offlineProofStatus.realGemmaInferenceLabel,
                             realGemmaDeveloperWarning = offlineProofStatus.realGemmaDeveloperWarning,
                             protocolContextLabel = screen.patient.protocolContextLabel(),
+                            gemmaAudioTranscriptionAvailable = realGemmaRequiredModeStatus.inferenceEnabled,
+                            gemmaAudioUnavailableMessage = LiteRtGemmaAudioTranscriptClient.UNAVAILABLE_MESSAGE,
                             missedFollowUpAlerts = PatientMemoryInsights.missedFollowUpAlerts(
                                 patientId = screen.patient.id,
                                 visits = visits
@@ -765,6 +781,9 @@ private fun SmritiApp(
                             },
                             onCheckUrgentGuidance = {
                                 currentScreen = SmritiScreen.UrgentProtocolLookup(patient = screen.patient)
+                            },
+                            onTranscribeGemmaAudio = { wavBytes ->
+                                gemmaAudioTranscriptClient.transcribe(wavBytes)
                             },
                             onGenerate = { observation, voiceNote ->
                                 scope.launch {

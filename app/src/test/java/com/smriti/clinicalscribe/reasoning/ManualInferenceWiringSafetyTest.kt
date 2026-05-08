@@ -84,6 +84,7 @@ class ManualInferenceWiringSafetyTest {
         assertEquals(
             listOf(
                 "reasoning/LiteRtApiSurfaceProbe.kt",
+                "reasoning/LiteRtGemmaAudioTranscriptClient.kt",
                 "reasoning/LiteRtGemmaTextClient.kt",
                 "reasoning/RealGemmaVisionPaperNoteClient.kt"
             ),

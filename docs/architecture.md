@@ -80,8 +80,9 @@ Try Offline Speech
 ```
 
 ```text
-Gemma audio transcription (validated as manual probe, app-facing next phase)
+Gemma audio transcription
 -> local microphone audio recording
+-> short 16 kHz mono PCM capture wrapped as in-memory WAV bytes
 -> Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))
 -> EngineConfig.audioBackend = Backend.CPU()
 -> Gemma transcription fills editable transcript
@@ -94,7 +95,7 @@ recorded .m4a voice note
 -> stored only after CHW confirmation
 ```
 
-Gemma audio transcription is validated through LiteRT-LM 0.11.0 manual probe. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment.
+Gemma audio transcription is wired into the Visit screen only when RealGemma submission readiness is active. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## Protocol Retrieval Flow
 

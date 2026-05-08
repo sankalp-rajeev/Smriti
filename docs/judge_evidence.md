@@ -161,7 +161,7 @@ Manual multilingual harness:
 
 ## Audio Status
 
-Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe. `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()` succeeded on-device. Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. App-facing microphone recording into the editable transcript is next-phase work.
+Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe and wired into the app-facing Visit screen. `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()` succeeded on-device. Audio fills an editable transcript only. CHW must review/edit before manually generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## Paper-Note Vision Evidence
 

@@ -12,7 +12,7 @@ Meena is seven months pregnant. She has severe headache and blurred vision and t
 
 **Claim boundary:** Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Production-grade multilingual audio quality is not yet claimed.
 
-**App-facing status:** The manual probe succeeded. The next phase will wire real microphone recording into the editable transcript field. Audio never saves or creates clinical output by itself.
+**App-facing status:** Real microphone recording is wired into the Visit screen behind RealGemma submission readiness. Audio is recorded as short 16 kHz mono PCM, wrapped as temporary in-memory WAV bytes for Gemma transcription, and used only to fill the editable transcript field. Audio never saves or creates clinical output by itself.
 
 **History:** LiteRT-LM 0.10.2 blocked audio with `Audio must be preprocessed before being used in SessionAdvanced.` because `EngineConfig.audioBackend` was not available. The 0.11.0 upgrade added `audioBackend` as a public field, and the probe with `Backend.CPU()` resolved the preprocessing blocker.
 

@@ -22,13 +22,14 @@ class OfflineProofStatusTest {
                 "Model file" to "Setup needed",
                 "Engine state" to "manual only",
                 "Transcript source" to "offline speech or manual typing",
+                "Gemma audio transcript" to "Editable transcript only",
                 "Paper note scan" to "Available",
                 "Vision support" to "Uses local Gemma vision",
                 "Scan review" to "Review required before save",
                 "Cloud OCR" to "none",
                 "Languages" to "EN, HI, ES, SW",
                 "Cloud APIs" to "none",
-                "Direct Gemma audio" to "not used"
+                "Audio save" to "none from audio alone"
             ),
             status.lines
         )
@@ -51,7 +52,7 @@ class OfflineProofStatusTest {
                 "On-device Gemma" to "Setup needed",
                 "Paper note scan" to "available",
                 "Cloud APIs" to "none",
-                "Direct Gemma audio" to "not used"
+                "Gemma audio transcript" to "editable only"
             ),
             status.compactLines
         )
@@ -63,7 +64,7 @@ class OfflineProofStatusTest {
                 "On-device Gemma: Setup needed",
                 "Paper note scan: available",
                 "Cloud APIs: none",
-                "Direct Gemma audio: not used"
+                "Gemma audio transcript: editable only"
             ),
             status.compactDisplayLines
         )
@@ -81,7 +82,7 @@ class OfflineProofStatusTest {
             realGemmaDeveloperWarning = "Developer-only RealGemma text mode. Not default demo mode. Output must be reviewed before saving."
         )
 
-        assertEquals("Direct Gemma audio" to "not used", status.lines.last())
+        assertEquals("Audio save" to "none from audio alone", status.lines.last())
         assertEquals("Model file" to "ready", status.lines[2])
         assertEquals("Engine state" to "ready for use", status.lines[3])
     }

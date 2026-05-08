@@ -36,7 +36,7 @@ Phase D is implemented as a low-digital-literacy polish pass for the recorded de
 - Review screen now uses plain cards: `Referral suggested`, `No referral flag`, `More information needed`, and a collapsed `How was this prepared?` source section.
 - Summary screen shows `Saved visits on this device`, `Today's priority list`, urgent cases, follow-ups, routine visits, empty state, a collapsed preparation explanation, local-proof expansion, `View community panel`, and a plain fallback when on-device priority reasoning is unavailable.
 - Destructive actions now use confirmation dialogs for Reset Demo Data and register import.
-- Offline Proof wording was changed to `Works offline after setup`, `Patient memory: saved on this device`, `Health guidance: stored on this device`, `On-device Gemma: ready/setup needed`, `Cloud APIs: none`, and `Direct Gemma audio: not used`. These details now live behind `Check offline setup` instead of appearing by default on the roster.
+- Offline Proof wording includes `Works offline after setup`, `Patient memory: saved on this device`, `Health guidance: stored on this device`, `On-device Gemma: ready/setup needed`, `Gemma audio transcript: editable only`, and `Cloud APIs: none`. These details now live behind `Check offline setup` instead of appearing by default on the roster.
 - Source-level unit tests were added/updated for roster filtering/sorting/chips, sample transcript mapping, first-launch screens, validation/error states, review source section, summary fallback, destructive dialogs, and forbidden UI wording.
 - Validation status for this pass: `.\gradlew.bat testDebugUnitTest` passed after the RealGemma gate and UI wording updates. Full build validation is listed in `CONTEXT.md`.
 
@@ -72,7 +72,7 @@ Phase 1 validated the local Gemma 4 LiteRT-LM stack behind manual instrumentatio
 - Parser failures log the first 1500 characters of raw RealGemma output plus the rejection reason to `SmritiRealGemma` in debug/dev builds only. The UI keeps a concise retry/setup error and never shows raw model text as a clinical result.
 - The latest accepted manual RealGemma benchmark reported `totalScenarios=3`, `successCount=3`, `parserSuccessCount=3`, `referralCount=1`, `citationCount=2`, `singleCitationContractCount=3`, `averageLatencyMs=15812`, and `maxLatencyMs=26272`.
 - Manual probes confirmed native function calling API behavior and long-context memory stress behavior with a sideloaded model.
-- Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe using `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()`. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. App-facing microphone recording into the editable transcript is next-phase work.
+- Gemma audio transcription is wired into the app-facing Visit screen after the LiteRT-LM 0.11.0 manual probe succeeded. The app records short local microphone audio, transcribes locally with Gemma, and fills the editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save after the CHW manually taps Generate Visit Note. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## Phase H Paper-Note Scan Status
 
@@ -208,7 +208,7 @@ Recommended order:
 
 ## What Is Blocked
 
-- Gemma audio transcription validated as a manual probe through LiteRT-LM 0.11.0; audio fills an editable transcript only. App-facing microphone integration is next-phase work.
+- Gemma audio transcription is wired into the app-facing Visit screen; audio fills an editable transcript only and requires CHW review/edit plus a separate manual Generate Visit Note action.
 - The current Kotlin API path now exposes `ExperimentalFlags.overwritePromptTemplate` for future multimodal prompt customization.
 - Paper-note scan is limited to text/data extraction. It must not be used for wounds, rashes, ultrasound, medicine strips, growth charts, photos of people, diagnosis, treatment, or referral decisions from image alone.
 - Android offline speech recognition depends on device/emulator recognizer support and installed offline language packs.

@@ -6,7 +6,7 @@ Smriti is an offline maternal-health visit copilot for community health workers 
 
 The central product idea is local patient memory plus a local protocol pack plus a structured documentation workflow. Smriti is not diagnostic AI. It provides protocol-grounded documentation and referral support only, and every generated record must be reviewed and confirmed by the CHW before it is persisted.
 
-The filmed/local submission flow uses `RealGemmaAgent` as the app-facing reasoning engine. Real Gemma 4 LiteRT-LM text inference has been validated through manual paths, and app inference requires the submission build flag, app-private sentinel, and app-private model. Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe; audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment.
+The filmed/local submission flow uses `RealGemmaAgent` as the app-facing reasoning engine. Real Gemma 4 LiteRT-LM text inference has been validated through manual paths, and app inference requires the submission build flag, app-private sentinel, and app-private model. Gemma audio transcription is wired into the Visit screen after the LiteRT-LM 0.11.0 manual probe succeeded; audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save after the CHW manually taps Generate Visit Note. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## 2. Problem And Use Case
 
@@ -207,7 +207,7 @@ local microphone audio
 -> CHW confirm/save
 ```
 
-Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Production-grade multilingual audio quality is not yet claimed. App-facing microphone recording into the editable transcript is next-phase work.
+Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Production-grade multilingual audio quality is not yet claimed. App-facing microphone recording is wired only to the editable transcript field.
 
 History: LiteRT-LM 0.10.2 blocked audio with `Audio must be preprocessed before being used in SessionAdvanced.` The 0.11.0 upgrade added `EngineConfig.audioBackend` and the probe with `Backend.CPU()` resolved the blocker.
 
@@ -318,7 +318,7 @@ Manual vision probe evidence:
 - CHW review/edit and explicit patient-record confirmation are required before saving.
 - Image bytes are not persisted.
 - No cloud OCR/API is used.
-- Gemma audio transcription validated as manual probe; audio fills an editable transcript only. The vision path is separate from audio.
+- Gemma audio transcription is wired into the Visit screen; audio fills an editable transcript only. The vision path is separate from audio.
 
 ## 12A. Local Follow-Up, Patient Message, Community Panel, And Lookup
 
@@ -393,7 +393,7 @@ Repository safety scan findings:
 - No runtime model download code.
 - `RealGemmaAgent` is the app-facing reasoning engine.
 - RealGemma requires local setup: build flag, app-private sentinel, and sideloaded model.
-- Docs do not claim direct Gemma audio works.
+- Docs do not claim direct audio clinical reasoning.
 - Docs do not claim clinical validation.
 
 ## 15. Demo Flow
@@ -436,7 +436,7 @@ Avoid claiming:
 
 ## 16. Known Limitations / Future Work
 
-- Gemma audio transcription validated as manual probe through LiteRT-LM 0.11.0; audio fills an editable transcript only. App-facing microphone integration is next-phase work. No direct audio diagnosis, treatment, or referral.
+- Gemma audio transcription is wired into the app-facing Visit screen through LiteRT-LM 0.11.0; audio fills an editable transcript only and still requires a separate manual Generate Visit Note action. No direct audio diagnosis, treatment, or referral.
 - Android offline speech depends on device/emulator recognizer support and installed offline language packs.
 - The protocol corpus is a scaffold, not a complete reviewed guideline library.
 - Urgent Protocol Lookup is limited by the scaffold protocol corpus and must not be treated as clinical validation or an emergency chatbot.

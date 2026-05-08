@@ -35,7 +35,7 @@ Smriti is designed so the core demo can run in airplane mode.
 - App startup does not run inference.
 - RealGemma text reasoning requires the submission build flag, app-private local gate, and sideloaded app-private model.
 - If setup is missing or inference fails, the app shows setup/retry messaging and does not save or display mock clinical output.
-- Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment.
+- Gemma audio transcription is wired into the Visit screen behind RealGemma submission readiness. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save after a manual Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## Data Boundary
 

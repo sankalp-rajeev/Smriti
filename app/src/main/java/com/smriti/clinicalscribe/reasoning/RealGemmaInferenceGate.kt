@@ -8,6 +8,7 @@ enum class RealGemmaRequestType {
     VISIT_NOTE,
     SUPERVISOR_SUMMARY,
     PAPER_NOTE_SCAN,
+    AUDIO_TRANSCRIPT,
     MANUAL_TEST,
     PRELOAD
 }

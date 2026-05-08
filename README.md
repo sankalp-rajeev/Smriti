@@ -32,7 +32,7 @@ The core runtime must work in airplane mode. Smriti stores patient data locally,
 14. Open End-of-Day Summary for urgent, follow-up, routine priority lists, and the community panel entry.
 15. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision + audio transcription validated.
 
-Smriti demonstrates local Android LiteRT-LM text reasoning, local Gemma 4 vision paper-note extraction, and Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe. Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Selected languages demonstrated: English, Hindi, Spanish, Swahili. Do not claim clinical validation, all-language support, or broad camera diagnosis. Vision scan is data-entry support only, not diagnosis.
+Smriti demonstrates local Android LiteRT-LM text reasoning, local Gemma 4 vision paper-note extraction, and Gemma audio transcription wired to the editable transcript field after LiteRT-LM 0.11.0 manual validation. Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Selected languages demonstrated: English, Hindi, Spanish, Swahili. Do not claim clinical validation, all-language support, or broad camera diagnosis. Vision scan is data-entry support only, not diagnosis.
 
 See [docs/demo_flow.md](docs/demo_flow.md) for the step-by-step judge script.
 
@@ -65,7 +65,7 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 - Phase C multilingual demo support: selected patient-specific output languages demonstrated are English, Hindi, Spanish, and Swahili; `preferredLanguage` controls RealGemma visit-note output in fully gated submission mode after manual validation.
 - RealGemma: manual text inference validated; app-facing reasoning now requires build flag + app-private sentinel + app-private model for inference.
 - Supervisor priority: raw local counts remain visible, and the app attempts RealGemma priority reasoning; unavailable output shows retry/setup messaging.
-- Audio: Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. App-facing microphone recording into the editable transcript is next-phase work.
+- Audio: App-facing microphone recording now uses local Gemma audio transcription to fill the editable transcript field when RealGemma submission gates and the app-private model are active. Clinical note generation still requires the CHW to tap Generate Visit Note and still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 - Vision: manual probe passed; local Gemma 4 vision extracts structured JSON from a synthetic paper note for CHW-reviewed data entry only. Image bytes are not persisted and no cloud OCR/API is used.
 
 The 15.8s average RealGemma latency reflects real on-device Gemma 4 E2B text inference on CPU backend; in the CHW field workflow, this is positioned as protocol-grounded reasoning support replacing manual paper/protocol lookup, not instant chat.
@@ -107,7 +107,7 @@ See [docs/judge_evidence.md](docs/judge_evidence.md).
 - RealGemma inference requires `-Psmriti.realGemmaSubmissionMode=true`, `files/dev/enable_real_gemma_text_mode`, and `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
 - RealGemma failures, timeouts, invalid JSON, or citation/safety rejection show an unavailable/retry state instead of silently displaying mock output as RealGemma.
 - `MockGemmaAgent` may remain in the repo for deterministic unit fixtures only; app screens do not use it for visit or supervisor output.
-- Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe using `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()`. Audio fills an editable transcript only. No audio-only save path. No direct audio diagnosis or treatment. App-facing microphone recording into the editable transcript is next-phase work.
+- Gemma audio transcription is wired into the app-facing Visit screen behind RealGemma submission readiness using `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()`. Audio fills an editable transcript only. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## LiteRT-LM Status
 
@@ -174,7 +174,7 @@ Manual multilingual RealGemma validation is optional and requires a sideloaded a
 .\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaMultilingualInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
 ```
 
-Only claim a filmed RealGemma language after this manual harness passes for that language. No cloud translation API is used. Gemma audio transcription is validated as a manual probe; app-facing microphone integration is next-phase work.
+Only claim a filmed RealGemma language after this manual harness passes for that language. No cloud translation API is used. Gemma audio transcription fills the editable transcript only; CHW review and manual note generation are still required.
 
 ## Judge Notes
 

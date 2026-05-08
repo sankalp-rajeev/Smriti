@@ -34,6 +34,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.smriti.clinicalscribe.audio.Pcm16AudioRecorder
+import com.smriti.clinicalscribe.audio.Pcm16WavEncoder
 import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
 import com.smriti.clinicalscribe.data.HistorySignal
 import com.smriti.clinicalscribe.data.MissedFollowUpAlert
@@ -44,6 +46,8 @@ import com.smriti.clinicalscribe.data.FollowUpTaskScheduler
 import com.smriti.clinicalscribe.data.FollowUpTaskStatus
 import com.smriti.clinicalscribe.data.TranscriptSource
 import com.smriti.clinicalscribe.data.VisitLog
+import com.smriti.clinicalscribe.reasoning.GemmaAudioTranscriptResult
+import com.smriti.clinicalscribe.reasoning.LiteRtGemmaAudioTranscriptClient
 import com.smriti.clinicalscribe.transcript.AndroidOfflineSpeechRecognizerClient
 import com.smriti.clinicalscribe.transcript.TranscriptResult
 import java.text.SimpleDateFormat
@@ -66,6 +70,8 @@ fun VisitScreen(
     realGemmaInferenceLabel: String,
     realGemmaDeveloperWarning: String?,
     protocolContextLabel: String,
+    gemmaAudioTranscriptionAvailable: Boolean,
+    gemmaAudioUnavailableMessage: String = LiteRtGemmaAudioTranscriptClient.UNAVAILABLE_MESSAGE,
     missedFollowUpAlerts: List<MissedFollowUpAlert>,
     followUpTasks: List<FollowUpTask>,
     historySignal: HistorySignal?,
@@ -77,6 +83,7 @@ fun VisitScreen(
     onMarkFollowUpTaskDone: (String) -> Unit,
     onRescheduleFollowUpTask: (String, String) -> Unit,
     onCheckUrgentGuidance: () -> Unit,
+    onTranscribeGemmaAudio: suspend (ByteArray) -> GemmaAudioTranscriptResult,
     onGenerate: (String, VoiceNoteMetadata?) -> Unit,
     onScanPaperNote: () -> Unit,
     onUseSamplePaperNote: () -> Unit,
@@ -84,9 +91,13 @@ fun VisitScreen(
 ) {
     val context = LocalContext.current
     val offlineSpeechClient = remember(context) { AndroidOfflineSpeechRecognizerClient(context) }
+    val gemmaAudioRecorder = remember { Pcm16AudioRecorder() }
     val scope = rememberCoroutineScope()
     var offlineSpeechStatus by remember { mutableStateOf<String?>(null) }
     var isListeningOfflineSpeech by remember { mutableStateOf(false) }
+    var gemmaAudioStatus by remember(patient.id) { mutableStateOf<String?>(null) }
+    var isRecordingGemmaAudio by remember(patient.id) { mutableStateOf(false) }
+    var isTranscribingGemmaAudio by remember(patient.id) { mutableStateOf(false) }
     var dismissedOngoingFollowUpIds by remember(patient.id) { mutableStateOf<Set<Long>>(emptySet()) }
     var observationText by remember(patient.id) { mutableStateOf("") }
     var inlineError by remember(patient.id) { mutableStateOf<String?>(null) }
@@ -119,7 +130,9 @@ fun VisitScreen(
     }
 
     DisposableEffect(Unit) {
-        onDispose { }
+        onDispose {
+            gemmaAudioRecorder.cancel()
+        }
     }
 
     fun tryOfflineSpeech() {
@@ -158,6 +171,74 @@ fun VisitScreen(
         }
     }
 
+    fun stopGemmaAudioRecording() {
+        if (!isRecordingGemmaAudio) return
+        isRecordingGemmaAudio = false
+        val clipResult = gemmaAudioRecorder.stop()
+        clipResult.onFailure { error ->
+            gemmaAudioStatus = "Recording could not be used: ${error.message ?: "please type manually."}"
+        }.onSuccess { clip ->
+            scope.launch {
+                isTranscribingGemmaAudio = true
+                gemmaAudioStatus = "Transcribing locally with Gemma..."
+                val wavBytes = runCatching { Pcm16WavEncoder.encode(clip) }
+                wavBytes.onFailure { error ->
+                    gemmaAudioStatus = "Audio could not be prepared. Existing text was kept. ${error.message.orEmpty()}".trim()
+                    isTranscribingGemmaAudio = false
+                }.onSuccess { bytes ->
+                    when (val result = onTranscribeGemmaAudio(bytes)) {
+                        is GemmaAudioTranscriptResult.Success -> {
+                            observationText = result.transcript
+                            inlineError = null
+                            gemmaAudioStatus = "Transcript added. Please review before generating."
+                        }
+                        is GemmaAudioTranscriptResult.Unavailable -> {
+                            gemmaAudioStatus = "${result.reason} Existing text was kept."
+                        }
+                        is GemmaAudioTranscriptResult.Failed -> {
+                            gemmaAudioStatus = "Gemma audio transcription failed. Existing text was kept."
+                        }
+                    }
+                    isTranscribingGemmaAudio = false
+                }
+            }
+        }
+    }
+
+    fun startGemmaAudioRecording() {
+        when {
+            !gemmaAudioTranscriptionAvailable -> {
+                gemmaAudioStatus = gemmaAudioUnavailableMessage
+            }
+            !audioPermissionGranted -> {
+                gemmaAudioStatus = "Microphone permission is needed. Please allow it, then try again."
+                onRequestAudioPermission()
+            }
+            isGenerating || isReadingPaperNote || isListeningOfflineSpeech || isTranscribingGemmaAudio -> {
+                gemmaAudioStatus = "Smriti is already preparing audio or a note. Please wait."
+            }
+            else -> {
+                gemmaAudioRecorder.start()
+                    .onSuccess {
+                        isRecordingGemmaAudio = true
+                        inlineError = null
+                        offlineSpeechStatus = null
+                        gemmaAudioStatus = "Recording locally... Tap Stop when finished."
+                        scope.launch {
+                            delay(Pcm16AudioRecorder.MAX_DURATION_MILLIS)
+                            if (isRecordingGemmaAudio) {
+                                stopGemmaAudioRecording()
+                            }
+                        }
+                    }
+                    .onFailure { error ->
+                        isRecordingGemmaAudio = false
+                        gemmaAudioStatus = "Could not start recording: ${error.message ?: "please try again."}"
+                    }
+            }
+        }
+    }
+
     fun requestGenerate() {
         val trimmed = observationText.trim()
         when {
@@ -168,8 +249,8 @@ fun VisitScreen(
                 inlineError = "This observation is very short.\nAdd more detail for a better note."
                 onGenerate(observationText, null)
             }
-            isReadingPaperNote -> {
-                inlineError = "Smriti is reading a paper note. Please wait."
+            isReadingPaperNote || isTranscribingGemmaAudio || isRecordingGemmaAudio -> {
+                inlineError = "Smriti is preparing local input. Please wait."
             }
             !isGenerating -> {
                 inlineError = null
@@ -265,12 +346,44 @@ fun VisitScreen(
 
             item {
                 SmritiCard {
+                        if (gemmaAudioTranscriptionAvailable) {
+                            Button(
+                                onClick = {
+                                    if (isRecordingGemmaAudio) {
+                                        stopGemmaAudioRecording()
+                                    } else {
+                                        startGemmaAudioRecording()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 52.dp),
+                                enabled = !isGenerating && !isReadingPaperNote && !isListeningOfflineSpeech && !isTranscribingGemmaAudio
+                            ) {
+                                Text(if (isRecordingGemmaAudio) "Stop" else "Record with Gemma")
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = { gemmaAudioStatus = gemmaAudioUnavailableMessage },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp),
+                                enabled = !isGenerating && !isReadingPaperNote
+                            ) {
+                                Text("Record with Gemma")
+                            }
+                        }
+                        Text(
+                            "Transcript is editable. No visit is saved from audio alone.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         Button(
                             onClick = { tryOfflineSpeech() },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 52.dp),
-                            enabled = !isListeningOfflineSpeech && !isGenerating
+                            enabled = !isListeningOfflineSpeech && !isGenerating && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
                         ) {
                             Text(if (isListeningOfflineSpeech) "Listening..." else "Speak observation")
                         }
@@ -284,7 +397,7 @@ fun VisitScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .heightIn(min = 48.dp),
-                                enabled = !isGenerating && !isReadingPaperNote
+                                enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
                             ) {
                                 Text("Use sample visit transcript")
                             }
@@ -308,12 +421,15 @@ fun VisitScreen(
                         offlineSpeechStatus?.let { message ->
                             Text(message, style = MaterialTheme.typography.bodyLarge)
                         }
+                        gemmaAudioStatus?.let { message ->
+                            Text(message, style = MaterialTheme.typography.bodyLarge)
+                        }
                         Button(
                             onClick = { requestGenerate() },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 52.dp),
-                            enabled = !isGenerating && !isReadingPaperNote
+                            enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
                         ) {
                             Text(if (isGenerating) "Preparing note..." else "Generate visit note")
                         }
@@ -322,7 +438,7 @@ fun VisitScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 48.dp),
-                            enabled = !isGenerating && !isReadingPaperNote
+                            enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
                         ) {
                             Text("Check urgent guidance")
                         }
@@ -331,7 +447,7 @@ fun VisitScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 48.dp),
-                            enabled = !isGenerating && !isReadingPaperNote
+                            enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
                         ) {
                             Text("Scan paper note")
                         }
@@ -340,7 +456,7 @@ fun VisitScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 48.dp),
-                            enabled = !isGenerating && !isReadingPaperNote
+                            enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
                         ) {
                             Text("Use sample paper note")
                         }

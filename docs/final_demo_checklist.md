@@ -80,7 +80,7 @@ On-device Gemma 4 inference - sped up for demo.
 | Show urgent protocol lookup | Tap `Urgent protocol lookup` from Patient Roster. Select `Severe headache` and `Blurred vision`, then tap `Check urgent guidance`. | Lookup opens offline, retrieves local health guidance with a citation, shows `This is not a diagnosis`, and states no visit/referral/follow-up is saved. | Lookup saves data, creates a referral/follow-up, changes Summary/Community Panel counts, calls RealGemma, or uses treatment/dose/risk-score wording. |
 | Note language labels | Check patient cards for `Note language: Hindi`, `Note language: Spanish`, `Note language: Swahili`, or `Note language: English`. | Generated notes follow each patient's saved preferred language. | Roster implies the whole app UI language changed. |
 | Empty states | Search for a missing patient. | Roster shows `No patient found for ...` and offers `Add patient`. | Blank list appears with no explanation. |
-| Show Offline Proof | Tap `Check offline setup`. | Dedicated setup screen shows works offline after setup, patient memory saved on device, guidance stored on device, on-device Gemma ready/setup needed, paper-note scan available, cloud APIs none, direct Gemma audio not used. | Technical proof details appear by default on the roster or imply cloud runtime/direct Gemma audio. |
+| Show Offline Proof | Tap `Check offline setup`. | Dedicated setup screen shows works offline after setup, patient memory saved on device, guidance stored on device, on-device Gemma ready/setup needed, Gemma audio transcript editable only, paper-note scan available, and cloud APIs none. | Technical proof details appear by default on the roster or imply cloud runtime/audio-only clinical output. |
 | Select Meena | Tap `Meena Sharma, 28F` / `Open visit`. | Visit screen opens for Meena. | Wrong patient opens or navigation fails. |
 | Show visit order | On Visit screen, show patient header, alerts before input, instruction card, input card, compact history, then local setup proof. | Important alerts are visible before transcript input. | Alerts are buried below history or setup details. |
 | Visit note language | On Visit screen, point to `Visit note will be prepared in ...`. | The label matches the selected patient's saved note language, not a global UI language. | Changing a default/new-patient language changes an existing patient's note language. |
@@ -128,8 +128,8 @@ On-device Gemma 4 inference - sped up for demo.
 - `Selected languages demonstrated: English, Hindi, Spanish, Swahili.`
 - `These are patient-specific generated note languages; Smriti does not claim full app UI translation.`
 - `Protocol citation IDs remain stable in English; no cloud translation API is used.`
-- `Gemma audio transcription is validated through a manual probe. Audio fills an editable transcript only; clinical note generation still goes through text reasoning and CHW review.`
-- `App-facing microphone recording into the editable transcript is next-phase work.`
+- `Gemma audio transcription fills an editable transcript only; clinical note generation still goes through text reasoning and CHW review after the worker taps Generate.`
+- `App-facing microphone recording fills the editable transcript only; it does not generate or save a clinical note from audio.`
 - `Vision scan is data-entry support only, not diagnosis.`
 - `Local Gemma 4 vision paper-note extraction requires CHW review before saving.`
 

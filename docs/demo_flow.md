@@ -36,7 +36,7 @@ On-device Gemma 4 inference - sped up for demo.
 - `Urgent protocol lookup checks local health guidance only; it does not save a visit or create a referral flag.`
 - `Patient messages are reviewed by the CHW and shared only by user action through Android's share sheet.`
 - `Smriti runs one on-device Gemma request at a time so the filmed path stays stable.`
-- `Gemma audio transcription is validated through a manual probe. Audio fills an editable transcript only; clinical note generation still goes through text reasoning and CHW review.`
+- `Gemma audio transcription fills an editable transcript only; clinical note generation still goes through text reasoning and CHW review after the worker taps Generate.`
 
 ## Safety Details To Show
 

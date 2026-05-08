@@ -39,7 +39,7 @@ data class OfflineProofStatus(
             "On-device Gemma" to modelReadyLabel,
             "Paper note scan" to "available",
             "Cloud APIs" to "none",
-            "Direct Gemma audio" to "not used"
+            "Gemma audio transcript" to "editable only"
         )
 
     val lines: List<Pair<String, String>>
@@ -49,13 +49,14 @@ data class OfflineProofStatus(
             "Model file" to modelReadyLabel,
             "Engine state" to if (modelReadyLabel == "ready") "ready for use" else "manual only",
             "Transcript source" to "offline speech or manual typing",
+            "Gemma audio transcript" to "Editable transcript only",
             "Paper note scan" to "Available",
             "Vision support" to "Uses local Gemma vision",
             "Scan review" to "Review required before save",
             "Cloud OCR" to "none",
             "Languages" to "EN, HI, ES, SW",
             "Cloud APIs" to "none",
-            "Direct Gemma audio" to "not used"
+            "Audio save" to "none from audio alone"
         )
 
     val compactDisplayLines: List<String>

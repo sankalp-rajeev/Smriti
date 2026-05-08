@@ -320,6 +320,80 @@ class NormalVisitFlowWiringTest {
     }
 
     @Test
+    fun gemmaAudioTranscriptPathDoesNotGenerateOrSaveClinicalOutput() {
+        val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
+        val mainActivity = appSourceFile("MainActivity.kt").readText()
+        val client = appSourceFile("reasoning/LiteRtGemmaAudioTranscriptClient.kt").readText()
+
+        val start = visitScreen.indexOf("fun stopGemmaAudioRecording()")
+        val end = visitScreen.indexOf("fun requestGenerate", startIndex = start)
+        val audioBlock = visitScreen.substring(start, end)
+        val callbackStart = mainActivity.indexOf("onTranscribeGemmaAudio = { wavBytes ->")
+        val callbackEnd = mainActivity.indexOf("onGenerate = { observation, voiceNote ->", startIndex = callbackStart)
+        val callbackBlock = mainActivity.substring(callbackStart, callbackEnd)
+
+        assertTrue(audioBlock.contains("Pcm16WavEncoder.encode(clip)"))
+        assertTrue(audioBlock.contains("onTranscribeGemmaAudio(bytes)"))
+        assertTrue(audioBlock.contains("observationText = result.transcript"))
+        assertTrue(audioBlock.contains("Transcript added. Please review before generating."))
+        assertTrue(callbackBlock.contains("gemmaAudioTranscriptClient.transcribe(wavBytes)"))
+        listOf(
+            "onGenerate(",
+            "visitReasoningPipeline.process",
+            "saveConfirmedVisit",
+            "saveConfirmedScannedPaperNote",
+            "ReferralFlag",
+            "FollowUpTask",
+            "PatientLeaveBehindMessageGenerator",
+            "CommunityPanelBuilder"
+        ).forEach { forbidden ->
+            assertFalse("Audio path should not contain $forbidden", audioBlock.contains(forbidden))
+            assertFalse("Audio callback should not contain $forbidden", callbackBlock.contains(forbidden))
+            assertFalse("Audio client should not contain $forbidden", client.contains(forbidden))
+        }
+    }
+
+    @Test
+    fun gemmaAudioFailurePreservesExistingEditableTranscriptAndManualGenerate() {
+        val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
+        val unavailableStart = visitScreen.indexOf("is GemmaAudioTranscriptResult.Unavailable ->")
+        val failedStart = visitScreen.indexOf("is GemmaAudioTranscriptResult.Failed ->")
+        val successStart = visitScreen.indexOf("is GemmaAudioTranscriptResult.Success ->")
+        val unavailableBlock = visitScreen.substring(unavailableStart, failedStart)
+        val failedBlock = visitScreen.substring(failedStart, visitScreen.indexOf("}", startIndex = failedStart))
+
+        assertTrue(successStart >= 0)
+        assertTrue(unavailableStart > successStart)
+        assertTrue(failedStart > unavailableStart)
+        assertFalse(unavailableBlock.contains("observationText ="))
+        assertFalse(failedBlock.contains("observationText ="))
+        assertTrue(visitScreen.contains("Text(if (isGenerating) \"Preparing note...\" else \"Generate visit note\")"))
+        assertTrue(visitScreen.contains("onClick = { requestGenerate() }"))
+    }
+
+    @Test
+    fun gemmaAudioUiAvoidsSampleAudioAndUnsafeClaims() {
+        val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
+        val start = visitScreen.indexOf("Text(if (isRecordingGemmaAudio) \"Stop\" else \"Record with Gemma\")")
+        val end = visitScreen.indexOf("Text(if (isListeningOfflineSpeech) \"Listening...\" else \"Speak observation\")", startIndex = start)
+        val audioUiBlock = visitScreen.substring(start, end)
+
+        assertTrue(audioUiBlock.contains("Record with Gemma"))
+        assertTrue(audioUiBlock.contains("Transcript is editable. No visit is saved from audio alone."))
+        listOf(
+            "Use sample Gemma audio",
+            "sample audio",
+            "audio diagnosis",
+            "audio referral",
+            "audio treatment",
+            "auto-save",
+            "automatically save"
+        ).forEach { forbidden ->
+            assertFalse("Found forbidden audio UI wording: $forbidden", audioUiBlock.contains(forbidden, ignoreCase = true))
+        }
+    }
+
+    @Test
     fun sampleTranscriptButtonStillFillsEditableTranscript() {
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
         val sampleButtonStart = visitScreen.indexOf("Text(\"Use sample visit transcript\")")

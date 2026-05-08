@@ -62,7 +62,7 @@ The app-facing flow no longer falls back to mock-generated clinical, visit, or s
 
 - Product hardening for Real Gemma `.litertlm` model setup and device performance.
 - LiteRT-LM `Engine` creation, initialization, conversation creation, and inference outside the gated local submission path.
-- App-facing microphone recording wired into the Gemma audio transcription path (manual probe succeeded; app UI integration is next-phase work).
+- App-facing microphone recording is wired into the Gemma audio transcription path. It fills the editable transcript only; clinical note generation remains a separate CHW action.
 - Productized function calling through LiteRT-LM.
 - GPU backend benchmarking and broader device performance characterization.
 - WER and referral-accuracy studies with clinically reviewed data.
