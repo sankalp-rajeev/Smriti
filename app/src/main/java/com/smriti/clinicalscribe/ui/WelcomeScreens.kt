@@ -8,16 +8,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -28,9 +28,43 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun WelcomeScreen(
     onStartVisits: () -> Unit,
+    onImportPatientRegister: () -> Unit,
+    onAddPatientManually: () -> Unit,
     onUserGuide: () -> Unit,
-    onCheckOfflineSetup: () -> Unit
+    onAboutSmriti: () -> Unit,
+    onCheckOfflineSetup: () -> Unit,
+    isImportingPatientRegister: Boolean = false,
+    importStatusMessage: String? = null
 ) {
+    var showImportDialog by remember { mutableStateOf(false) }
+
+    if (showImportDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            title = { Text("Add patients from supervisor file") },
+            text = {
+                Text(
+                    "Import patient register shared by your supervisor. Patient register is stored on this device. No internet needed after setup."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showImportDialog = false
+                        onImportPatientRegister()
+                    }
+                ) {
+                    Text("Import patient register")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     SmritiScreenSurface {
         LazyColumn(
             modifier = Modifier
@@ -42,25 +76,22 @@ fun WelcomeScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Smriti", style = MaterialTheme.typography.headlineLarge)
                     Text(
-                        "For the ones who show up.",
+                        "Set up today's patient list",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "Smriti helps health workers carry each visit forward, with patient context, structured notes, and follow-up support ready for review.",
+                        "Start with patients already saved on this device, import a supervisor register, or add one patient manually.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             item {
-                MemoryThreadMotif()
-            }
-            item {
-                SmritiCard(tone = SmritiTone.Default) {
-                    Text("Smriti means memory.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                SmritiCard(tone = SmritiTone.Success) {
+                    Text("Works without internet after setup", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "It is built for the people who carry care from home to home, helping them remember what matters across visits.",
+                        "Patient memory, local guidance, and confirmed notes stay on the device.",
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
@@ -69,27 +100,101 @@ fun WelcomeScreen(
                     )
                 }
             }
-            item { PillarCard("Remember every visit", "Keep each patient's story moving forward, from one home visit to the next.") }
-            item { PillarCard("Support every worker", "Prepare structured notes and review support while the health worker stays in control.") }
-            item { PillarCard("Close every loop", "Bring follow-ups, urgent reviews, and end-of-day summaries back into view.") }
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SmritiCard(tone = SmritiTone.Default) {
+                    SmritiSectionHeader("Start")
+                    SmritiPrimaryButton("Start visits", onStartVisits)
+                    SmritiSectionHeader("Set up patient list")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        SmritiStatusChip("Review before saving", tone = SmritiTone.Info, modifier = Modifier.weight(1f))
-                        SmritiStatusChip("Patient context", tone = SmritiTone.Success, modifier = Modifier.weight(1f))
+                        SmritiSecondaryButton(
+                            text = if (isImportingPatientRegister) "Importing..." else "Import patient register",
+                            onClick = { showImportDialog = true },
+                            modifier = Modifier.weight(1f),
+                            enabled = !isImportingPatientRegister
+                        )
+                        SmritiSecondaryButton("Add patient manually", onAddPatientManually, modifier = Modifier.weight(1f))
                     }
+                    SmritiSectionHeader("Help & setup")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        SmritiStatusChip("Follow-up support", tone = SmritiTone.Caution, modifier = Modifier.weight(1f))
-                        SmritiStatusChip("Works after setup", tone = SmritiTone.Muted, modifier = Modifier.weight(1f))
+                        SmritiTonalButton("User guide", onUserGuide, modifier = Modifier.weight(1f))
+                        SmritiSecondaryButton("About Smriti", onAboutSmriti, modifier = Modifier.weight(1f))
+                    }
+                    SmritiSecondaryButton("Check offline setup", onCheckOfflineSetup)
+                }
+            }
+            importStatusMessage?.let { message ->
+                item {
+                    SmritiCard(tone = SmritiTone.Info) {
+                        Text("Import patient register", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(message, style = MaterialTheme.typography.bodyLarge)
+                        Text("Review imported patients on the roster.", style = MaterialTheme.typography.bodyMedium)
+                        SmritiPrimaryButton("View roster", onStartVisits)
                     }
                 }
             }
             item {
+                MemoryThreadMotif()
+            }
+            item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SmritiPrimaryButton("Start visits", onStartVisits)
-                    SmritiSecondaryButton("Check offline setup", onCheckOfflineSetup)
-                    SmritiTonalButton("View user guide", onUserGuide)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiStatusChip("Review before save", tone = SmritiTone.Info, modifier = Modifier.weight(1f))
+                        SmritiStatusChip("Saved on this device", tone = SmritiTone.Success, modifier = Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiStatusChip("Follow-up support", tone = SmritiTone.Caution, modifier = Modifier.weight(1f))
+                        SmritiStatusChip("No internet needed", tone = SmritiTone.Muted, modifier = Modifier.weight(1f))
+                    }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun AboutSmritiScreen(
+    onBack: () -> Unit
+) {
+    SmritiScreenSurface {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(SmritiSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("About Smriti", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        "Built for community health workers carrying care from home to home.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            item {
+                SmritiCard(tone = SmritiTone.Success) {
+                    Text("Smriti means memory.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "It is built for community health workers who move from home to home carrying patient history, follow-ups, and local guidance in paper registers and memory.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        "Smriti keeps that work on the phone: patient history, cited guidance, reviewed notes, follow-ups, patient messages, and community visibility.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        "It works after setup without cloud APIs. Smriti supports the health worker; it does not diagnose or replace clinical judgment.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        "The health worker reviews and confirms before saving.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            item {
+                SmritiPrimaryButton("Back", onBack)
             }
         }
     }
@@ -119,14 +224,6 @@ private fun MemoryThreadMotif() {
         drawCircle(color = dotColor, radius = 7.dp.toPx(), center = Offset(startX, y))
         drawCircle(color = middleColor, radius = 9.dp.toPx(), center = Offset(midX, y))
         drawCircle(color = dotColor, radius = 7.dp.toPx(), center = Offset(endX, y))
-    }
-}
-
-@Composable
-private fun PillarCard(title: String, body: String) {
-    SmritiCard(tone = SmritiTone.Info) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Text(body, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

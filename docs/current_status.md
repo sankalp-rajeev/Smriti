@@ -68,6 +68,8 @@ Phase 1 validated the local Gemma 4 LiteRT-LM stack behind manual instrumentatio
 - Visit prompts are compacted for latency: selected patient profile, capped prior history, top retrieved protocol chunks, strict JSON schema, language instruction, allowed citations, and non-diagnostic safety wording are retained while unrelated history/protocol bulk is trimmed.
 - The current LiteRT-LM `Conversation.sendMessage(prompt)` app path has no wired generation-options object in this codebase, so Smriti does not invent unsupported temperature or token-limit calls. Output size is constrained through the prompt contract and parser validation.
 - Stable app text inference uses CPU by default. A GPU backend path is isolated behind explicit developer/test configuration via `LiteRtBackendMode.GPU_EXPERIMENTAL`; it is not the filmed default unless manual target-device testing proves it works and improves latency without breaking CPU fallback.
+- Manual speculative decoding/MTP benchmark ran on CPU with LiteRT-LM 0.11.0: CPU baseline 21787 ms, CPU speculative/MTP 22138 ms, delta +351 ms slower. CPU remains the stable default, and no speculative decoding speedup is claimed.
+- Manual native protocol tool-calling probe passed. Gemma called local `lookupProtocol` through `OpenApiTool + tool(...) + ConversationConfig(tools, automaticToolCalling=true)` with India danger-sign arguments and returned citation `Smriti Demo Maternal Health Protocol Danger Signs 1.1`. This is optional manual evidence only; production visits still use deterministic `ProtocolRetriever` before RealGemma prompting.
 - Routine no-danger-sign RealGemma outputs can pass safely with `referralFlag=false`, `dangerSigns=[]`, and empty citations when no supplied protocol directly supports a protocol-specific recommendation. Referral outputs still require a supplied citation.
 - Parser failures log the first 1500 characters of raw RealGemma output plus the rejection reason to `SmritiRealGemma` in debug/dev builds only. The UI keeps a concise retry/setup error and never shows raw model text as a clinical result.
 - The latest accepted manual RealGemma benchmark reported `totalScenarios=3`, `successCount=3`, `parserSuccessCount=3`, `referralCount=1`, `citationCount=2`, `singleCitationContractCount=3`, `averageLatencyMs=15812`, and `maxLatencyMs=26272`.
@@ -225,10 +227,12 @@ Recommended order:
 - `ManualRealGemmaMultilingualInstrumentedTest`
 - `ManualRealGemmaMemoryStressInstrumentedTest`
 - `ManualLiteRtFunctionCallingInstrumentedTest`
+- `ManualLiteRtProtocolToolCallingInstrumentedTest`
 - `ManualLiteRtAudioCapabilityInstrumentedTest`
 - `ManualLiteRtAudioInferenceInstrumentedTest`
 - `ManualRealGemmaVisionProbeInstrumentedTest`
 - `ManualRealGemmaBackendLatencyInstrumentedTest`
+- `ManualRealGemmaSpeculativeLatencyInstrumentedTest`
 
 These tests require explicit instrumentation arguments and, for inference, a sideloaded app-private model. They are separate from startup and do not add cloud or runtime download behavior.
 

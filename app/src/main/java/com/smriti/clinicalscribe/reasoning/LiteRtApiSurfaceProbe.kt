@@ -13,6 +13,10 @@ import com.google.ai.edge.litertlm.OpenApiTool
 import com.google.ai.edge.litertlm.SamplerConfig
 import com.google.ai.edge.litertlm.SessionConfig
 import com.google.ai.edge.litertlm.ToolCall
+import com.google.ai.edge.litertlm.ToolManager
+import com.google.ai.edge.litertlm.ToolParam
+import com.google.ai.edge.litertlm.ToolProvider
+import com.google.ai.edge.litertlm.ToolSet
 
 /**
  * Compile-only probe for LiteRT-LM API types. The nullable references below prove
@@ -33,6 +37,10 @@ data class LiteRtApiSurfaceProbe(
     val conversationConfig: ConversationConfig? = null,
     val toolCall: ToolCall? = null,
     val openApiTool: OpenApiTool? = null,
+    val toolProvider: ToolProvider? = null,
+    val toolManager: ToolManager? = null,
+    val toolSet: ToolSet? = null,
+    val toolParam: ToolParam? = null,
     val samplerConfig: SamplerConfig? = null,
     val sessionConfig: SessionConfig? = null,
     val capabilities: Capabilities? = null
@@ -53,6 +61,10 @@ data class LiteRtApiSurfaceProbe(
             "com.google.ai.edge.litertlm.ConversationConfig",
             "com.google.ai.edge.litertlm.ToolCall",
             "com.google.ai.edge.litertlm.OpenApiTool",
+            "com.google.ai.edge.litertlm.ToolProvider",
+            "com.google.ai.edge.litertlm.ToolManager",
+            "com.google.ai.edge.litertlm.ToolSet",
+            "com.google.ai.edge.litertlm.ToolParam",
             "com.google.ai.edge.litertlm.SamplerConfig",
             "com.google.ai.edge.litertlm.SessionConfig",
             "com.google.ai.edge.litertlm.Capabilities",
@@ -76,6 +88,15 @@ data class LiteRtApiSurfaceProbe(
             "Capabilities.hasSpeculativeDecodingSupport() is public in litertlm-android 0.11.0.",
             "No public draft-model, target-model, MTP-specific, or multi-token configuration class was found in the 0.11.0 classes.jar name scan.",
             "Smriti keeps speculative decoding manual-only until the gated latency probe is run on a target device."
+        )
+
+    val toolCallingApiFindings: List<String>
+        get() = listOf(
+            "OpenApiTool and ToolCall are public.",
+            "ToolProvider, ToolManager, ToolSet, and ToolParam are public.",
+            "ReflectionTool is present in the 0.11.0 AAR but is Kotlin-internal, so Smriti does not import it.",
+            "ConversationConfig exposes tools and automaticToolCalling.",
+            "Smriti keeps native tool-calling manual-only; production protocol retrieval remains deterministic ProtocolRetriever before RealGemma prompting."
         )
 
     val imageApiFindings: List<String>

@@ -82,6 +82,10 @@ class LocalVisitMemoryStoreTest {
         val second = store.importSupervisorRegister(register)
 
         assertEquals(6, first.patientCount)
+        assertEquals(6, first.patientsAdded)
+        assertEquals(0, first.patientsUpdated)
+        assertEquals(0, second.patientsAdded)
+        assertEquals(6, second.patientsUpdated)
         assertEquals(6, second.snapshot.patients.size)
         assertEquals(register.priorVisits.size, second.snapshot.visits.size)
         assertEquals(1, second.snapshot.visits.count { it.id == 2_004L })

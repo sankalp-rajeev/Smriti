@@ -1,6 +1,7 @@
 package com.smriti.clinicalscribe.pipeline
 
 import java.io.File
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -94,7 +95,7 @@ class NormalVisitFlowWiringTest {
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
 
         assertTrue(screen.contains("OutlinedTextField("))
-        assertTrue(screen.contains("Review before sharing"))
+        assertTrue(screen.contains("Editable leave-behind"))
         assertTrue(screen.contains("Message for patient"))
         assertTrue(screen.contains("SmritiPrimaryButton("))
         assertTrue(screen.contains("text = \"Share\""))
@@ -200,7 +201,7 @@ class NormalVisitFlowWiringTest {
         assertFalse(visitScreen.contains("Real Gemma 4 audio integration comes next"))
         assertTrue(visitScreen.contains("Today's observation"))
         assertTrue(visitScreen.contains("Offline setup ready"))
-        assertTrue(visitScreen.contains("On-device Gemma:"))
+        assertTrue(visitScreen.contains("Gemma 4 on device:"))
         assertTrue(visitScreen.contains("Local guidance available"))
         assertTrue(visitScreen.contains("Visit note will be prepared in \${PatientVisitUiText.noteLanguageDisplayLabel(patient)}"))
     }
@@ -211,12 +212,12 @@ class NormalVisitFlowWiringTest {
         val reviewScreen = appSourceFile("ui/ReviewScreen.kt").readText()
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
 
-        assertTrue(patientListScreen.contains("Helping field workers carry care forward."))
-        assertTrue(patientListScreen.contains("Note language: \${PatientVisitUiText.noteLanguageName(patient)}"))
+        assertTrue(patientListScreen.contains("Daily patient memory for field visits."))
+        assertTrue(patientListScreen.contains("Language: \${PatientVisitUiText.noteLanguageName(patient)}"))
         assertTrue(patientListScreen.contains("Check offline setup"))
         assertFalse(patientListScreen.contains("Language set to"))
         assertFalse(patientListScreen.contains("Protocol-grounded"))
-        assertTrue(reviewScreen.contains("Smriti does not diagnose. Health worker must review before saving."))
+        assertTrue(reviewScreen.contains("Smriti does not diagnose."))
         assertTrue(reviewScreen.contains("No referral flag"))
         assertTrue(reviewScreen.contains("No urgent danger signs were flagged from this note."))
         assertTrue(reviewScreen.contains("How was this prepared?"))
@@ -225,7 +226,7 @@ class NormalVisitFlowWiringTest {
         assertFalse(reviewScreen.contains("Protocol Citation"))
         assertFalse(reviewScreen.contains("Confirmed local data only"))
         assertTrue(summaryScreen.contains("Saved visits on this device"))
-        assertTrue(summaryScreen.contains("Today's priority list"))
+        assertTrue(summaryScreen.contains("Saved visit summary"))
         assertTrue(summaryScreen.contains("How was this prepared?"))
         listOf(
             "Protocol-grounded",
@@ -240,9 +241,9 @@ class NormalVisitFlowWiringTest {
     @Test
     fun reviewScreenOnlyShowsReferralSuggestedWhenReferralFlagExists() {
         val reviewScreen = appSourceFile("ui/ReviewScreen.kt").readText()
-        val referralSupportIndex = reviewScreen.indexOf("Text(\"Referral suggested\"")
-        val referralGuardIndex = reviewScreen.indexOf("if (referralFlag != null)")
-        val routineCardIndex = reviewScreen.indexOf("Text(\"No referral flag\"")
+        val referralSupportIndex = reviewScreen.indexOf("SmritiStatusChip(\"Referral suggested\"")
+        val referralGuardIndex = reviewScreen.indexOf("referralFlag != null ->")
+        val routineCardIndex = reviewScreen.indexOf("SmritiStatusChip(\"No referral flag\"")
 
         assertTrue(referralGuardIndex >= 0)
         assertTrue(referralSupportIndex > referralGuardIndex)
@@ -255,12 +256,16 @@ class NormalVisitFlowWiringTest {
         val welcomeScreens = appSourceFile("ui/WelcomeScreens.kt").readText()
         val mainActivity = appSourceFile("MainActivity.kt").readText()
 
-        assertTrue(patientListScreen.contains("SmritiPrimaryButton(\"Add patient\""))
-        assertTrue(patientListScreen.contains("SmritiTonalButton(\"End-of-day summary\""))
-        assertTrue(patientListScreen.contains("text = if (isImportingSupervisorRegister) \"Importing...\" else \"Import register\""))
-        assertTrue(patientListScreen.contains("Text(\"Check offline setup\")"))
-        assertTrue(patientListScreen.contains("Text(\"About Smriti\")"))
-        assertTrue(patientListScreen.contains(".heightIn(min = 48.dp)"))
+        assertTrue(patientListScreen.contains("SmritiSecondaryButton(\"Add patient\""))
+        assertTrue(patientListScreen.contains("SmritiSecondaryButton(\"End-of-day summary\""))
+        assertTrue(patientListScreen.contains("text = if (isImportingSupervisorRegister) \"Importing...\" else \"Import patient register\""))
+        assertTrue(patientListScreen.contains("Patient register is stored on this device"))
+        assertTrue(patientListScreen.contains("Review imported patients on the roster."))
+        assertEquals(1, Regex("LazyColumn\\(").findAll(patientListScreen).count())
+        assertTrue(patientListScreen.contains("SmritiSecondaryButton(\"Check offline setup\""))
+        assertTrue(patientListScreen.contains("SmritiSecondaryButton(\"About Smriti\""))
+        assertTrue(patientListScreen.contains("FilterChip("))
+        assertTrue(patientListScreen.contains("RosterFilter.entries"))
         assertFalse(patientListScreen.contains("OfflineProofCard("))
         assertTrue(welcomeScreens.contains("OfflineProofCard(status = status)"))
         assertTrue(mainActivity.contains("SmritiScreen.OfflineSetup"))
@@ -274,7 +279,7 @@ class NormalVisitFlowWiringTest {
         val alertIndex = visitScreen.indexOf("MissedFollowUpCard(")
         val signalIndex = visitScreen.indexOf("HistorySignalCard(signal = signal)")
         val instructionIndex = visitScreen.indexOf("Text(\"Today's observation\"")
-        val transcriptIndex = visitScreen.indexOf("Text(if (isListeningOfflineSpeech) \"Listening...\" else \"Speak observation\")")
+        val transcriptIndex = visitScreen.indexOf("text = if (isListeningOfflineSpeech) \"Listening...\" else \"Speak observation\"")
         val historyIndex = visitScreen.indexOf("PriorHistorySection(")
 
         assertTrue(alertIndex >= 0)
@@ -367,19 +372,19 @@ class NormalVisitFlowWiringTest {
         assertTrue(failedStart > unavailableStart)
         assertFalse(unavailableBlock.contains("observationText ="))
         assertFalse(failedBlock.contains("observationText ="))
-        assertTrue(visitScreen.contains("Text(if (isGenerating) \"Preparing note...\" else \"Generate visit note\")"))
+        assertTrue(visitScreen.contains("text = if (isGenerating) \"Preparing note...\" else \"Generate visit note\""))
         assertTrue(visitScreen.contains("onClick = { requestGenerate() }"))
     }
 
     @Test
     fun gemmaAudioUiAvoidsSampleAudioAndUnsafeClaims() {
         val visitScreen = appSourceFile("ui/VisitScreen.kt").readText()
-        val start = visitScreen.indexOf("Text(if (isRecordingGemmaAudio) \"Stop\" else \"Record with Gemma\")")
-        val end = visitScreen.indexOf("Text(if (isListeningOfflineSpeech) \"Listening...\" else \"Speak observation\")", startIndex = start)
+        val start = visitScreen.indexOf("text = if (isRecordingGemmaAudio) \"Stop recording\" else \"Record observation\"")
+        val end = visitScreen.indexOf("SmritiPrimaryButton(", startIndex = start)
         val audioUiBlock = visitScreen.substring(start, end)
 
-        assertTrue(audioUiBlock.contains("Record with Gemma"))
-        assertTrue(audioUiBlock.contains("Transcript is editable. No visit is saved from audio alone."))
+        assertTrue(audioUiBlock.contains("Record observation"))
+        assertTrue(audioUiBlock.contains("Transcript is editable. Audio alone never saves a visit."))
         listOf(
             "Use sample Gemma audio",
             "sample audio",
@@ -481,7 +486,7 @@ class NormalVisitFlowWiringTest {
         val summaryScreen = appSourceFile("ui/SummaryScreen.kt").readText()
         val mainActivity = appSourceFile("MainActivity.kt").readText()
 
-        assertTrue(summaryScreen.contains("Today's priority list"))
+        assertTrue(summaryScreen.contains("Saved visit summary"))
         assertTrue(summaryScreen.contains("priorityUnavailableMessage"))
         assertTrue(summaryScreen.contains("priorityQueue"))
         assertTrue(summaryScreen.contains("On-device priority summary unavailable. Showing saved local visit flags."))

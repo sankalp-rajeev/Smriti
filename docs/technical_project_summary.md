@@ -12,7 +12,7 @@ The filmed/local submission flow uses `RealGemmaAgent` as the app-facing reasoni
 
 CHWs and ASHAs often work from paper records, memory, and phone-based notes. They may not have EHR access, reliable connectivity, or immediate clinician backup during field visits. For maternal-health visits, this makes it easy to miss longitudinal context such as a prior borderline blood pressure note when a later visit includes danger signs.
 
-The core demo case is `Meena Sharma, 28F`, a pregnant patient with prior ANC history. The CHW enters a danger-sign observation: severe headache, blurred vision, blood pressure around 150/95, and reduced fetal movement. Smriti retrieves relevant local protocol guidance, generates a structured visit note, flags protocol-grounded referral support, shows a citation, and requires CHW confirmation before saving.
+The core demo case is synthetic demo patient `Meena Sharma, 28F`, a pregnant patient with prior ANC history. The CHW enters a danger-sign observation: severe headache, blurred vision, blood pressure around 150/95, and reduced fetal movement. Smriti retrieves relevant local protocol guidance, generates a structured visit note, flags protocol-grounded referral support, shows a citation, and requires CHW confirmation before saving.
 
 The workflow is built around memory, retrieval, structure, and safety:
 
@@ -192,7 +192,7 @@ Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe. `Conv
 Transcript preview from the probe:
 
 ```text
-Meena is seven months pregnant. She has severe headache and blurred vision and this is a demo.
+Synthetic demo patient Meena is seven months pregnant. She has severe headache and blurred vision and this is a demo.
 ```
 
 Smriti's safe audio path:
@@ -408,7 +408,7 @@ Recommended filmed/live flow:
 6. Open Community Panel to show local caseload counts, follow-ups, languages/countries, and priority list.
 7. Show Amara missed follow-up alert.
 8. Show Fatima rising BP history signal.
-9. Show Meena Hindi RealGemma note with referral suggested, citation/local guidance, and CHW confirm/save.
+9. Show synthetic demo patient Meena Hindi RealGemma note with referral suggested, citation/local guidance, and CHW confirm/save.
 10. Open the post-save patient message for review/edit/share controls.
 11. Show Lucia Spanish RealGemma note after manual validation.
 12. Show Grace Swahili routine/no-referral RealGemma note after manual validation.

@@ -3,6 +3,7 @@ package com.smriti.clinicalscribe.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -10,12 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,7 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.smriti.clinicalscribe.reasoning.SupervisorPriorityQueue
@@ -87,8 +83,36 @@ fun SummaryScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text("End-of-day summary", style = MaterialTheme.typography.headlineSmall)
-                    Text("Confirmed visits and follow-ups from this device.", style = MaterialTheme.typography.bodyLarge)
-                    SmritiPrimaryButton("Back to patients", onBack, enabled = !isResettingDemoData)
+                    Text("Supervisor-ready view from confirmed visits on this device.", style = MaterialTheme.typography.bodyLarge)
+                    SmritiSecondaryButton("Back to patients", onBack, enabled = !isResettingDemoData)
+                }
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiMetricTile("Saved visits", summary.totalVisits.toString(), tone = SmritiTone.Info, modifier = Modifier.weight(1f))
+                        SmritiMetricTile(
+                            "Follow-ups",
+                            summary.openFollowUps.toString(),
+                            tone = if (summary.openFollowUps > 0) SmritiTone.Caution else SmritiTone.Muted,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiMetricTile(
+                            "Urgent review support",
+                            (summary.referralsFlagged + summary.paperScanNeedsUrgentReview.size).toString(),
+                            tone = if (summary.referralsFlagged + summary.paperScanNeedsUrgentReview.size > 0) SmritiTone.Urgent else SmritiTone.Success,
+                            modifier = Modifier.weight(1f)
+                        )
+                        SmritiMetricTile(
+                            "Patient messages",
+                            if (onPreparePatientMessage != null) "1" else "0",
+                            tone = if (onPreparePatientMessage != null) SmritiTone.Success else SmritiTone.Muted,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
@@ -103,7 +127,7 @@ fun SummaryScreen(
             } else {
                 item {
                     SmritiCard(tone = SmritiTone.Info) {
-                        Text("Today's priority list", fontWeight = FontWeight.SemiBold)
+                        Text("Saved visit summary", fontWeight = FontWeight.SemiBold)
                         Text("Total visits saved today: ${summary.totalVisits}", style = MaterialTheme.typography.bodyLarge)
                         Text("Referral suggested: ${summary.referralsFlagged}", style = MaterialTheme.typography.bodyLarge)
                         Text("Open follow-ups: ${summary.openFollowUps}", style = MaterialTheme.typography.bodyLarge)
@@ -121,7 +145,7 @@ fun SummaryScreen(
                     SmritiCard(tone = SmritiTone.Success) {
                         Text("Patient message", fontWeight = FontWeight.SemiBold)
                         Text(
-                            "Prepare a simple message for ${patientMessagePatientName ?: "the patient"} to review before sharing.",
+                            "Prepare a simple leave-behind for ${patientMessagePatientName ?: "the patient"}.",
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text("Review before sharing. Smriti will not send it automatically.", style = MaterialTheme.typography.bodyMedium)
@@ -236,7 +260,11 @@ fun SummaryScreen(
             }
 
             item {
-                SmritiTonalButton("View community panel", onShowCommunityPanel)
+                SmritiCard(tone = SmritiTone.Info) {
+                    Text("Community panel entry", fontWeight = FontWeight.SemiBold)
+                    Text("Open the local dashboard for patient, follow-up, and attention counts.", style = MaterialTheme.typography.bodyLarge)
+                    SmritiTonalButton("View community panel", onShowCommunityPanel)
+                }
             }
 
             if (showDemoControls) {

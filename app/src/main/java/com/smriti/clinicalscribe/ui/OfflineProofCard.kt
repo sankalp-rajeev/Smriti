@@ -33,30 +33,23 @@ data class OfflineProofStatus(
 
     val compactLines: List<Pair<String, String>>
         get() = listOf(
-            "Works offline after setup" to "",
-            "Patient memory" to "saved on this device",
-            "Health guidance" to "stored on this device",
-            "On-device Gemma" to modelReadyLabel,
-            "Paper note scan" to "available",
-            "Cloud APIs" to "none",
-            "Gemma audio transcript" to "editable only"
+            "Runs after setup without cloud APIs" to "",
+            "Local Room database" to "saved on this device",
+            "Local protocol pack" to "available",
+            "LiteRT-LM Gemma 4" to modelReadyLabel,
+            "CHW review required" to "before save"
         )
 
     val lines: List<Pair<String, String>>
         get() = listOf(
-            "Patient memory" to "Room/SQLite local storage",
-            "Health guidance" to "Local JSON pack: 46 chunks, 6 countries",
-            "Model file" to modelReadyLabel,
-            "Engine state" to if (modelReadyLabel == "ready") "ready for use" else "manual only",
-            "Transcript source" to "offline speech or manual typing",
-            "Gemma audio transcript" to "Editable transcript only",
-            "Paper note scan" to "Available",
-            "Vision support" to "Uses local Gemma vision",
-            "Scan review" to "Review required before save",
-            "Cloud OCR" to "none",
+            "Runs after setup without cloud APIs" to "",
+            "Local Room database" to "patient memory saved on this device",
+            "Local protocol pack" to "cited guidance stored on this device",
+            "LiteRT-LM Gemma 4" to modelReadyLabel,
+            "Transcript input" to "editable before note generation",
+            "Paper note scan" to "review before save",
             "Languages" to "EN, HI, ES, SW",
-            "Cloud APIs" to "none",
-            "Audio save" to "none from audio alone"
+            "CHW review required" to "before any save"
         )
 
     val compactDisplayLines: List<String>
@@ -76,7 +69,7 @@ fun OfflineProofCard(
         tone = SmritiTone.Muted,
         modifier = modifier
     ) {
-        Text("Offline setup checklist", fontWeight = FontWeight.SemiBold)
+        Text("Offline proof", fontWeight = FontWeight.SemiBold)
         val proofLines = if (compact) status.compactDisplayLines else status.displayLines
         proofLines.forEach { line ->
             Text(

@@ -117,4 +117,30 @@ class ManualInferenceWiringSafetyTest {
         assertTrue(engineConfigFactory.contains("backend = backendMode.toBackend()"))
         assertFalse(engineConfigFactory.contains("enableSpeculativeDecoding"))
     }
+
+    @Test
+    fun protocolToolCallingProbeIsNotWiredIntoNormalAppFlow() {
+        val appRoot = File("src/main/java/com/smriti/clinicalscribe")
+            .takeIf { it.exists() }
+            ?: File("app/src/main/java/com/smriti/clinicalscribe")
+        val normalFlowFiles = listOf(
+            File(appRoot, "MainActivity.kt"),
+            File(appRoot, "ui/VisitScreen.kt"),
+            File(appRoot, "ui/SummaryScreen.kt"),
+            File(appRoot, "pipeline/VisitReasoningPipeline.kt"),
+            File(appRoot, "reasoning/RealGemmaAgent.kt"),
+            File(appRoot, "reasoning/LiteRtGemmaTextClient.kt")
+        )
+        val combined = normalFlowFiles.joinToString(separator = "\n") { it.readText() }
+        val pipeline = File(appRoot, "pipeline/VisitReasoningPipeline.kt").readText()
+
+        assertFalse(combined.contains("ManualLiteRtProtocolToolCallingInstrumentedTest"))
+        assertFalse(combined.contains("SmritiProtocolToolCall"))
+        assertFalse(combined.contains("lookupProtocol"))
+        assertFalse(combined.contains("OpenApiTool"))
+        assertFalse(combined.contains("ConversationConfig("))
+        assertFalse(combined.contains("automaticToolCalling"))
+        assertTrue(pipeline.contains("protocolRetriever.retrieve("))
+        assertTrue(pipeline.contains("gemmaAgent.generateVisitNote("))
+    }
 }

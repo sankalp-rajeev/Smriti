@@ -3,6 +3,7 @@ package com.smriti.clinicalscribe.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -39,46 +40,53 @@ fun PatientMessageScreen(
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Patient message", style = MaterialTheme.typography.headlineSmall)
-                    Text(patientName, style = MaterialTheme.typography.bodyLarge)
+                    Text("Patient message for review", style = MaterialTheme.typography.headlineSmall)
+                    Text(patientName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                     SmritiSecondaryButton("Back", onBack)
                 }
             }
 
             item {
                 SmritiCard(tone = SmritiTone.Info) {
-                    Text("Review before sharing", fontWeight = FontWeight.SemiBold)
+                    Text("Editable leave-behind", fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Edit this message with the patient before using the phone share sheet.",
+                        "Review this message with the patient before copying or opening the phone share sheet.",
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    Text("This message is for review only.", style = MaterialTheme.typography.bodyMedium)
+                    Text("Smriti does not auto-send anything.", style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
             item {
-                OutlinedTextField(
-                    value = message,
-                    onValueChange = { message = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = SmritiSpacing.PrimaryButtonMinHeight * 5),
-                    label = { Text("Message for patient") },
-                    minLines = 8
-                )
+                SmritiCard {
+                    Text("Message card", fontWeight = FontWeight.SemiBold)
+                    OutlinedTextField(
+                        value = message,
+                        onValueChange = { message = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = SmritiSpacing.PrimaryButtonMinHeight * 5),
+                        label = { Text("Message for patient") },
+                        minLines = 8
+                    )
+                }
             }
 
             item {
-                SmritiPrimaryButton(
-                    text = "Share",
-                    onClick = { onShare(message) },
-                    enabled = message.isNotBlank()
-                )
-                SmritiSecondaryButton(
-                    text = "Copy",
-                    onClick = { onCopy(message) },
-                    enabled = message.isNotBlank()
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    SmritiSecondaryButton(
+                        text = "Copy",
+                        onClick = { onCopy(message) },
+                        modifier = Modifier.weight(1f),
+                        enabled = message.isNotBlank()
+                    )
+                    SmritiPrimaryButton(
+                        text = "Share",
+                        onClick = { onShare(message) },
+                        modifier = Modifier.weight(1f),
+                        enabled = message.isNotBlank()
+                    )
+                }
                 copyStatusMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 shareStatusMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             }

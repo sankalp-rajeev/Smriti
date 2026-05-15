@@ -46,7 +46,6 @@ import com.smriti.clinicalscribe.rag.ProtocolRetriever
 import com.smriti.clinicalscribe.reasoning.LiteRtEngineConfigFactory
 import com.smriti.clinicalscribe.reasoning.LiteRtGemmaAudioTranscriptClient
 import com.smriti.clinicalscribe.reasoning.ModelAvailability
-import com.smriti.clinicalscribe.reasoning.ModelStatusKind
 import com.smriti.clinicalscribe.reasoning.RealGemmaReadinessEvaluator
 import com.smriti.clinicalscribe.reasoning.RealGemmaDeveloperMode
 import com.smriti.clinicalscribe.reasoning.SupervisorSummary
@@ -71,6 +70,7 @@ import com.smriti.clinicalscribe.transcript.SimulatedTranscriptClient
 import com.smriti.clinicalscribe.tts.AndroidVoiceOutput
 import com.smriti.clinicalscribe.tts.VoiceOutputResult
 import com.smriti.clinicalscribe.ui.AddPatientScreen
+import com.smriti.clinicalscribe.ui.AboutSmritiScreen
 import com.smriti.clinicalscribe.ui.CommunityPanelBuilder
 import com.smriti.clinicalscribe.ui.CommunityPanelScreen
 import com.smriti.clinicalscribe.ui.OfflineSetupScreen
@@ -167,6 +167,7 @@ private fun namesMatch(left: String, right: String): Boolean {
 
 private sealed interface SmritiScreen {
     data object Welcome : SmritiScreen
+    data object About : SmritiScreen
     data object UserGuide : SmritiScreen
     data object SetupGuidance : SmritiScreen
     data object OfflineSetup : SmritiScreen
@@ -224,7 +225,6 @@ private fun SmritiApp(
             modelAvailability.check()
         }
     }
-    val modelFileReady = modelStatus.kind == ModelStatusKind.FOUND_NOT_LOADED
     val detectedRealGemmaLocalGate = remember { RealGemmaDeveloperMode.isLocalGateEnabled(context.filesDir) }
     val realGemmaLocalGate = realGemmaLocalGateOverride ?: detectedRealGemmaLocalGate
     val realGemmaRequiredModeStatus = remember(realGemmaRequiredBuildGate, realGemmaLocalGate, modelStatus) {
@@ -380,13 +380,16 @@ private fun SmritiApp(
     }
     var currentScreen by remember {
         mutableStateOf<SmritiScreen>(
-            if (firstLaunchPrefs.getBoolean("welcome_seen", false)) {
+            if (finalRecordingUi) {
+                SmritiScreen.Welcome
+            } else if (firstLaunchPrefs.getBoolean("welcome_seen", false)) {
                 SmritiScreen.PatientRoster
             } else {
                 SmritiScreen.Welcome
             }
         )
     }
+    var supportBackTarget by remember { mutableStateOf<SmritiScreen>(SmritiScreen.PatientRoster) }
     var patients by remember { mutableStateOf<List<Patient>>(emptyList()) }
     var visits by remember { mutableStateOf<List<VisitLog>>(emptyList()) }
     var referrals by remember { mutableStateOf<List<ReferralFlag>>(emptyList()) }
@@ -474,11 +477,8 @@ private fun SmritiApp(
 
     fun openVisitsAfterWelcome() {
         firstLaunchPrefs.edit().putBoolean("welcome_seen", true).apply()
-        currentScreen = if (!modelFileReady && !firstLaunchPrefs.getBoolean("setup_seen", false)) {
-            SmritiScreen.SetupGuidance
-        } else {
-            SmritiScreen.PatientRoster
-        }
+        errorMessage = null
+        currentScreen = SmritiScreen.PatientRoster
     }
 
     fun applySnapshot(snapshot: VisitMemorySnapshot) {
@@ -486,6 +486,28 @@ private fun SmritiApp(
         visits = snapshot.visits
         referrals = snapshot.referrals
         followUpTasks = snapshot.followUpTasks
+    }
+
+    fun importSupervisorRegisterFromLocalAsset() {
+        scope.launch {
+            isImportingSupervisorRegister = true
+            errorMessage = null
+            importStatusMessage = null
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    val register = DemoSupervisorRegisterImporter.fromAsset(context)
+                    visitMemoryStore.importSupervisorRegister(register)
+                }
+                applySnapshot(result.snapshot)
+                importStatusMessage =
+                    "Patient register is stored on this device: ${result.patientsAdded} added, ${result.patientsUpdated} updated. No internet needed after setup."
+            } catch (_: Throwable) {
+                importStatusMessage = null
+                errorMessage = "Register could not be imported. Please try again."
+            } finally {
+                isImportingSupervisorRegister = false
+            }
+        }
     }
 
     fun buildSummaryScreen(
@@ -537,19 +559,37 @@ private fun SmritiApp(
                 when (val screen = currentScreen) {
                     SmritiScreen.Welcome -> WelcomeScreen(
                         onStartVisits = { openVisitsAfterWelcome() },
-                        onUserGuide = { currentScreen = SmritiScreen.UserGuide },
+                        onImportPatientRegister = { importSupervisorRegisterFromLocalAsset() },
+                        onAddPatientManually = {
+                            firstLaunchPrefs.edit().putBoolean("welcome_seen", true).apply()
+                            errorMessage = null
+                            currentScreen = SmritiScreen.AddPatient
+                        },
+                        onUserGuide = {
+                            supportBackTarget = SmritiScreen.Welcome
+                            currentScreen = SmritiScreen.UserGuide
+                        },
+                        onAboutSmriti = {
+                            supportBackTarget = SmritiScreen.Welcome
+                            currentScreen = SmritiScreen.About
+                        },
                         onCheckOfflineSetup = {
+                            supportBackTarget = SmritiScreen.Welcome
                             currentScreen = SmritiScreen.OfflineSetup
+                        },
+                        isImportingPatientRegister = isImportingSupervisorRegister,
+                        importStatusMessage = importStatusMessage
+                    )
+
+                    SmritiScreen.About -> AboutSmritiScreen(
+                        onBack = {
+                            currentScreen = supportBackTarget
                         }
                     )
 
                     SmritiScreen.UserGuide -> UserGuideScreen(
                         onBack = {
-                            currentScreen = if (firstLaunchPrefs.getBoolean("welcome_seen", false)) {
-                                SmritiScreen.PatientRoster
-                            } else {
-                                SmritiScreen.Welcome
-                            }
+                            currentScreen = supportBackTarget
                         }
                     )
 
@@ -571,11 +611,7 @@ private fun SmritiApp(
                     SmritiScreen.OfflineSetup -> OfflineSetupScreen(
                         status = offlineProofStatus,
                         onBack = {
-                            currentScreen = if (firstLaunchPrefs.getBoolean("welcome_seen", false)) {
-                                SmritiScreen.PatientRoster
-                            } else {
-                                SmritiScreen.Welcome
-                            }
+                            currentScreen = supportBackTarget
                         }
                     )
 
@@ -595,27 +631,7 @@ private fun SmritiApp(
                             errorMessage = null
                             currentScreen = SmritiScreen.AddPatient
                         },
-                        onImportSupervisorRegister = {
-                            scope.launch {
-                                isImportingSupervisorRegister = true
-                                errorMessage = null
-                                importStatusMessage = null
-                                try {
-                                    val result = withContext(Dispatchers.IO) {
-                                        val register = DemoSupervisorRegisterImporter.fromAsset(context)
-                                        visitMemoryStore.importSupervisorRegister(register)
-                                    }
-                                    applySnapshot(result.snapshot)
-                                    importStatusMessage = "Register imported on this device."
-                                } catch (_: Throwable) {
-                                    importStatusMessage = null
-                                    errorMessage =
-                                        "Register could not be imported. Please try again."
-                                } finally {
-                                    isImportingSupervisorRegister = false
-                                }
-                            }
-                        },
+                        onImportSupervisorRegister = { importSupervisorRegisterFromLocalAsset() },
                         onUrgentProtocolLookup = {
                             currentScreen = SmritiScreen.UrgentProtocolLookup()
                         },
@@ -625,9 +641,16 @@ private fun SmritiApp(
                         onShowSummary = {
                             currentScreen = buildSummaryScreen(patients, visits, referrals, followUpTasks)
                         },
-                        onUserGuide = { currentScreen = SmritiScreen.UserGuide },
-                        onAboutSmriti = { currentScreen = SmritiScreen.Welcome },
+                        onUserGuide = {
+                            supportBackTarget = SmritiScreen.PatientRoster
+                            currentScreen = SmritiScreen.UserGuide
+                        },
+                        onAboutSmriti = {
+                            supportBackTarget = SmritiScreen.PatientRoster
+                            currentScreen = SmritiScreen.About
+                        },
                         onCheckOfflineSetup = {
+                            supportBackTarget = SmritiScreen.PatientRoster
                             currentScreen = SmritiScreen.OfflineSetup
                         }
                     )

@@ -103,12 +103,16 @@ class LocalVisitMemoryStore(
     suspend fun importSupervisorRegister(
         register: SupervisorRegister
     ): SupervisorRegisterImportResult {
+        val existingPatientIds = patientDao.getAll().map { it.id }.toSet()
         patientDao.upsertAll(register.patients)
         visitLogDao.upsertAll(register.priorVisits)
         seedMissingFollowUpTasks(nowMillis = System.currentTimeMillis())
         val snapshot = refresh()
+        val importedPatientIds = register.patients.map { it.id }.toSet()
         return SupervisorRegisterImportResult(
             patientCount = register.patients.size,
+            patientsAdded = importedPatientIds.count { it !in existingPatientIds },
+            patientsUpdated = importedPatientIds.count { it in existingPatientIds },
             visitCount = register.priorVisits.size,
             snapshot = snapshot
         )
@@ -310,6 +314,8 @@ data class SupervisorRegister(
 
 data class SupervisorRegisterImportResult(
     val patientCount: Int,
+    val patientsAdded: Int,
+    val patientsUpdated: Int,
     val visitCount: Int,
     val snapshot: VisitMemorySnapshot
 )

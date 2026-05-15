@@ -122,12 +122,16 @@ class PhaseDUxLogicTest {
         assertTrue(mainActivity.contains("OfflineSetupScreen("))
         assertFalse(mainActivity.contains("selectedLanguageOverride"))
         assertFalse(mainActivity.contains("copy(preferredLanguage = code)"))
-        assertTrue(welcomeScreens.contains("For the ones who show up."))
-        assertTrue(welcomeScreens.contains("Smriti means memory."))
-        assertTrue(welcomeScreens.contains("Remember every visit"))
-        assertTrue(welcomeScreens.contains("Support every worker"))
-        assertTrue(welcomeScreens.contains("Close every loop"))
+        assertTrue(welcomeScreens.contains("Set up today's patient list"))
+        assertTrue(welcomeScreens.contains("Import patient register"))
+        assertTrue(welcomeScreens.contains("Add patient manually"))
+        assertTrue(welcomeScreens.contains("Help & setup"))
+        assertTrue(welcomeScreens.contains("Smriti keeps that work on the phone"))
+        assertTrue(welcomeScreens.contains("Works without internet after setup"))
+        assertTrue(welcomeScreens.contains("Patient register is stored on this device"))
+        assertTrue(welcomeScreens.contains("Review imported patients on the roster."))
         assertTrue(mainActivity.contains("firstLaunchPrefs.edit().putBoolean(\"welcome_seen\", true).apply()"))
+        assertTrue(mainActivity.contains("if (finalRecordingUi)"))
         assertTrue(roster.contains("About Smriti"))
         assertTrue(welcomeScreens.contains("One-time setup needed"))
         assertTrue(welcomeScreens.contains("Continue without model (demo mode)"))
@@ -142,7 +146,7 @@ class PhaseDUxLogicTest {
         val roster = appSourceFile("ui/PatientListScreen.kt").readText()
         val visit = appSourceFile("ui/VisitScreen.kt").readText()
 
-        assertTrue(roster.contains("Note language: \${PatientVisitUiText.noteLanguageName(patient)}"))
+        assertTrue(roster.contains("Language: \${PatientVisitUiText.noteLanguageName(patient)}"))
         assertTrue(visit.contains("Visit note will be prepared in \${PatientVisitUiText.noteLanguageDisplayLabel(patient)}"))
         assertFalse(roster.contains("Output language:"))
         assertFalse(visit.contains("Output language:"))
@@ -158,9 +162,9 @@ class PhaseDUxLogicTest {
         assertTrue(visit.contains("Try again"))
         assertTrue(visit.contains("Note is being prepared"))
         assertTrue(visit.contains("Please wait until Smriti finishes."))
-        assertTrue(visit.contains("Record with Gemma"))
-        assertTrue(visit.contains("Transcribing locally with Gemma..."))
-        assertTrue(visit.contains("Transcript is editable. No visit is saved from audio alone."))
+        assertTrue(visit.contains("Record observation"))
+        assertTrue(visit.contains("Preparing editable transcript on device..."))
+        assertTrue(visit.contains("Transcript is editable. Audio alone never saves a visit."))
         assertTrue(visit.contains("Follow-up due"))
         assertTrue(visit.contains("Mark done"))
         assertTrue(visit.contains("Reschedule 1 week"))
@@ -192,7 +196,7 @@ class PhaseDUxLogicTest {
         assertTrue(summary.contains("Reset all demo data?"))
         assertTrue(summary.contains("showDemoControls: Boolean = true"))
         assertTrue(summary.contains("if (showDemoControls)"))
-        assertTrue(roster.contains("Add patients from file?"))
+        assertTrue(roster.contains("Add patients from supervisor file"))
         assertFalse(summary.contains("mock"))
         assertFalse(summary.contains("Mock"))
     }
@@ -204,7 +208,7 @@ class PhaseDUxLogicTest {
         val model = appSourceFile("ui/CommunityPanel.kt").readText()
 
         assertTrue(roster.contains("Community panel"))
-        assertTrue(screen.contains("Local view of your saved patient roster."))
+        assertTrue(screen.contains("Small local dashboard from saved patient records."))
         assertTrue(screen.contains("Saved on this device"))
         assertTrue(screen.contains("Follow-ups overdue"))
         assertTrue(screen.contains("Urgent review saved"))
@@ -231,10 +235,10 @@ class PhaseDUxLogicTest {
         val visit = appSourceFile("ui/VisitScreen.kt").readText()
         val screen = appSourceFile("ui/UrgentProtocolLookupScreen.kt").readText()
 
-        assertTrue(roster.contains("Urgent protocol lookup"))
+        assertTrue(roster.contains("Urgent lookup"))
         assertTrue(visit.contains("Check urgent guidance"))
         assertTrue(screen.contains("Urgent protocol lookup"))
-        assertTrue(screen.contains("Check urgent guidance from local health guidance."))
+        assertTrue(screen.contains("Check danger signs against cited local guidance."))
         assertTrue(screen.contains("Health guidance used"))
         assertTrue(screen.contains("Urgent review may be needed"))
         assertTrue(screen.contains("Document the observation and contact a supervisor or health facility."))
@@ -264,6 +268,7 @@ class PhaseDUxLogicTest {
         assertTrue(mainActivity.contains("recycleRealGemmaEngineAfterVisitNote: Boolean = BuildConfig.RECYCLE_REAL_GEMMA_ENGINE_AFTER_VISIT_NOTE"))
         assertTrue(mainActivity.contains("showDemoControls = !finalRecordingUi"))
         assertTrue(visit.contains("Use sample visit transcript"))
+        assertTrue(visit.contains("Use sample paper note"))
         assertTrue(visit.contains("if (showDemoControls)"))
         assertTrue(summary.contains("Reset Demo Data"))
         assertTrue(summary.contains("if (showDemoControls)"))
@@ -276,11 +281,16 @@ class PhaseDUxLogicTest {
 
         assertTrue(roster.contains("Check offline setup"))
         assertFalse(roster.contains("OfflineProofCard("))
+        assertTrue(roster.contains("LazyColumn("))
+        assertEquals(1, Regex("LazyColumn\\(").findAll(roster).count())
+        assertTrue(roster.contains("FilterChip("))
+        assertTrue(roster.contains("RosterFilter.entries"))
+        assertTrue(roster.contains("matchesRosterFilter"))
         assertTrue(welcomeScreens.contains("OfflineProofCard(status = status)"))
         assertTrue(welcomeScreens.contains("Smriti does not diagnose"))
         assertTrue(welcomeScreens.contains("Health worker must review"))
         assertTrue(welcomeScreens.contains("Confirm and save"))
-        assertTrue(welcomeScreens.contains("Works after setup"))
+        assertTrue(welcomeScreens.contains("Works without internet after setup"))
     }
 
     @Test
@@ -290,7 +300,7 @@ class PhaseDUxLogicTest {
             .filter { it.isFile && it.extension == "kt" }
             .joinToString(separator = "\n") { it.readText() }
 
-        listOf("Protocol grounded", "Protocol-grounded", "Found, not loaded", "Mock mode", "KAPT", "KSP", "LiteRT", "parser", "schema", "RAG", "pipeline")
+        listOf("Protocol grounded", "Protocol-grounded", "Found, not loaded", "Mock mode", "KAPT", "KSP", "parser", "schema", "RAG", "pipeline")
             .forEach { forbidden -> assertFalse("Found forbidden UI wording: $forbidden", combined.contains(forbidden)) }
     }
 

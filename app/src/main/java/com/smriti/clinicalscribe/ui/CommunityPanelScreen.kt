@@ -32,35 +32,44 @@ fun CommunityPanelScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Community panel", style = MaterialTheme.typography.headlineSmall)
-                    Text("Local view of your saved patient roster.", style = MaterialTheme.typography.bodyLarge)
+                    Text("Small local dashboard from saved patient records.", style = MaterialTheme.typography.bodyLarge)
                     SmritiSecondaryButton("Back to patients", onBack)
                 }
             }
 
             item {
-                SmritiCard(tone = SmritiTone.Info) {
+                SmritiCard(tone = SmritiTone.Success) {
                     Text("Today's focus", fontWeight = FontWeight.SemiBold)
                     Text(panel.narrative, style = MaterialTheme.typography.bodyLarge)
-                    Text("Saved on this device. No internet needed for these counts.", style = MaterialTheme.typography.bodyMedium)
+                    Text("Saved on this device. No internet needed.", style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
             item {
-                SmritiCard(tone = if (panel.attentionPatients.isEmpty()) SmritiTone.Success else SmritiTone.Caution) {
-                    Text("Needs attention", fontWeight = FontWeight.SemiBold)
-                    MetricLine("Attention cases", panel.attentionPatients.size.toString())
-                    MetricLine("Urgent review saved", panel.urgentReferralSavedCount.toString())
-                    MetricLine("History signal", panel.historySignalCount.toString())
-                    MetricLine("No recent visit", panel.missedRecentVisitCount.toString())
-                }
-            }
-
-            item {
-                SmritiCard(tone = SmritiTone.Muted) {
-                    Text("Follow-ups", fontWeight = FontWeight.SemiBold)
-                    MetricLine("Open follow-ups", panel.openFollowUpCount.toString())
-                    MetricLine("Follow-ups overdue", panel.overdueFollowUpCount.toString())
-                    MetricLine("Due or upcoming", panel.dueOrUpcomingFollowUpCount.toString())
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiMetricTile("Total patients", panel.totalPatients.toString(), tone = SmritiTone.Info, modifier = Modifier.weight(1f))
+                        SmritiMetricTile(
+                            "Needs attention",
+                            panel.attentionPatients.size.toString(),
+                            tone = if (panel.attentionPatients.isEmpty()) SmritiTone.Success else SmritiTone.Caution,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiMetricTile(
+                            "Open follow-ups",
+                            panel.openFollowUpCount.toString(),
+                            tone = if (panel.openFollowUpCount > 0) SmritiTone.Caution else SmritiTone.Muted,
+                            modifier = Modifier.weight(1f)
+                        )
+                        SmritiMetricTile(
+                            "No recent visit",
+                            panel.missedRecentVisitCount.toString(),
+                            tone = if (panel.missedRecentVisitCount > 0) SmritiTone.Caution else SmritiTone.Muted,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
@@ -72,19 +81,22 @@ fun CommunityPanelScreen(
             }
 
             item {
-                SmritiCard {
-                    Text("Pregnancy stage", fontWeight = FontWeight.SemiBold)
-                    MetricLine("Patients in roster", panel.totalPatients.toString())
-                    MetricLine("Pregnancy weeks recorded", panel.pregnantPatients.toString())
-                    MetricLine("Third trimester", panel.thirdTrimesterCount.toString())
-                    MetricLine("Near term", panel.nearTermCount.toString())
+                SmritiCard(tone = SmritiTone.Muted) {
+                    Text("Attention details", fontWeight = FontWeight.SemiBold)
+                    MetricLine("Urgent review saved", panel.urgentReferralSavedCount.toString())
+                    MetricLine("History signal", panel.historySignalCount.toString())
+                    MetricLine("Follow-ups overdue", panel.overdueFollowUpCount.toString())
+                    MetricLine("Due or upcoming", panel.dueOrUpcomingFollowUpCount.toString())
                 }
             }
 
             item {
                 SmritiCard(tone = SmritiTone.Muted) {
-                    Text("Languages", fontWeight = FontWeight.SemiBold)
-                    Text(panel.noteLanguagesRepresented.joinToString().ifBlank { "Not recorded" }, style = MaterialTheme.typography.bodyLarge)
+                    Text("Community snapshot", fontWeight = FontWeight.SemiBold)
+                    MetricLine("Pregnancy weeks recorded", panel.pregnantPatients.toString())
+                    MetricLine("Third trimester", panel.thirdTrimesterCount.toString())
+                    MetricLine("Near term", panel.nearTermCount.toString())
+                    Text("Languages: ${panel.noteLanguagesRepresented.joinToString().ifBlank { "Not recorded" }}", style = MaterialTheme.typography.bodyMedium)
                     Text("Countries: ${panel.countriesRepresented.joinToString().ifBlank { "Not recorded" }}", style = MaterialTheme.typography.bodyMedium)
                 }
             }
@@ -106,7 +118,7 @@ fun CommunityPanelScreen(
             item {
                 SmritiCard(tone = SmritiTone.Info) {
                     Text("Offline proof", fontWeight = FontWeight.SemiBold)
-                    Text("This panel uses patients, saved visits, referral flags, and follow-up tasks stored locally.", style = MaterialTheme.typography.bodyLarge)
+                    Text("Uses local patients, saved visits, referral flags, and follow-up tasks.", style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }

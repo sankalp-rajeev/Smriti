@@ -7,7 +7,7 @@ Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe. `Conv
 Transcript preview from the probe:
 
 ```text
-Meena is seven months pregnant. She has severe headache and blurred vision and this is a demo.
+Synthetic demo patient Meena is seven months pregnant. She has severe headache and blurred vision and this is a demo.
 ```
 
 **Claim boundary:** Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Production-grade multilingual audio quality is not yet claimed.
@@ -61,9 +61,15 @@ CPU is the stable documented backend for the filmed path. `Backend.GPU()` is ava
 
 ## Speculative Decoding / MTP Probe
 
-LiteRT-LM Android `0.11.0` exposes `ExperimentalFlags.enableSpeculativeDecoding` and `Capabilities.hasSpeculativeDecodingSupport()`, but Smriti has not benchmark-validated faster latency yet. The current support is an explicit manual instrumentation probe only. CPU remains the stable default, and speculative/MTP must not be used for app-facing behavior or filming claims unless the manual target-device benchmark succeeds with parser, citation, and safety validation intact.
+LiteRT-LM Android `0.11.0` exposes `ExperimentalFlags.enableSpeculativeDecoding` and `Capabilities.hasSpeculativeDecodingSupport()`. Smriti added an explicit manual instrumentation probe only. The first manual CPU run on this emulator did not improve latency: CPU baseline was 21787 ms, CPU speculative/MTP was 22138 ms, delta +351 ms slower. CPU remains the stable default, and Smriti should not claim speculative decoding speedup.
 
 No public draft-model, target-model, MTP-specific, or multi-token configuration class was confirmed in the local 0.11.0 AAR name/signature scan.
+
+## Native Protocol Tool-Calling Probe
+
+LiteRT-LM Android `0.11.0` exposes native tool-calling APIs, and Smriti has a manual-only `lookupProtocol` probe backed by local `ProtocolRetriever`. The connected manual protocol tool-call probe passed: Gemma called `lookupProtocol` with India danger-sign arguments and the tool returned `Smriti Demo Maternal Health Protocol Danger Signs 1.1`.
+
+Normal visits still use deterministic local protocol retrieval before RealGemma text reasoning. Native tool-calling must not create visits, referral flags, follow-up tasks, patient leave-behind messages, Community Panel count changes, diagnosis, treatment, dosage, or autosave behavior.
 
 ## RealGemma Schema Adherence
 

@@ -57,7 +57,7 @@ fun UrgentProtocolLookupScreen(
                             Text("Back")
                         }
                     }
-                    Text("Check urgent guidance from local health guidance.", style = MaterialTheme.typography.bodyLarge)
+                    Text("Check danger signs against cited local guidance.", style = MaterialTheme.typography.bodyLarge)
                     Text(patientName ?: "No patient selected", style = MaterialTheme.typography.bodyMedium)
                     Text(patientContextLabel, style = MaterialTheme.typography.bodyMedium)
                 }
@@ -124,7 +124,7 @@ private fun LookupResultCard(result: UrgentProtocolLookupResult) {
                 "Document the observation and contact a supervisor or health facility.",
                 style = MaterialTheme.typography.bodyLarge
             )
-            Text("This is not a diagnosis. Follow local protocol.", style = MaterialTheme.typography.bodyMedium)
+            Text("This is not a diagnosis. Nothing is saved from this lookup.", style = MaterialTheme.typography.bodyMedium)
         }
         return
     }
@@ -136,17 +136,18 @@ private fun LookupResultCard(result: UrgentProtocolLookupResult) {
         } else {
             Text("Local guidance checked", fontWeight = FontWeight.SemiBold)
         }
+        SmritiStatusChip("No save from lookup", tone = SmritiTone.Muted)
         Text(
             "Observed: ${observedText(result)}",
             style = MaterialTheme.typography.bodyLarge
         )
-        Text(chunk.text, style = MaterialTheme.typography.bodyLarge)
+        Text(guidancePreview(chunk.text), style = MaterialTheme.typography.bodyLarge)
         Text("Health guidance used: ${chunk.citation}", style = MaterialTheme.typography.bodyMedium)
         Text("This is not a diagnosis. Follow local protocol and supervisor guidance.", style = MaterialTheme.typography.bodyMedium)
         SmritiSectionHeader("Next steps")
-        Text("1. Document the observation.", style = MaterialTheme.typography.bodyMedium)
-        Text("2. Contact supervisor or health facility.", style = MaterialTheme.typography.bodyMedium)
-        Text("3. Do not delay urgent review when danger signs are present.", style = MaterialTheme.typography.bodyMedium)
+        Text("Document the observation.", style = MaterialTheme.typography.bodyMedium)
+        Text("Contact supervisor or health facility.", style = MaterialTheme.typography.bodyMedium)
+        Text("Do not delay urgent review when danger signs are present.", style = MaterialTheme.typography.bodyMedium)
         Text("No visit, referral flag, or follow-up task is saved from this lookup.", style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -154,4 +155,9 @@ private fun LookupResultCard(result: UrgentProtocolLookupResult) {
 private fun observedText(result: UrgentProtocolLookupResult): String {
     val values = result.observedSigns + result.freeText.takeIf { it.isNotBlank() }.orEmpty()
     return values.filter { it.isNotBlank() }.joinToString().ifBlank { "Observation entered" }
+}
+
+private fun guidancePreview(text: String): String {
+    val cleaned = text.replace(Regex("\\s+"), " ").trim()
+    return if (cleaned.length <= 220) cleaned else "${cleaned.take(217).trimEnd()}..."
 }

@@ -11,13 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -106,8 +101,8 @@ fun VisitScreen(
     var loadingStep by remember { mutableIntStateOf(0) }
     val loadingMessages = listOf(
         "Reading patient history...",
-        "Checking local health guidance...",
-        "Running on-device Gemma...",
+        "Checking cited local guidance...",
+        "Running Gemma 4 on device...",
         "Preparing note for review..."
     )
     val activeFollowUpTasks = followUpTasks
@@ -180,7 +175,7 @@ fun VisitScreen(
         }.onSuccess { clip ->
             scope.launch {
                 isTranscribingGemmaAudio = true
-                gemmaAudioStatus = "Transcribing locally with Gemma..."
+                gemmaAudioStatus = "Preparing editable transcript on device..."
                 val wavBytes = runCatching { Pcm16WavEncoder.encode(clip) }
                 wavBytes.onFailure { error ->
                     gemmaAudioStatus = "Audio could not be prepared. Existing text was kept. ${error.message.orEmpty()}".trim()
@@ -196,7 +191,7 @@ fun VisitScreen(
                             gemmaAudioStatus = "${result.reason} Existing text was kept."
                         }
                         is GemmaAudioTranscriptResult.Failed -> {
-                            gemmaAudioStatus = "Gemma audio transcription failed. Existing text was kept."
+                            gemmaAudioStatus = "Audio transcript failed. Existing text was kept."
                         }
                     }
                     isTranscribingGemmaAudio = false
@@ -298,7 +293,7 @@ fun VisitScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        OutlinedButton(
+                        TextButton(
                             onClick = {
                                 if (isGenerating) showStopDialog = true else onBack()
                             },
@@ -338,7 +333,7 @@ fun VisitScreen(
                 SmritiCard(tone = SmritiTone.Info) {
                     Text("Today's observation", fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Speak or type what you saw today. Smriti will prepare a note for review.",
+                        "Speak or type what you saw today. Smriti will draft a cited note for review before save.",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
@@ -346,47 +341,31 @@ fun VisitScreen(
 
             item {
                 SmritiCard {
-                        if (gemmaAudioTranscriptionAvailable) {
-                            Button(
-                                onClick = {
+                        SmritiSectionHeader("Transcript")
+                        SmritiSecondaryButton(
+                            text = if (isRecordingGemmaAudio) "Stop recording" else "Record observation",
+                            onClick = {
+                                if (gemmaAudioTranscriptionAvailable) {
                                     if (isRecordingGemmaAudio) {
                                         stopGemmaAudioRecording()
                                     } else {
                                         startGemmaAudioRecording()
                                     }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 52.dp),
-                                enabled = !isGenerating && !isReadingPaperNote && !isListeningOfflineSpeech && !isTranscribingGemmaAudio
-                            ) {
-                                Text(if (isRecordingGemmaAudio) "Stop" else "Record with Gemma")
+                                } else {
+                                    gemmaAudioStatus = gemmaAudioUnavailableMessage
+                                }
+                            },
+                            enabled = if (gemmaAudioTranscriptionAvailable) {
+                                !isGenerating && !isReadingPaperNote && !isListeningOfflineSpeech && !isTranscribingGemmaAudio
+                            } else {
+                                !isGenerating && !isReadingPaperNote
                             }
-                        } else {
-                            OutlinedButton(
-                                onClick = { gemmaAudioStatus = gemmaAudioUnavailableMessage },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 48.dp),
-                                enabled = !isGenerating && !isReadingPaperNote
-                            ) {
-                                Text("Record with Gemma")
-                            }
-                        }
-                        Text(
-                            "Transcript is editable. No visit is saved from audio alone.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Button(
+                        SmritiSecondaryButton(
+                            text = if (isListeningOfflineSpeech) "Listening..." else "Speak observation",
                             onClick = { tryOfflineSpeech() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 52.dp),
                             enabled = !isListeningOfflineSpeech && !isGenerating && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
-                        ) {
-                            Text(if (isListeningOfflineSpeech) "Listening..." else "Speak observation")
-                        }
+                        )
                         if (showDemoControls) {
                             OutlinedButton(
                                 onClick = {
@@ -415,6 +394,11 @@ fun VisitScreen(
                             placeholder = { Text("Type today's visit observation here") },
                             minLines = 5
                         )
+                        Text(
+                            "Transcript is editable. Audio alone never saves a visit.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         inlineError?.let { message ->
                             Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge)
                         }
@@ -424,42 +408,39 @@ fun VisitScreen(
                         gemmaAudioStatus?.let { message ->
                             Text(message, style = MaterialTheme.typography.bodyLarge)
                         }
-                        Button(
+                        SmritiPrimaryButton(
+                            text = if (isGenerating) "Preparing note..." else "Generate visit note",
                             onClick = { requestGenerate() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 52.dp),
                             enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
-                        ) {
-                            Text(if (isGenerating) "Preparing note..." else "Generate visit note")
-                        }
-                        OutlinedButton(
-                            onClick = onCheckUrgentGuidance,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp),
-                            enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
-                        ) {
-                            Text("Check urgent guidance")
-                        }
-                        OutlinedButton(
-                            onClick = onScanPaperNote,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp),
-                            enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
-                        ) {
-                            Text("Scan paper note")
-                        }
-                        OutlinedButton(
+                        )
+                }
+            }
+
+            item {
+                SmritiCard(tone = SmritiTone.Muted) {
+                    SmritiSectionHeader("Support actions")
+                    Text(
+                        "Use these when the visit needs local guidance or paper-note review.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SmritiSecondaryButton(
+                        text = "Check urgent guidance",
+                        onClick = onCheckUrgentGuidance,
+                        enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
+                    )
+                    SmritiSecondaryButton(
+                        text = "Scan paper note",
+                        onClick = onScanPaperNote,
+                        enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
+                    )
+                    if (showDemoControls) {
+                        SmritiSecondaryButton(
+                            text = "Use sample paper note",
                             onClick = onUseSamplePaperNote,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp),
                             enabled = !isGenerating && !isReadingPaperNote && !isRecordingGemmaAudio && !isTranscribingGemmaAudio
-                        ) {
-                            Text("Use sample paper note")
-                        }
+                        )
+                    }
                 }
             }
 
@@ -515,8 +496,8 @@ fun VisitScreen(
             item {
                 SmritiCard(tone = SmritiTone.Muted) {
                     Text("Offline setup ready", fontWeight = FontWeight.SemiBold)
-                    SmritiStatusChip("On-device Gemma: ${if (modelReady) "ready" else "Setup needed"}", tone = if (modelReady) SmritiTone.Success else SmritiTone.Caution)
-                    Text("Local guidance available")
+                    SmritiStatusChip("Gemma 4 on device: ${if (modelReady) "ready" else "setup needed"}", tone = if (modelReady) SmritiTone.Success else SmritiTone.Caution)
+                    Text("Local guidance available. Review before save.", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -539,14 +520,10 @@ private fun FollowUpTaskCard(
         Text(title, fontWeight = FontWeight.SemiBold)
         Text(task.reason.ifBlank { "Check again" }, style = MaterialTheme.typography.bodyLarge)
         Text("Check again by ${formatDate(task.dueDateMillis)}.", style = MaterialTheme.typography.bodyMedium)
-        Button(
+        SmritiPrimaryButton(
+            text = "Mark done",
             onClick = onMarkDone,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-        ) {
-            Text("Mark done")
-        }
+        )
         OutlinedButton(
             onClick = onReschedule,
             modifier = Modifier
@@ -570,14 +547,10 @@ private fun MissedFollowUpCard(
             "Referred to health facility ${alert.daysOverdue} days ago. Outcome unknown. Confirm before today's visit.",
             style = MaterialTheme.typography.bodyLarge
         )
-        Button(
+        SmritiPrimaryButton(
+            text = "Mark confirmed",
             onClick = onMarkConfirmed,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-        ) {
-            Text("Mark confirmed")
-        }
+        )
         OutlinedButton(
             onClick = onNoteOngoing,
             modifier = Modifier

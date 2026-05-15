@@ -231,6 +231,14 @@ adb logcat -s SmritiSpeculativeLatency:I SmritiLatency:I "*:S"
 
 The probe does not write to Room, update UI, change the default backend, or bypass parser/safety/citation validation. If the model reports no speculative support, the harness logs the blocker after CPU baseline and stops. Do not claim faster latency unless this manual probe succeeds on the target device/emulator.
 
+Latest manual CPU run:
+
+- CPU baseline: 21787 ms
+- CPU speculative/MTP: 22138 ms
+- Delta: +351 ms slower
+
+Conclusion: LiteRT-LM 0.11.0 exposes the speculative APIs, but this first emulator CPU run did not improve latency. CPU remains the stable default, and Smriti should not claim a speculative decoding speedup.
+
 ## Manual Multilingual RealGemma Test
 
 Phase C adds a manual multilingual validation harness for the recorded demo:
@@ -292,7 +300,7 @@ adb logcat -s SmritiRealGemmaPriority:I "*:S"
 
 ## Manual Function-Calling Probe
 
-LiteRT-LM Android `0.10.2` exposes native tool/function-calling classes such as `OpenApiTool`, `ToolCall`, `ToolProvider`, and `ConversationConfig(tools=..., automaticToolCalling=...)`. Smriti keeps JSON parsing as the safe fallback until a manual probe proves the model reliably executes a native tool call.
+LiteRT-LM Android `0.11.0` exposes native tool/function-calling classes such as `OpenApiTool`, `ToolCall`, `ToolProvider`, `ToolManager`, `ToolSet`, `ToolParam`, and `ConversationConfig(tools=..., automaticToolCalling=...)`. `ReflectionTool` exists in the AAR but is Kotlin-internal from Smriti app code, so the manual probes use the public `OpenApiTool` route. Smriti keeps JSON parsing and deterministic protocol retrieval as the safe production path unless native tool-calling is explicitly productized later.
 
 Run only the manual function-calling probe:
 
@@ -305,6 +313,41 @@ View the function-calling probe output:
 ```powershell
 adb logcat -s SmritiLiteRtFunctionTest:I "*:S"
 ```
+
+## Manual Protocol Tool-Calling Probe
+
+The protocol tool-calling probe exposes the existing local `ProtocolRetriever` as a native LiteRT-LM tool named `lookupProtocol`. It is manual/developer-only and does not write to Room, save visits, create referral flags, create follow-up tasks, create leave-behind messages, update Community Panel counts, or replace production retrieval.
+
+Tool schema:
+
+```text
+lookupProtocol(query: String, countryCode: String?, region: String?): String
+```
+
+Run only after the app-private model is sideloaded:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualLiteRtProtocolToolCallingInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true" "-Pandroid.testInstrumentationRunnerArguments.allowManualFunctionCalling=true"
+```
+
+View logs:
+
+```powershell
+adb logcat -s SmritiProtocolToolCall:I SmritiRealGemmaGate:I "*:S"
+```
+
+The probe logs model load, tool registration, whether the tool call happened, tool arguments, returned citation, final response preview, and the safety boundary.
+
+Latest connected manual result: passed. Log evidence showed:
+
+- Tool API: `OpenApiTool + tool(...) + ConversationConfig(tools, automaticToolCalling=true)`
+- Local protocol tool registered: `lookupProtocol`
+- Tool call happened: `true`
+- Tool arguments: `{"countryCode":"IN","query":"severe headache blurred vision high blood pressure pregnancy danger signs","region":"INDIA"}`
+- Returned citation: `Smriti Demo Maternal Health Protocol Danger Signs 1.1`
+- Safety boundary: manual probe only; no diagnosis, no save, no Room write, no referral flag.
+
+Correct claim: manual LiteRT-LM protocol tool-calling probe validated; Gemma called a local protocol lookup tool and returned cited maternal danger-sign guidance. Smriti keeps deterministic `ProtocolRetriever` as the production safety path.
 
 ## Manual Memory Stress Benchmark
 

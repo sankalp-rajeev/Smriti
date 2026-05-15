@@ -1,6 +1,7 @@
 package com.smriti.clinicalscribe.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -35,29 +36,39 @@ object SmritiSpacing {
     val PrimaryButtonMinHeight = 52.dp
 }
 
+private val SmritiWarmBackground = Color(0xFFFCF7EF)
+private val SmritiCardSurface = Color(0xFFFFFCF7)
+private val SmritiCardSurfaceHigh = Color(0xFFF6EFE5)
+private val SmritiInfoContainer = Color(0xFFDCECF6)
+private val SmritiCautionContainer = Color(0xFFFFE8B8)
+private val SmritiUrgentContainer = Color(0xFFFFDDE2)
+private val SmritiSuccessContainer = Color(0xFFDCEFE5)
+private val SmritiSoftBorder = Color(0xFFE5D9C9)
+
 private val SmritiLightColorScheme: ColorScheme = lightColorScheme(
-    primary = Color(0xFF1F6F5B),
+    primary = Color(0xFF185C4C),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFC7EBDD),
+    primaryContainer = SmritiSuccessContainer,
     onPrimaryContainer = Color(0xFF062019),
-    secondary = Color(0xFF52665C),
+    secondary = Color(0xFF446676),
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFD5E7DD),
-    onSecondaryContainer = Color(0xFF102019),
+    secondaryContainer = SmritiInfoContainer,
+    onSecondaryContainer = Color(0xFF0B2430),
     tertiary = Color(0xFF6B5F20),
     onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFF4E5A3),
+    tertiaryContainer = SmritiCautionContainer,
     onTertiaryContainer = Color(0xFF211B00),
     error = Color(0xFFBA1A1A),
-    errorContainer = Color(0xFFFFDAD6),
+    errorContainer = SmritiUrgentContainer,
     onErrorContainer = Color(0xFF410002),
-    background = Color(0xFFFBFCF8),
+    background = SmritiWarmBackground,
     onBackground = Color(0xFF191C1A),
-    surface = Color(0xFFFBFCF8),
+    surface = SmritiWarmBackground,
     onSurface = Color(0xFF191C1A),
-    surfaceVariant = Color(0xFFDDE5DF),
-    onSurfaceVariant = Color(0xFF414942),
-    outline = Color(0xFF717971)
+    surfaceVariant = Color(0xFFE9DED0),
+    onSurfaceVariant = Color(0xFF51483E),
+    outline = Color(0xFF817669),
+    outlineVariant = SmritiSoftBorder
 )
 
 @Composable
@@ -93,23 +104,17 @@ fun SmritiCard(
     tone: SmritiTone = SmritiTone.Default,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val containerColor = when (tone) {
-        SmritiTone.Default -> MaterialTheme.colorScheme.surfaceContainer
-        SmritiTone.Muted -> MaterialTheme.colorScheme.surfaceContainerHigh
-        SmritiTone.Info -> MaterialTheme.colorScheme.secondaryContainer
-        SmritiTone.Caution -> MaterialTheme.colorScheme.tertiaryContainer
-        SmritiTone.Urgent -> MaterialTheme.colorScheme.errorContainer
-        SmritiTone.Success -> MaterialTheme.colorScheme.primaryContainer
-    }
+    val containerColor = smritiToneContainer(tone)
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, SmritiSoftBorder)
     ) {
         Column(
             modifier = Modifier.padding(SmritiSpacing.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             content = content
         )
     }
@@ -121,7 +126,8 @@ fun SmritiSectionHeader(label: String, modifier: Modifier = Modifier) {
         text = label,
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
-        modifier = modifier.padding(top = 4.dp)
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier.padding(top = 6.dp)
     )
 }
 
@@ -155,6 +161,9 @@ fun SmritiSecondaryButton(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.primary
+        ),
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = SmritiSpacing.ButtonMinHeight)
@@ -205,5 +214,49 @@ fun SmritiStatusChip(
             .padding(horizontal = 12.dp, vertical = 7.dp)
     ) {
         Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+fun SmritiMetricTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    tone: SmritiTone = SmritiTone.Muted
+) {
+    Surface(
+        modifier = modifier.heightIn(min = 82.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = smritiToneContainer(tone),
+        border = BorderStroke(1.dp, SmritiSoftBorder)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun smritiToneContainer(tone: SmritiTone): Color {
+    return when (tone) {
+        SmritiTone.Default -> SmritiCardSurface
+        SmritiTone.Muted -> SmritiCardSurfaceHigh
+        SmritiTone.Info -> SmritiInfoContainer
+        SmritiTone.Caution -> SmritiCautionContainer
+        SmritiTone.Urgent -> SmritiUrgentContainer
+        SmritiTone.Success -> SmritiSuccessContainer
     }
 }

@@ -11,12 +11,12 @@ Use this for the 3-minute edited judge video. Reset Demo Data before filming if 
 5. **E. Community panel** - Tap `Community panel`. Show `Today's focus`, `Needs attention`, follow-up counts, pregnancy stage, languages/countries, and the local priority list. Say: this is saved-on-device panel management, not prediction.
 6. **F. Amara Tesfaye** - Open Amara and show the missed follow-up alert. Note this is deterministic local history, not prediction.
 7. **G. Fatima Begum** - Open Fatima and show the rising BP history signal. Keep the spoken framing cautious: history signal for CHW attention, not diagnosis.
-8. **H. Meena Sharma** - Select Meena, use the Hindi sample/RealGemma note path, generate a structured note, show referral suggested, local guidance citation, safety wording, CHW review, then confirm/save.
+8. **H. Meena Sharma** - Select synthetic demo patient Meena, use the Hindi sample/RealGemma note path, generate a structured note, show referral suggested, local guidance citation, safety wording, CHW review, then confirm/save.
 9. **I. Patient leave-behind message** - From the post-save Summary, tap `Prepare patient message`; show editable text and the user-initiated Share/Copy controls. Do not send a message during filming unless intentionally showing the Android chooser.
 10. **J. Lucia Fernandez** - Show a Spanish RealGemma note for Lucia after manual validation. Keep citation IDs in English.
 11. **K. Grace Achieng** - Show a Swahili routine/no-referral RealGemma note after manual validation.
 12. **L. Grace paper-note scan** - Use `Use sample paper note`. Local Gemma vision extracts Grace, BP, symptoms, and follow-up from the synthetic note. CHW reviews and saves. Say: vision scan is data-entry support only, not diagnosis.
-13. **M. End-of-day Summary** - Show urgent, follow-up, and routine priority lists. Meena should appear as urgent after the confirmed referral save; `View community panel` is available from Summary.
+13. **M. End-of-day Summary** - Show urgent, follow-up, and routine priority lists. Synthetic demo patient Meena should appear as urgent after the confirmed referral save; `View community panel` is available from Summary.
 14. **N. Close with Offline Proof** - Close on no cloud APIs, local patient memory, local guidance, RealGemma text + vision + audio transcription validated, and CHW review/confirm/save always required.
 
 For edited waits, use an on-screen label while keeping the real generated result:

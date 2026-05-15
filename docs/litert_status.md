@@ -24,6 +24,7 @@ This document is the current judge-facing status of Smriti's LiteRT-LM integrati
 - `ManualRealGemmaBenchmarkInstrumentedTest` is the manual benchmark harness for real text inference reliability and latency.
 - `ManualRealGemmaMemoryStressInstrumentedTest` is the manual 10/20/40 prior-visit context stress harness.
 - `ManualLiteRtFunctionCallingInstrumentedTest` probes native tool/function calling with `OpenApiTool` and `ConversationConfig(tools=...)`.
+- `ManualLiteRtProtocolToolCallingInstrumentedTest` exposes local `ProtocolRetriever` as a native manual-only protocol lookup tool.
 - `ManualLiteRtAudioCapabilityInstrumentedTest` probes the exposed audio API surface.
 - `ManualLiteRtAudioInferenceInstrumentedTest` is the separate real-audio manual inference harness.
 - `ManualRealGemmaVisionProbeInstrumentedTest` is the separate gated image-input runtime probe.
@@ -46,15 +47,29 @@ Manual text inference is similarly explicit: `LiteRtGemmaTextClient.generateText
 
 ## Function Calling Status
 
-LiteRT-LM Android `0.10.2` exposes native function/tool classes:
+LiteRT-LM Android `0.11.0` exposes native function/tool classes:
 
 - `OpenApiTool`
 - `ToolCall`
 - `ToolProvider`
 - `ToolManager`
+- `ToolSet`
+- `ToolParam`
 - `ConversationConfig(tools=..., automaticToolCalling=...)`
 
 Smriti added a manual probe, `ManualLiteRtFunctionCallingInstrumentedTest`, that registers a native `log_visit` tool and asks the model to call it. This is a real native tool-call probe, not JSON prompting. On the current Phase 1 device run, the model executed `log_visit` once and supplied `patientId`, `observationText`, `protocolCitation`, and `referralRequired`. The app still uses the strict JSON prompt/parser path as the safe fallback until native tool calling is productized safely. It is not wired into app startup or UI.
+
+`ReflectionTool` is present in the `0.11.0` AAR, but it is Kotlin-internal from Smriti's app code, so the manual probes use the public `OpenApiTool` route.
+
+Smriti also added `ManualLiteRtProtocolToolCallingInstrumentedTest` as a Phase 9 manual/developer-only probe. It registers `lookupProtocol(query, countryCode, region)` through `OpenApiTool`, calls the existing local `ProtocolRetriever` over `protocols/maternal_health_demo_protocols.json`, and returns compact local guidance with citation, topic, snippet, and country/region context. It logs under `SmritiProtocolToolCall`.
+
+Current protocol tool-call status: manual LiteRT-LM protocol tool-calling probe validated. The connected probe used `OpenApiTool + tool(...) + ConversationConfig(tools, automaticToolCalling=true)`, registered local tool `lookupProtocol`, and Gemma called it with:
+
+```json
+{"countryCode":"IN","query":"severe headache blurred vision high blood pressure pregnancy danger signs","region":"INDIA"}
+```
+
+The tool returned local citation `Smriti Demo Maternal Health Protocol Danger Signs 1.1`. Safety boundary logged: manual probe only; no diagnosis, no save, no Room write, no referral flag. Production retrieval remains deterministic `ProtocolRetriever` inside `VisitReasoningPipeline` before RealGemma prompting; tool-calling is not required for the normal app flow.
 
 ## Memory Stress Status
 
@@ -124,7 +139,15 @@ LiteRT-LM Android `0.11.0` exposes a usable Kotlin/Android-level speculative hoo
 
 Smriti added `ManualRealGemmaSpeculativeLatencyInstrumentedTest` as a manual/developer-only latency probe. It requires `allowManualTextInference=true` and `allowSpeculativeDecoding=true`, runs CPU baseline first, checks model capability support, then runs CPU with speculative/MTP enabled only if the model reports support. Optional GPU + speculative remains behind `allowExperimentalGpuBackend=true`.
 
-The probe logs under `SmritiSpeculativeLatency` and `SmritiLatency`, uses existing safe RealGemma text scenarios, runs through the existing RealGemma parser, citation validation, and safety post-processing, and does not write to Room or update UI. CPU remains the stable default app path. This probe has compile support only until it is manually run on a target device with the sideloaded model; do not claim faster latency yet.
+The probe logs under `SmritiSpeculativeLatency` and `SmritiLatency`, uses existing safe RealGemma text scenarios, runs through the existing RealGemma parser, citation validation, and safety post-processing, and does not write to Room or update UI.
+
+Manual CPU benchmark result:
+
+- CPU baseline: 21787 ms
+- CPU speculative/MTP: 22138 ms
+- Delta: +351 ms slower
+
+The first manual CPU speculative run did not improve latency on this emulator. CPU remains the stable default app path. Do not claim speculative decoding speedup.
 
 Phase 2 starts the fallback architecture for voice visits:
 

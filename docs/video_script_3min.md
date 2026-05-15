@@ -2,7 +2,7 @@
 
 ## 0:00-0:20 Problem Hook
 
-"An ASHA worker visits a pregnant mother with headache and blurred vision. She writes it on paper, then moves to the next house. Days later, the danger signs are obvious in hindsight. The problem was not effort. It was no EHR, no signal, and no reliable way to remember every prior visit."
+"If she forgets the card, 'we check it in our record,' an ASHA worker in Udaipur told researchers. But if the patient was outside her area, she could not know what care was due. That is the gap Smriti is built for: care depending on memory, paper, and whether the right record is available. Every two minutes, a woman dies from pregnancy or childbirth complications. Most maternal deaths are preventable."
 
 Show: field setting, paper note, Android phone entering airplane mode.
 
@@ -17,7 +17,7 @@ Show: airplane mode still on, Smriti launching.
 1. Show Patient Roster and Offline Proof.
 2. Open `Urgent protocol lookup`; select severe headache and blurred vision; show local health guidance with citation and no automatic save.
 3. Open `Community panel` and show local caseload counts: follow-ups, urgent review saved, pregnancy stage, languages, and today's focus.
-4. Select `Meena, 28F`.
+4. Select synthetic demo patient `Meena, 28F`.
 5. Show prior ANC visit history.
 6. Use the sample danger-sign transcript.
 7. Generate the visit note.

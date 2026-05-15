@@ -1,24 +1,20 @@
 package com.smriti.clinicalscribe.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,14 +23,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.smriti.clinicalscribe.data.FollowUpTask
+import com.smriti.clinicalscribe.data.FollowUpTaskStatus
 import com.smriti.clinicalscribe.data.Patient
 import com.smriti.clinicalscribe.data.ReferralFlag
 import com.smriti.clinicalscribe.data.VisitLog
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PatientListScreen(
     patients: List<Patient>,
@@ -56,11 +53,15 @@ fun PatientListScreen(
 ) {
     var showImportDialog by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    var selectedFilter by remember { mutableStateOf(RosterFilter.All) }
     val sortedPatients = remember(patients, visits, referrals, followUpTasks) {
         PatientRosterUiLogic.sortPatients(patients, visits, referrals, followUpTasks = followUpTasks)
     }
-    val filteredPatients = remember(sortedPatients, query) {
+    val filteredPatients = remember(sortedPatients, query, selectedFilter, visits, referrals, followUpTasks) {
         PatientRosterUiLogic.filterPatients(sortedPatients, query)
+            .filter { patient ->
+                patient.matchesRosterFilter(selectedFilter, visits, referrals, followUpTasks)
+            }
     }
     val attentionPatients = filteredPatients.filter {
         PatientRosterUiLogic.attentionRank(it, visits, referrals, followUpTasks = followUpTasks) < 6
@@ -68,12 +69,21 @@ fun PatientListScreen(
     val routinePatients = filteredPatients.filter {
         PatientRosterUiLogic.attentionRank(it, visits, referrals, followUpTasks = followUpTasks) >= 6
     }
+    val needsAttentionCount = sortedPatients.count {
+        PatientRosterUiLogic.attentionRank(it, visits, referrals, followUpTasks = followUpTasks) < 6
+    }
+    val openFollowUpCount = followUpTasks.count { it.status in FollowUpTaskStatus.ACTIVE }
+    val savedVisitCount = visits.count { it.confirmed }
 
     if (showImportDialog) {
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
-            title = { Text("Add patients from file?") },
-            text = { Text("This will add patients from the imported file. Existing patients will not be deleted.") },
+            title = { Text("Add patients from supervisor file") },
+            text = {
+                Text(
+                    "Import patient register shared by your supervisor. Patient register is stored on this device. Existing patients will not be deleted. No internet needed after setup."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -81,7 +91,7 @@ fun PatientListScreen(
                         onImportSupervisorRegister()
                     }
                 ) {
-                    Text("Import")
+                    Text("Import patient register")
                 }
             },
             dismissButton = {
@@ -93,105 +103,180 @@ fun PatientListScreen(
     }
 
     SmritiScreenSurface {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(SmritiSpacing.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(SmritiSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Smriti", style = MaterialTheme.typography.headlineMedium)
-                    Text("Helping field workers carry care forward.", style = MaterialTheme.typography.bodyLarge)
+                    Text("Daily patient memory for field visits.", style = MaterialTheme.typography.bodyLarge)
                 }
             }
 
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Search patient") },
-                singleLine = true
-            )
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SmritiSectionHeader("Today's focus")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiMetricTile(
+                            label = "Needs attention",
+                            value = needsAttentionCount.toString(),
+                            tone = if (needsAttentionCount > 0) SmritiTone.Caution else SmritiTone.Success,
+                            modifier = Modifier.weight(1f)
+                        )
+                        SmritiMetricTile(
+                            label = "Follow-up due",
+                            value = openFollowUpCount.toString(),
+                            tone = if (openFollowUpCount > 0) SmritiTone.Caution else SmritiTone.Muted,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiMetricTile(
+                            label = "Saved on this device",
+                            value = patients.size.toString(),
+                            tone = SmritiTone.Info,
+                            modifier = Modifier.weight(1f)
+                        )
+                        SmritiMetricTile(
+                            label = "Saved visits",
+                            value = savedVisitCount.toString(),
+                            tone = SmritiTone.Muted,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
 
-            SmritiPrimaryButton("Add patient", onAddPatient, enabled = !isLoading)
-            SmritiSecondaryButton("Urgent protocol lookup", onUrgentProtocolLookup, enabled = !isLoading)
-            SmritiTonalButton("Community panel", onShowCommunityPanel, enabled = !isLoading)
-            SmritiTonalButton("End-of-day summary", onShowSummary, enabled = !isLoading)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                SmritiSecondaryButton(
-                    text = if (isImportingSupervisorRegister) "Importing..." else "Import register",
-                    onClick = { showImportDialog = true },
-                    modifier = Modifier.weight(1f),
-                    enabled = !isImportingSupervisorRegister
+            item {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Search patient") },
+                    singleLine = true
                 )
-                SmritiSecondaryButton("User guide", onUserGuide, modifier = Modifier.weight(1f))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = onAboutSmriti, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text("About Smriti")
-                }
-                TextButton(onClick = onCheckOfflineSetup, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text("Check offline setup")
+
+            item {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    RosterFilter.entries.forEach { filter ->
+                        FilterChip(
+                            selected = selectedFilter == filter,
+                            onClick = { selectedFilter = filter },
+                            label = { Text(filter.label) }
+                        )
+                    }
                 }
             }
-            importStatusMessage?.let {
-                SmritiStatusChip(it, tone = SmritiTone.Info)
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SmritiSectionHeader("Main actions")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiTonalButton("Community panel", onShowCommunityPanel, modifier = Modifier.weight(1f), enabled = !isLoading)
+                        SmritiSecondaryButton("End-of-day summary", onShowSummary, modifier = Modifier.weight(1f), enabled = !isLoading)
+                    }
+                }
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SmritiSectionHeader("Setup actions")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiSecondaryButton(
+                            text = if (isImportingSupervisorRegister) "Importing..." else "Import patient register",
+                            onClick = { showImportDialog = true },
+                            modifier = Modifier.weight(1f),
+                            enabled = !isImportingSupervisorRegister
+                        )
+                        SmritiSecondaryButton("Add patient", onAddPatient, modifier = Modifier.weight(1f), enabled = !isLoading)
+                    }
+                }
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SmritiSectionHeader("Support actions")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiSecondaryButton("Urgent lookup", onUrgentProtocolLookup, modifier = Modifier.weight(1f), enabled = !isLoading)
+                        SmritiSecondaryButton("User guide", onUserGuide, modifier = Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        SmritiSecondaryButton("About Smriti", onAboutSmriti, modifier = Modifier.weight(1f))
+                        SmritiSecondaryButton("Check offline setup", onCheckOfflineSetup, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+
+            importStatusMessage?.let { message ->
+                item {
+                    SmritiCard(tone = SmritiTone.Info) {
+                        Text("Import patient register", fontWeight = FontWeight.SemiBold)
+                        Text(message, style = MaterialTheme.typography.bodyLarge)
+                        Text("Review imported patients on the roster.", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
 
             if (isLoading) {
-                SmritiCard(tone = SmritiTone.Info) {
-                    Text("Loading local patient roster...", style = MaterialTheme.typography.bodyLarge)
+                item {
+                    SmritiCard(tone = SmritiTone.Info) {
+                        Text("Loading local patient roster...", style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentPadding = PaddingValues(bottom = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    when {
-                        patients.isEmpty() -> item {
-                            EmptyRosterState(
-                                onAddPatient = onAddPatient,
-                                onImportRegister = { showImportDialog = true }
-                            )
-                        }
-                        filteredPatients.isEmpty() -> item {
-                            SearchEmptyState(query = query, onAddPatient = onAddPatient)
-                        }
-                        else -> {
-                            if (attentionPatients.isNotEmpty()) {
-                                item { SectionHeader("Needs attention") }
-                                items(attentionPatients) { patient ->
-                                    PatientRow(
-                                        patient = patient,
-                                        visits = visits,
-                                        referrals = referrals,
-                                        followUpTasks = followUpTasks,
-                                        onPatientSelected = onPatientSelected
-                                    )
-                                }
+                when {
+                    patients.isEmpty() -> item {
+                        EmptyRosterState(
+                            onAddPatient = onAddPatient,
+                            onImportRegister = { showImportDialog = true }
+                        )
+                    }
+                    filteredPatients.isEmpty() -> item {
+                        SearchEmptyState(query = query, selectedFilter = selectedFilter, onAddPatient = onAddPatient)
+                    }
+                    else -> {
+                        if (attentionPatients.isNotEmpty()) {
+                            item { SectionHeader("Needs attention") }
+                            items(attentionPatients) { patient ->
+                                PatientRow(
+                                    patient = patient,
+                                    visits = visits,
+                                    referrals = referrals,
+                                    followUpTasks = followUpTasks,
+                                    onPatientSelected = onPatientSelected
+                                )
                             }
-                            if (routinePatients.isNotEmpty()) {
-                                item { SectionHeader("Routine visits") }
-                                items(routinePatients) { patient ->
-                                    PatientRow(
-                                        patient = patient,
-                                        visits = visits,
-                                        referrals = referrals,
-                                        followUpTasks = followUpTasks,
-                                        onPatientSelected = onPatientSelected
-                                    )
-                                }
+                        }
+                        if (routinePatients.isNotEmpty()) {
+                            item { SectionHeader("Routine visits") }
+                            items(routinePatients) { patient ->
+                                PatientRow(
+                                    patient = patient,
+                                    visits = visits,
+                                    referrals = referrals,
+                                    followUpTasks = followUpTasks,
+                                    onPatientSelected = onPatientSelected
+                                )
                             }
                         }
                     }
                 }
+            }
+
+            item {
+                Text(
+                    text = "Saved on this device: ${patients.size} patients, $savedVisitCount visits.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
             }
         }
     }
@@ -204,20 +289,26 @@ private fun EmptyRosterState(
 ) {
     SmritiCard {
         Text("No patients yet.", style = MaterialTheme.typography.titleLarge)
-        Text("Import a patient register or add your first patient.", style = MaterialTheme.typography.bodyLarge)
+        Text("Import a patient register shared by your supervisor or add your first patient.", style = MaterialTheme.typography.bodyLarge)
         SmritiPrimaryButton("Add patient", onAddPatient)
-        SmritiSecondaryButton("Import register", onImportRegister)
+        SmritiSecondaryButton("Import patient register", onImportRegister)
     }
 }
 
 @Composable
 private fun SearchEmptyState(
     query: String,
+    selectedFilter: RosterFilter,
     onAddPatient: () -> Unit
 ) {
     SmritiCard {
-        Text("No patient found for '$query'", style = MaterialTheme.typography.titleMedium)
-        Text("Check the spelling or add a new patient.", style = MaterialTheme.typography.bodyLarge)
+        val title = if (query.isBlank()) {
+            "No patients in ${selectedFilter.label.lowercase()}."
+        } else {
+            "No patient found for '$query'"
+        }
+        Text(title, style = MaterialTheme.typography.titleMedium)
+        Text("Try another filter, check the spelling, or add a new patient.", style = MaterialTheme.typography.bodyLarge)
         SmritiSecondaryButton("Add patient", onAddPatient)
     }
 }
@@ -228,6 +319,7 @@ private fun SectionHeader(label: String) {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun PatientRow(
     patient: Patient,
     visits: List<VisitLog>,
@@ -237,19 +329,27 @@ private fun PatientRow(
 ) {
     val visitCount = visits.count { it.patientId == patient.id }
     val chips = PatientRosterUiLogic.statusChips(patient, visits, referrals, followUpTasks = followUpTasks)
-    SmritiCard {
+    val cardTone = when {
+        chips.any { it.tone == PatientChipTone.Urgent } -> SmritiTone.Urgent
+        chips.any { it.tone == PatientChipTone.Caution } -> SmritiTone.Caution
+        else -> SmritiTone.Default
+    }
+    SmritiCard(tone = cardTone) {
         Text(patient.displayLabel(), style = MaterialTheme.typography.titleLarge)
-        Text(PatientVisitUiText.gestationLabel(patient), style = MaterialTheme.typography.bodyLarge)
+        Text(PatientVisitUiText.gestationLabel(patient), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
         Text(PatientVisitUiText.countryVillage(patient), style = MaterialTheme.typography.bodyLarge)
         Text(
-            text = "Note language: ${PatientVisitUiText.noteLanguageName(patient)}",
+            text = "Language: ${PatientVisitUiText.noteLanguageName(patient)}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             chips.forEach { chip -> PatientChip(chip) }
         }
-        Text("$visitCount history entr${if (visitCount == 1) "y" else "ies"}", style = MaterialTheme.typography.bodyMedium)
+        Text("$visitCount history entr${if (visitCount == 1) "y" else "ies"} saved on this device", style = MaterialTheme.typography.bodyMedium)
         SmritiPrimaryButton("Open visit", onClick = { onPatientSelected(patient) })
     }
 }
@@ -262,4 +362,33 @@ private fun PatientChip(chip: PatientStatusChip) {
         PatientChipTone.Routine -> SmritiTone.Success
     }
     SmritiStatusChip(chip.label, tone = tone)
+}
+
+private enum class RosterFilter(val label: String) {
+    All("All"),
+    NeedsAttention("Needs attention"),
+    FollowUpDue("Follow-up due"),
+    NearTerm("Near term"),
+    Routine("Routine")
+}
+
+private fun Patient.matchesRosterFilter(
+    filter: RosterFilter,
+    visits: List<VisitLog>,
+    referrals: List<ReferralFlag>,
+    followUpTasks: List<FollowUpTask>
+): Boolean {
+    if (filter == RosterFilter.All) return true
+    val chips = PatientRosterUiLogic.statusChips(this, visits, referrals, followUpTasks = followUpTasks)
+    return when (filter) {
+        RosterFilter.All -> true
+        RosterFilter.NeedsAttention ->
+            PatientRosterUiLogic.attentionRank(this, visits, referrals, followUpTasks = followUpTasks) < 6
+        RosterFilter.FollowUpDue ->
+            chips.any { it.label.startsWith("Follow-up") }
+        RosterFilter.NearTerm ->
+            (pregnancyWeeks ?: 0) >= 36
+        RosterFilter.Routine ->
+            chips.any { it.label == "Routine" }
+    }
 }

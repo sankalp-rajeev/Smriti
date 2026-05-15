@@ -8,7 +8,11 @@ Judge-facing framing: local patient memory plus a local protocol pack, protocol-
 
 ## Problem
 
-Community health workers often work from paper records, memory, and limited connectivity. That makes it easy to miss longitudinal context, such as a prior high blood pressure note during a later pregnancy danger-sign visit. Existing hospital scribes and cloud chatbots assume stable internet, EHR access, or clinician workflows. Smriti targets the field setting: one Android phone, local patient memory, local protocols, and no required network.
+If she forgets the card, "we check it in our record," an ASHA worker in Udaipur told researchers. But if the patient was outside her area, she could not know what care was due. That is the gap Smriti is built for: the moment when care depends on memory, paper, and whether the right record is available.
+
+Every two minutes, a woman dies from pregnancy or childbirth complications. Most maternal deaths are preventable. Existing hospital scribes and cloud chatbots assume stable internet, EHR access, or clinician workflows. Smriti targets the field setting: one Android phone, local patient memory, local protocols, and no required network.
+
+Sources: Yale Global Health Review, ["Consider the ASHA"](https://yaleglobalhealthreview.com/2017/05/14/consider-the-asha-a-qualitative-analysis-of-accredited-social-health-activists-experiences-in-udaipur-india/); WHO, ["Maternal mortality"](https://www.who.int/news-room/fact-sheets/detail/maternal-mortality).
 
 ## Why Offline Matters
 
@@ -24,7 +28,7 @@ The core runtime must work in airplane mode. Smriti stores patient data locally,
 6. Open `Community panel` for local caseload counts, follow-ups, languages/countries, and today's focus.
 7. Open `Amara Tesfaye, 30F` for missed follow-up.
 8. Open `Fatima Begum, 24F` for rising BP history signal.
-9. Open `Meena Sharma, 28F` for a Hindi RealGemma danger-sign note with referral suggested, local guidance citation, and CHW confirm/save.
+9. Open synthetic demo patient `Meena Sharma, 28F` for a Hindi RealGemma danger-sign note with referral suggested, local guidance citation, and CHW confirm/save.
 10. Open the patient leave-behind message from Summary; review/edit before Copy or Share.
 11. Open `Lucia Fernandez` for a Spanish RealGemma note after manual validation.
 12. Open `Grace Achieng` for a Swahili routine/no-referral RealGemma note after manual validation.
@@ -67,6 +71,8 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 - Supervisor priority: raw local counts remain visible, and the app attempts RealGemma priority reasoning; unavailable output shows retry/setup messaging.
 - Audio: App-facing microphone recording now uses local Gemma audio transcription to fill the editable transcript field when RealGemma submission gates and the app-private model are active. Clinical note generation still requires the CHW to tap Generate Visit Note and still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 - Vision: manual probe passed; local Gemma 4 vision extracts structured JSON from a synthetic paper note for CHW-reviewed data entry only. Image bytes are not persisted and no cloud OCR/API is used.
+- Protocol tool-calling: manual LiteRT-LM probe passed; Gemma called local `lookupProtocol` and returned cited maternal danger-sign guidance. Production visits still use deterministic `ProtocolRetriever`.
+- Speculative decoding: LiteRT-LM 0.11.0 exposes speculative APIs, but the first manual CPU benchmark was slightly slower, so CPU remains the stable default and no speedup is claimed.
 
 The 15.8s average RealGemma latency reflects real on-device Gemma 4 E2B text inference on CPU backend; in the CHW field workflow, this is positioned as protocol-grounded reasoning support replacing manual paper/protocol lookup, not instant chat.
 
@@ -115,6 +121,8 @@ See [docs/judge_evidence.md](docs/judge_evidence.md).
 - Required model path: `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
 - The app detects whether that file exists; if missing or not enabled, generation is blocked with setup/retry messaging.
 - EngineConfig defaults to stable `Backend.CPU()` when that model file exists. An isolated `Backend.GPU()` latency experiment exists behind explicit developer/test configuration and is not the default.
+- Manual CPU speculative/MTP probe result: baseline 21787 ms, speculative 22138 ms, delta +351 ms slower. CPU remains the stable default.
+- Manual protocol tool-calling probe validated `OpenApiTool + tool(...) + ConversationConfig(tools, automaticToolCalling=true)` for local protocol lookup only. It is not production visit reasoning and does not save data.
 - Direct LiteRT-LM API types compile after the Room KSP migration.
 - Runtime text inference is enabled only when the submission build flag, app-private local gate, and app-private model are present.
 - No model files are committed.

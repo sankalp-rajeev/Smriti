@@ -6,15 +6,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,7 +17,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.smriti.clinicalscribe.audio.VoiceNoteMetadata
@@ -59,17 +53,16 @@ fun ReviewScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Review before saving", style = MaterialTheme.typography.headlineSmall)
-                    SmritiCard(tone = SmritiTone.Info) {
-                        Text("Review before saving", fontWeight = FontWeight.SemiBold)
+                    SmritiCard(tone = SmritiTone.Success) {
+                        Text(patient.displayLabel(), fontWeight = FontWeight.SemiBold)
                         Text(
-                            "Smriti prepares support notes. The health worker stays in control.",
+                            "Smriti drafted a cited note. The health worker reviews and confirms before it is saved on this device.",
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            "Smriti does not diagnose. Health worker must review before saving.",
+                            "Smriti does not diagnose.",
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        Text(patient.displayLabel(), style = MaterialTheme.typography.bodyMedium)
                     }
                     SmritiSecondaryButton("Back to visit", onBack, enabled = !isSaving)
                 }
@@ -85,184 +78,166 @@ fun ReviewScreen(
             }
 
             val referralFlag = result.referralFlag
-            if (referralFlag != null) {
-                item {
-                    SmritiCard(tone = SmritiTone.Urgent) {
-                        Text("Referral suggested", fontWeight = FontWeight.SemiBold)
-                        Text(referralFlag.reason, style = MaterialTheme.typography.bodyLarge)
-                        if (referralFlag.dangerSigns.isNotBlank()) {
-                            Text("Danger signs: ${referralFlag.dangerSigns}", style = MaterialTheme.typography.bodyLarge)
+            item {
+                SmritiCard(tone = if (referralFlag != null) SmritiTone.Urgent else if (result.uncertain) SmritiTone.Caution else SmritiTone.Success) {
+                    Text("Referral-support status", fontWeight = FontWeight.SemiBold)
+                    when {
+                        referralFlag != null -> {
+                            SmritiStatusChip("Referral suggested", tone = SmritiTone.Urgent)
+                            Text(referralFlag.reason, style = MaterialTheme.typography.bodyLarge)
+                            if (referralFlag.dangerSigns.isNotBlank()) {
+                                Text("Danger signs: ${referralFlag.dangerSigns}", style = MaterialTheme.typography.bodyLarge)
+                            }
+                            OutlinedButton(
+                                onClick = onReadReferralSuggestion,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
+                            ) {
+                                Text("Read note aloud")
+                            }
                         }
-                        Text("Health guidance used:", fontWeight = FontWeight.SemiBold)
-                        Text(result.protocolChunk?.title ?: referralFlag.protocolBasis, style = MaterialTheme.typography.bodyLarge)
-                        OutlinedButton(
-                            onClick = onReadReferralSuggestion,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp)
-                        ) {
-                            Text("Read note aloud")
+                        result.uncertain -> {
+                            SmritiStatusChip("Needs confirmation", tone = SmritiTone.Caution)
+                            Text("Smriti needs the health worker to confirm missing details before saving.", style = MaterialTheme.typography.bodyLarge)
                         }
-                    }
-                }
-            } else if (!result.uncertain) {
-                item {
-                    SmritiCard(tone = SmritiTone.Success) {
-                        Text("No referral flag", fontWeight = FontWeight.SemiBold)
-                        Text("No urgent danger signs were flagged from this note.", style = MaterialTheme.typography.bodyLarge)
-                        Text(followUpText, style = MaterialTheme.typography.bodyLarge)
+                        else -> {
+                            SmritiStatusChip("No referral flag", tone = SmritiTone.Success)
+                            Text("No urgent danger signs were flagged from this note.", style = MaterialTheme.typography.bodyLarge)
+                        }
                     }
                 }
             }
 
             item {
-                OutlinedButton(
-                    onClick = { showSourceDetails = !showSourceDetails },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp)
-                ) {
-                    Text("How was this prepared?")
-                }
-                if (showSourceDetails) {
-                    SmritiCard(
-                        tone = SmritiTone.Muted,
-                        modifier = Modifier.padding(top = 8.dp)
+                SmritiCard(tone = SmritiTone.Info) {
+                    Text("Local guidance / citation", fontWeight = FontWeight.SemiBold)
+                    Text(result.protocolChunk?.title ?: "Local guidance checked", style = MaterialTheme.typography.bodyLarge)
+                    Text("Guidance ID: ${result.protocolCitation}", style = MaterialTheme.typography.bodyMedium)
+                    result.protocolChunk?.text?.takeIf { it.isNotBlank() }?.let { text ->
+                        Text(guidanceSummary(text), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    OutlinedButton(
+                        onClick = { showSourceDetails = !showSourceDetails },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                     ) {
-                        Text("This note was prepared using:", fontWeight = FontWeight.SemiBold)
-                        Text("- Today's visit observation")
+                        Text(if (showSourceDetails) "Hide preparation details" else "How was this prepared?")
+                    }
+                    if (showSourceDetails) {
+                        Text("This note was prepared using today's observation.", style = MaterialTheme.typography.bodyMedium)
                         if (priorVisitCount > 0) {
-                            Text("- Patient history from $priorVisitCount prior visits")
+                            Text("Patient history from $priorVisitCount prior visits", style = MaterialTheme.typography.bodyMedium)
                         } else {
-                            Text("- No prior visit history (first visit)")
+                            Text("No prior visit history on this device", style = MaterialTheme.typography.bodyMedium)
                         }
                         val localSource = patient.country.ifBlank { "this country" }
-                        Text("- Local health guidance for $localSource")
-                        Text("- On-device note preparation (no internet used)")
-                        if (result.protocolChunk == null) {
-                            Text("- Global health guidance (no local guidance for this country yet)")
-                        }
-                        Text("Guidance ID: ${result.protocolCitation}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Local guidance for $localSource", style = MaterialTheme.typography.bodyMedium)
+                        Text("Gemma 4 on device; no internet used", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
 
             item {
-                OutlinedTextField(
-                    value = observationText,
-                    onValueChange = { observationText = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 110.dp),
-                    label = { Text("Observation") },
-                    minLines = 3
-                )
-            }
-
-            item {
-                OutlinedTextField(
-                    value = historyText,
-                    onValueChange = { historyText = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp),
-                    label = { Text("Relevant history") },
-                    minLines = 3
-                )
-            }
-
-            item {
-                OutlinedTextField(
-                    value = supportText,
-                    onValueChange = { supportText = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 130.dp),
-                    label = { Text("Local guidance support") },
-                    minLines = 4
-                )
-            }
-
-            item {
-                OutlinedTextField(
-                    value = followUpText,
-                    onValueChange = { followUpText = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Follow-up plan") },
-                    minLines = 2
-                )
-            }
-
-            voiceNote?.let { note ->
-                item {
-                    Text(
-                        "Local voice note attached: ${note.audioDurationSeconds}s",
-                        style = MaterialTheme.typography.bodyMedium
+                SmritiCard {
+                    Text("Generated note", fontWeight = FontWeight.SemiBold)
+                    OutlinedTextField(
+                        value = observationText,
+                        onValueChange = { observationText = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 110.dp),
+                        label = { Text("Observation") },
+                        minLines = 3
                     )
-                }
-            }
-
-            ttsStatusMessage?.let { message ->
-                item { Text(message, style = MaterialTheme.typography.bodyLarge) }
-            }
-
-            item {
-                OutlinedButton(
-                    onClick = {
-                        onExportVisitJson(
-                            buildStructuredNote(
-                                observation = observationText,
-                                relevantHistory = historyText,
-                                guidanceSupport = supportText
-                            ),
-                            followUpText
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp)
-                ) {
-                    Text("Export visit data")
-                }
-                exportVisitPath?.let { path ->
-                    Text(
-                        text = "Export saved locally: $path",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 6.dp)
+                    OutlinedTextField(
+                        value = historyText,
+                        onValueChange = { historyText = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 100.dp),
+                        label = { Text("Relevant history") },
+                        minLines = 3
+                    )
+                    OutlinedTextField(
+                        value = supportText,
+                        onValueChange = { supportText = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 130.dp),
+                        label = { Text("Local guidance support") },
+                        minLines = 4
+                    )
+                    OutlinedTextField(
+                        value = followUpText,
+                        onValueChange = { followUpText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Follow-up plan") },
+                        minLines = 2
                     )
                 }
             }
 
             item {
-                OutlinedButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                    enabled = !isSaving
-                ) {
-                    Text("Edit note")
-                }
-            }
-
-            item {
-                Button(
-                    onClick = {
-                        onConfirmSave(
-                            buildStructuredNote(
-                                observation = observationText,
-                                relevantHistory = historyText,
-                                guidanceSupport = supportText
-                            ),
-                            followUpText
+                SmritiCard(tone = SmritiTone.Muted) {
+                    Text("CHW confirm/save", fontWeight = FontWeight.SemiBold)
+                    Text("Review the note, citation, and follow-up plan before saving.", style = MaterialTheme.typography.bodyLarge)
+                    voiceNote?.let { note ->
+                        Text(
+                            "Local voice note attached: ${note.audioDurationSeconds}s",
+                            style = MaterialTheme.typography.bodyMedium
                         )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 52.dp),
-                    enabled = observationText.isNotBlank() && supportText.isNotBlank() && !isSaving
-                ) {
-                    Text(if (isSaving) "Saving locally..." else "Confirm and save")
+                    }
+                    ttsStatusMessage?.let { message ->
+                        Text(message, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            onExportVisitJson(
+                                buildStructuredNote(
+                                    observation = observationText,
+                                    relevantHistory = historyText,
+                                    guidanceSupport = supportText
+                                ),
+                                followUpText
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                    ) {
+                        Text("Export visit data")
+                    }
+                    exportVisitPath?.let { path ->
+                        Text(
+                            text = "Export saved locally: $path",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp),
+                        enabled = !isSaving
+                    ) {
+                        Text("Edit note")
+                    }
+                    SmritiPrimaryButton(
+                        text = if (isSaving) "Saving locally..." else "Confirm and save",
+                        onClick = {
+                            onConfirmSave(
+                                buildStructuredNote(
+                                    observation = observationText,
+                                    relevantHistory = historyText,
+                                    guidanceSupport = supportText
+                                ),
+                                followUpText
+                            )
+                        },
+                        enabled = observationText.isNotBlank() && supportText.isNotBlank() && !isSaving
+                    )
                 }
             }
         }
@@ -321,5 +296,10 @@ private fun buildStructuredNote(
         "Relevant history:\n${relevantHistory.trim()}",
         "Local guidance support:\n${guidanceSupport.trim()}"
     ).joinToString(separator = "\n\n")
+}
+
+private fun guidanceSummary(text: String): String {
+    val cleaned = text.replace(Regex("\\s+"), " ").trim()
+    return if (cleaned.length <= 260) cleaned else "${cleaned.take(257).trimEnd()}..."
 }
 
