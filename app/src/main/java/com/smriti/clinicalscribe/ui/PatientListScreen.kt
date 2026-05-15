@@ -239,7 +239,7 @@ fun PatientListScreen(
                         )
                     }
                     filteredPatients.isEmpty() -> item {
-                        SearchEmptyState(query = query, selectedFilter = selectedFilter, onAddPatient = onAddPatient)
+                        SearchEmptyState(onAddPatient = onAddPatient)
                     }
                     else -> {
                         if (attentionPatients.isNotEmpty()) {
@@ -297,17 +297,10 @@ private fun EmptyRosterState(
 
 @Composable
 private fun SearchEmptyState(
-    query: String,
-    selectedFilter: RosterFilter,
     onAddPatient: () -> Unit
 ) {
     SmritiCard {
-        val title = if (query.isBlank()) {
-            "No patients in ${selectedFilter.label.lowercase()}."
-        } else {
-            "No patient found for '$query'"
-        }
-        Text(title, style = MaterialTheme.typography.titleMedium)
+        Text("No patients match this filter.", style = MaterialTheme.typography.titleMedium)
         Text("Try another filter, check the spelling, or add a new patient.", style = MaterialTheme.typography.bodyLarge)
         SmritiSecondaryButton("Add patient", onAddPatient)
     }

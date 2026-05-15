@@ -165,7 +165,7 @@ fun AboutSmritiScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("About Smriti", style = MaterialTheme.typography.headlineSmall)
                     Text(
-                        "Built for community health workers carrying care from home to home.",
+                        "Smriti is built for the health worker who shows up - even when there is no signal, no EHR, and too many visits to remember alone.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

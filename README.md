@@ -21,29 +21,26 @@ The core runtime must work in airplane mode. Smriti stores patient data locally,
 ## Core Demo Flow
 
 1. Turn on airplane mode.
-2. Show Welcome.
-3. Tap `Check offline setup` to show Offline Proof / setup ready, then return to the roster.
-4. Show Patient Roster search, attention chips, and patient-card note language labels.
-5. Open `Urgent protocol lookup`; select severe headache and blurred vision to show local health guidance with citation and no save.
-6. Open `Community panel` for local caseload counts, follow-ups, languages/countries, and today's focus.
-7. Open `Amara Tesfaye, 30F` for missed follow-up.
-8. Open `Fatima Begum, 24F` for rising BP history signal.
-9. Open synthetic demo patient `Meena Sharma, 28F` for a Hindi RealGemma danger-sign note with referral suggested, local guidance citation, and CHW confirm/save.
-10. Open the patient leave-behind message from Summary; review/edit before Copy or Share.
-11. Open `Lucia Fernandez` for a Spanish RealGemma note after manual validation.
-12. Open `Grace Achieng` for a Swahili routine/no-referral RealGemma note after manual validation.
-13. Use Grace's sample paper-note scan; local Gemma 4 vision extracts structured data for CHW review/save.
-14. Open End-of-Day Summary for urgent, follow-up, routine priority lists, and the community panel entry.
-15. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision + audio transcription validated.
+2. Show Welcome: `Start`, `Set up patient list`, and `Help & setup`.
+3. Optionally import the local supervisor register, then tap `Start visits`.
+4. Show Patient Roster search, filter chips, attention chips, and patient-card language labels.
+5. Open an English visit observation for Amara or Fatima to show local history/follow-up signals.
+6. Open synthetic demo patient `Meena Sharma, 28F` for a Hindi typed observation and a RealGemma danger-sign note with cited local guidance and CHW confirm/save.
+7. Show the follow-up task and editable patient leave-behind message.
+8. Open `Grace Achieng` for `Scan paper note`; local Gemma 4 vision extracts structured paper-note data for CHW review/save only.
+9. Open End-of-Day Summary and Community Panel for saved local follow-ups, urgent review support, and caseload visibility.
+10. Close with Offline Proof: no cloud APIs after setup, local patient memory, local guidance, Gemma 4 on device, and CHW review required.
 
 Smriti demonstrates local Android LiteRT-LM text reasoning, local Gemma 4 vision paper-note extraction, and Gemma audio transcription wired to the editable transcript field after LiteRT-LM 0.11.0 manual validation. Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Selected languages demonstrated: English, Hindi, Spanish, Swahili. Do not claim clinical validation, all-language support, or broad camera diagnosis. Vision scan is data-entry support only, not diagnosis.
 
-See [docs/demo_flow.md](docs/demo_flow.md) for the step-by-step judge script.
+See [docs/demo_flow.md](docs/demo_flow.md) and [docs/video_script_final.md](docs/video_script_final.md) for the step-by-step judge script.
 
 ## Project Status Docs
 
 For the concise current state, start with [docs/current_status.md](docs/current_status.md).
 
+- [Final video script](docs/video_script_final.md)
+- [Media-gallery architecture visual](docs/smriti_architecture_diagram.md)
 - [Judge evidence](docs/judge_evidence.md)
 - [Technical project summary](docs/technical_project_summary.md)
 - [Final demo checklist](docs/final_demo_checklist.md)
@@ -84,6 +81,8 @@ See [docs/judge_evidence.md](docs/judge_evidence.md).
 - Local six-patient synthetic roster with Meena Sharma, Fatima Begum, Amara Tesfaye, Grace Achieng, Priya Devi, and Lucia Fernandez.
 - Local supervisor-register import from `app/src/main/assets/demo/smriti_patients.json`; repeated imports upsert without duplicate histories.
 - Add Patient flow with voice-first registration prompts and manual fallback fields.
+- Welcome-first FinalUi flow with grouped `Start`, `Set up patient list`, and `Help & setup` actions.
+- Roster search plus UI-only filters for `All`, `Needs attention`, `Follow-up due`, `Near term`, and `Routine`.
 - Missed follow-up card on patient open for overdue incomplete follow-ups, with Mark Confirmed and Note as Ongoing actions.
 - History signal card for a cautious rising BP trend across prior visits.
 - Room/SQLite local storage for patients, visits, referrals, and protocols.
@@ -183,6 +182,15 @@ Manual multilingual RealGemma validation is optional and requires a sideloaded a
 ```
 
 Only claim a filmed RealGemma language after this manual harness passes for that language. No cloud translation API is used. Gemma audio transcription fills the editable transcript only; CHW review and manual note generation are still required.
+
+## Media Gallery Plan
+
+Recommended submission media:
+
+- Phone-frame recording of the FinalUi flow from Welcome to roster, Meena note review/save, patient message, Summary, Community Panel, and Offline Proof.
+- Architecture image exported from [docs/smriti_architecture_diagram.md](docs/smriti_architecture_diagram.md).
+- One clean roster screenshot showing filters and patient memory.
+- One ReviewScreen screenshot showing cited guidance and CHW confirm/save.
 
 ## Judge Notes
 

@@ -8,10 +8,12 @@ For the filmed/live runbook, use `docs/final_demo_checklist.md`.
 
 The recorded-demo UI was simplified for community health workers and low-digital-literacy field use:
 
-- Welcome screen explains Smriti in plain language before showing the roster.
+- Welcome screen opens first in FinalUi and explains Smriti in plain language before showing the roster.
+- Welcome groups actions into `Start`, `Set up patient list`, and `Help & setup`, with `Start visits` as the clear primary action.
+- About Smriti uses CHW-focused human framing: Smriti is built for the health worker who shows up even when there is no signal, no EHR, and too many visits to remember alone.
 - User Guide gives six short steps: choose patient, speak/type visit, generate note, review carefully, confirm/save, end of day.
 - Setup Guidance appears when the model file is absent on first launch and avoids internal runtime terms.
-- Patient Roster has local search, large primary actions, smaller secondary actions, attention/routine sections, empty states, patient status chips, and patient-card `Note language` labels.
+- Patient Roster has local search, UI-only filter chips for `All`, `Needs attention`, `Follow-up due`, `Near term`, and `Routine`, large main actions, smaller setup/support actions, attention/routine sections, empty states, patient status chips, and patient-card `Note language` labels.
 - Patient Roster exposes `Urgent protocol lookup`, a local read-only health guidance check over protocol assets.
 - Patient Roster exposes `Community panel`, a local caseload view for saved roster counts, follow-ups, urgent review saved, pregnancy stage, languages, countries, and today's focus.
 - Status chips are deterministic from local data: Amara shows `Follow-up due`, Fatima shows `History signal`, Grace shows `Routine`, and Meena shows `Referral saved` after a confirmed referral visit.
@@ -26,7 +28,7 @@ The recorded-demo UI was simplified for community health workers and low-digital
 - Urgent Protocol Lookup can also be opened from the Visit screen as `Check urgent guidance`; it does not save data, create referral flags, create follow-up tasks, or change Summary/Community Panel counts.
 - Offline Proof uses CHW-facing wording and avoids confusing model/internal status labels. It is available from `Check offline setup` and is not shown by default on the roster.
 - Destructive actions are confirmed before import/reset.
-- No cloud APIs, runtime downloads, direct Gemma audio, PHI, or invalid-output save path was added. The paper-note scan flow is local Gemma vision data entry only and requires CHW review before save.
+- No cloud APIs, runtime downloads, direct Gemma audio, PHI, or invalid-output save path was added. In FinalUi, the paper-note action is `Scan paper note`; the synthetic sample shortcut is hidden. The paper-note scan flow is local Gemma vision data entry only and requires CHW review before save.
 
 ## RealGemma-Required Demo
 
@@ -177,7 +179,7 @@ Local Gemma 4 vision is claimed only for synthetic paper-note data extraction.
 - `ManualRealGemmaVisionProbeInstrumentedTest` passed on emulator with a sideloaded app-private model.
 - The engine accepted `Conversation` image input.
 - Local Gemma 4 vision extracted structured JSON from the synthetic paper note: Grace Achieng, 02 May 2026, BP 116/74, symptoms, routine ANC follow-up, confidence HIGH, and `needsReview=true`.
-- The app flow now supports `Scan paper note` / `Use sample paper note`, Review Scanned Note, explicit patient link/current-patient confirmation, and local save to history with `source=paper_scan`.
+- The app flow now supports `Scan paper note`, Review Scanned Note, explicit patient link/current-patient confirmation, and local save to history with `source=paper_scan`. Any synthetic sample shortcut is kept outside FinalUi/dev-only filming.
 - The image bytes are not persisted.
 - The scan flow does not call visit-note referral generation or supervisor priority reasoning.
 
