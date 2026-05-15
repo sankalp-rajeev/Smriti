@@ -96,7 +96,7 @@ Community panel updated
 
 **Narration**
 
-Smriti also supports paper-note data entry. For Grace, a paper-note scan can extract draft fields for review, but vision is only data-entry support. It does not diagnose, does not recommend treatment, and does not create a referral from an image alone.
+Smriti also supports paper-note data entry. For Grace, a paper-note scan can extract draft fields for review. Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis. It does not recommend treatment or create a referral from an image alone.
 
 **Exact App Screen/Actions**
 
@@ -113,7 +113,7 @@ CHW review required
 
 **Narration**
 
-Smriti runs after setup without cloud APIs. Local patient history lives in Room/SQLite. Local JSON protocols provide country and region-aware citations. Gemma audio fills an editable transcript only; paper-note vision is data-entry only; every generated record goes through review before save. Smriti means memory. I built it so no health worker has to carry that memory alone.
+Smriti runs after setup without cloud APIs. Local patient history lives in Room/SQLite. Local JSON protocols provide country and region-aware citations. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis. Every generated record goes through review before save. Smriti means memory. I built it so no health worker has to carry that memory alone.
 
 **Exact App Screen/Actions**
 
@@ -145,7 +145,7 @@ Use only if the manual audio path is stable on the filming device.
 
 **Narration Insert**
 
-If audio is shown, say: "Audio fills an editable transcript. The health worker still reviews the text before Gemma drafts the note."
+If audio is shown, say: "Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action."
 
 **Boundary**
 

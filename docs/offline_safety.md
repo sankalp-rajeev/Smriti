@@ -29,13 +29,13 @@ Smriti is designed so the core demo can run in airplane mode.
 
 ## RealGemma Safety Gate
 
-- `RealGemmaAgent` is the app-facing reasoning engine for visit notes and supervisor priority reasoning.
+- `RealGemmaAgent` is the app-facing reasoning engine for visit notes when local setup is complete. Supervisor Summary is built from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow.
 - `MockGemmaAgent` may remain only as a deterministic test fixture, not as app-facing clinical output.
 - LiteRT-LM dependency and readiness checks are present.
 - App startup does not run inference.
 - RealGemma text reasoning requires the submission build flag, app-private local gate, and sideloaded app-private model.
 - If setup is missing or inference fails, the app shows setup/retry messaging and does not save or display mock clinical output.
-- Gemma audio transcription is wired into the Visit screen behind RealGemma submission readiness. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save after a manual Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
+- Gemma audio transcription is wired into the Visit screen behind RealGemma submission readiness. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## Data Boundary
 

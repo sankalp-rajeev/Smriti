@@ -2,7 +2,7 @@
 
 Smriti is an offline maternal-health visit copilot for community health workers. It helps a CHW manage a local village roster, check urgent local protocol guidance, review patient history, capture a voice-note-style observation, generate a structured visit note, surface protocol-grounded referral support, confirm the record, close follow-up loops, prepare patient-friendly messages, view a community panel, and produce an end-of-day supervisor summary.
 
-The filmed/local submission flow now requires `RealGemmaAgent` for app-facing visit and supervisor reasoning. If the local RealGemma model or gates are missing, Smriti shows setup/retry messaging instead of falling back to mock clinical output.
+The filmed/local submission flow now requires `RealGemmaAgent` for app-facing visit-note reasoning. If the local RealGemma model or gates are missing, Smriti shows setup/retry messaging instead of falling back to mock clinical output. Supervisor Summary is built from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow.
 
 Judge-facing framing: local patient memory plus a local protocol pack, protocol-grounded referral support rather than diagnosis, and CHW review/confirm before saving.
 
@@ -31,7 +31,7 @@ The core runtime must work in airplane mode. Smriti stores patient data locally,
 9. Open End-of-Day Summary and Community Panel for saved local follow-ups, urgent review support, and caseload visibility.
 10. Close with Offline Proof: no cloud APIs after setup, local patient memory, local guidance, Gemma 4 on device, and CHW review required.
 
-Smriti demonstrates local Android LiteRT-LM text reasoning, local Gemma 4 vision paper-note extraction, and Gemma audio transcription wired to the editable transcript field after LiteRT-LM 0.11.0 manual validation. Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Selected languages demonstrated: English, Hindi, Spanish, Swahili. Do not claim clinical validation, all-language support, or broad camera diagnosis. Vision scan is data-entry support only, not diagnosis.
+Smriti demonstrates local Android LiteRT-LM text reasoning, local Gemma 4 paper-note extraction, and Gemma audio transcription wired to the editable transcript field after LiteRT-LM 0.11.0 manual validation. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis or treatment. Selected generated note languages: English, Hindi, Spanish, Swahili. Full app UI translation is not claimed. Do not claim clinical validation, all-language support, or broad camera diagnosis. Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.
 
 See [docs/demo_flow.md](docs/demo_flow.md) and [docs/video_script_final.md](docs/video_script_final.md) for the step-by-step judge script.
 
@@ -65,9 +65,9 @@ For the concise current state, start with [docs/current_status.md](docs/current_
 - Urgent protocol lookup: roster and Visit screen can open a read-only local guidance lookup over the protocol pack; lookup alone creates no visit, referral flag, follow-up task, patient message, or community-panel count.
 - Phase C multilingual demo support: selected patient-specific output languages demonstrated are English, Hindi, Spanish, and Swahili; `preferredLanguage` controls RealGemma visit-note output in fully gated submission mode after manual validation.
 - RealGemma: manual text inference validated; app-facing reasoning now requires build flag + app-private sentinel + app-private model for inference.
-- Supervisor priority: raw local counts remain visible, and the app attempts RealGemma priority reasoning; unavailable output shows retry/setup messaging.
-- Audio: App-facing microphone recording now uses local Gemma audio transcription to fill the editable transcript field when RealGemma submission gates and the app-private model are active. Clinical note generation still requires the CHW to tap Generate Visit Note and still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis, treatment, or referral.
-- Vision: manual probe passed; local Gemma 4 vision extracts structured JSON from a synthetic paper note for CHW-reviewed data entry only. Image bytes are not persisted and no cloud OCR/API is used.
+- Supervisor Summary is built from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow.
+- Audio: App-facing microphone recording now uses local Gemma audio transcription to fill the editable transcript field when RealGemma submission gates and the app-private model are active. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
+- Vision: manual probe passed; local Gemma 4 vision extracts structured JSON from a synthetic paper note. Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis. Image bytes are not persisted and no cloud OCR/API is used.
 - Protocol tool-calling: manual LiteRT-LM probe passed; Gemma called local `lookupProtocol` and returned cited maternal danger-sign guidance. Production visits still use deterministic `ProtocolRetriever`.
 - Speculative decoding: LiteRT-LM 0.11.0 exposes speculative APIs, but the first manual CPU benchmark was slightly slower, so CPU remains the stable default and no speedup is claimed.
 
@@ -112,7 +112,7 @@ See [docs/judge_evidence.md](docs/judge_evidence.md).
 - RealGemma inference requires `-Psmriti.realGemmaSubmissionMode=true`, `files/dev/enable_real_gemma_text_mode`, and `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
 - RealGemma failures, timeouts, invalid JSON, or citation/safety rejection show an unavailable/retry state instead of silently displaying mock output as RealGemma.
 - `MockGemmaAgent` may remain in the repo for deterministic unit fixtures only; app screens do not use it for visit or supervisor output.
-- Gemma audio transcription is wired into the app-facing Visit screen behind RealGemma submission readiness using `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()`. Audio fills an editable transcript only. No audio-only save path. No direct audio diagnosis, treatment, or referral.
+- Gemma audio transcription is wired into the app-facing Visit screen behind RealGemma submission readiness using `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()`. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## LiteRT-LM Status
 
@@ -181,7 +181,7 @@ Manual multilingual RealGemma validation is optional and requires a sideloaded a
 .\gradlew.bat connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=com.smriti.clinicalscribe.reasoning.ManualRealGemmaMultilingualInstrumentedTest" "-Pandroid.testInstrumentationRunnerArguments.allowManualTextInference=true"
 ```
 
-Only claim a filmed RealGemma language after this manual harness passes for that language. No cloud translation API is used. Gemma audio transcription fills the editable transcript only; CHW review and manual note generation are still required.
+Only claim a filmed RealGemma language after this manual harness passes for that language. Selected generated note languages: English, Hindi, Spanish, Swahili. Full app UI translation is not claimed. No cloud translation API is used. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action.
 
 ## Media Gallery Plan
 

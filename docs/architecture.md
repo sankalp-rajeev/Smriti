@@ -22,7 +22,7 @@ MainActivity / SmritiApp
 Important boundaries:
 
 - `AgentConfig.DEFAULT_MODE = AgentMode.REAL_GEMMA_REQUIRED`.
-- App-facing visit and supervisor reasoning attempt `RealGemmaAgent`.
+- App-facing visit-note reasoning uses `RealGemmaAgent` when local setup is complete. Supervisor Summary is built from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow.
 - If the submission build flag, app-private sentinel, or app-private model is missing, the app shows setup/retry messaging instead of mock clinical output.
 - Offline Proof shows RealGemma setup/readiness status.
 - The normal Meena demo uses `countryCode=IN` and `region=INDIA`, with `GLOBAL_CORE` fallback.
@@ -95,7 +95,7 @@ recorded .m4a voice note
 -> stored only after CHW confirmation
 ```
 
-Gemma audio transcription is wired into the Visit screen only when RealGemma submission readiness is active. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis, treatment, or referral.
+Gemma audio transcription is wired into the Visit screen only when RealGemma submission readiness is active. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## Protocol Retrieval Flow
 

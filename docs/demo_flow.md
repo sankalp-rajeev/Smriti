@@ -9,7 +9,7 @@ Use this for the 3-minute edited judge video. Reset Demo Data before filming if 
 3. **Roster** - Show `Today's focus`, search, filter chips (`All`, `Needs attention`, `Follow-up due`, `Near term`, `Routine`), main actions, setup actions, support actions, and patient cards.
 4. **English typed observation** - Open Amara or Fatima to show local history/follow-up context and an editable typed observation path.
 5. **Hindi typed Meena observation** - Open synthetic demo patient Meena, type the danger-sign observation, generate a cited Gemma 4 note, review the citation/referral-support wording, then confirm/save.
-6. **Swahili paper-note/image scan with Grace** - Open Grace and use `Scan paper note` or a pre-prepared reviewed scan result. Say clearly: paper-note vision is data-entry support only.
+6. **Swahili paper-note/image scan with Grace** - Open Grace and use `Scan paper note` or a pre-prepared reviewed scan result. Say clearly: paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.
 7. **Follow-up task** - Show the saved follow-up task created after CHW confirmation.
 8. **Patient leave-behind** - Open the editable patient message. Show Copy/Share controls, but do not auto-send.
 9. **Supervisor summary / Community Panel** - Show saved local visits, follow-ups, urgent review support, patient messages, and Community Panel counts.
@@ -28,8 +28,8 @@ On-device Gemma 4 inference - sped up for demo.
 - `Gemma 4 E2B runs on-device through LiteRT-LM after setup.`
 - `CHW reviews, edits, confirms, and saves.`
 - `No cloud APIs are required after setup for the filmed runtime.`
-- `Gemma audio transcription fills an editable transcript only.`
-- `Vision scan is paper-note data-entry support only, not diagnosis.`
+- `Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action.`
+- `Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.`
 - `Community Panel counts are saved local roster data, not prediction or AI triage.`
 - `Urgent lookup checks local health guidance only; it does not save a visit or create a referral flag.`
 - `Patient messages are reviewed by the CHW and shared only by user action.`

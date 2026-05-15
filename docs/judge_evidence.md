@@ -46,22 +46,22 @@ Patient Roster
 -> LocalVisitMemoryStore
 -> local follow-up task creation if reviewed follow-up text exists
 -> patient message/community panel options from saved local state
--> Raw local counts + RealGemma priority queue attempt
+-> Supervisor Summary from confirmed local records
 ```
 
 Evidence:
 
 - `AgentConfig.DEFAULT_MODE = AgentMode.REAL_GEMMA_REQUIRED`.
 - App-facing visit generation uses `RealGemmaAgent`.
-- App-facing supervisor priority generation attempts RealGemma.
+- Supervisor Summary is built from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow.
 - Missing model, missing gate, timeout, failed inference, invalid JSON, or citation/safety rejection displays setup/retry messaging and does not save.
 - RealGemma has loaded and returned output on the emulator. The most recent observed failure mode was schema adherence: output omitted required `referralFlag`, so the hardened parser rejected it safely.
-- When the gated model is present, Smriti starts a background RealGemma preload and keeps the shared engine/client warm for subsequent patient generations and supervisor priority attempts. The first RealGemma call may still be slower because model/session initialization is expensive; later calls should avoid repeated cold loads when memory allows.
+- When the gated model is present, Smriti can start a background RealGemma preload and keep the shared engine/client warm for subsequent visit-note generations and manual/probe paths. The first RealGemma call may still be slower because model/session initialization is expensive; later calls should avoid repeated cold loads when memory allows.
 - Confirm/save is a local Room/SQLite write only. It never invokes RealGemma, never re-runs retrieval, and never auto-exports JSON; the CHW confirm/save gate remains required.
 - Follow-up scheduling, patient leave-behind messages, and Community Panel counts are deterministic local logic after save. They do not invoke RealGemma, LiteRT, protocol retrieval, cloud APIs, or mock clinical output.
 - Urgent Protocol Lookup is deterministic local `ProtocolRetriever` logic before or during visit documentation. It invokes no RealGemma/LiteRT/cloud path and writes no local records.
 - `SmritiLatency` logs timing markers for readiness, preload/init, protocol retrieval, history formatting, prompt build, generation, parser/safety/citation validation, ReviewScreen navigation, local save, and summary refresh without logging transcripts or raw clinical text.
-- A native LiteRT-LM crash was observed after overlapping/retried RealGemma calls piled up behind `Conversation.sendMessage(prompt)`. The app now uses one global non-queueing RealGemma inference gate across visit notes, supervisor priority generation, paper-note vision extraction, manual test paths, and preload. Busy requests return a friendly wait message instead of entering another native call.
+- A native LiteRT-LM crash was observed after overlapping/retried RealGemma calls piled up behind `Conversation.sendMessage(prompt)`. The app now uses one global non-queueing RealGemma inference gate across visit notes, manual/probe supervisor-priority reasoning, paper-note vision extraction, manual test paths, and preload. Busy requests return a friendly wait message instead of entering another native call.
 - UI actions disable overlapping generation/scan/save paths. Confirm/save remains local Room/SQLite only and is guarded against double taps.
 - Measured emulator/local setup timing evidence from `SmritiLatency`: RealGemma preload/init 1.885 s; Meena RealGemma generation 21.726 s; Meena validation 31 ms; Meena Room save 49 ms; Meena summary refresh 5 ms; Lucia RealGemma generation after preload/reuse 14.434 s; Lucia validation 4 ms; protocol retrieval 1-2 ms; prompt build 1-3 ms. Device performance may vary.
 - Timing interpretation: RealGemma inference dominates latency. Local retrieval, prompt build, parser/safety/citation validation, Room save, and summary refresh are negligible by comparison. The second generation was faster after preload/engine reuse.
@@ -146,7 +146,7 @@ Current schema-hardening note: if manual RealGemma output still fails the strict
 
 ## Phase C Multilingual Evidence
 
-- Selected languages demonstrated: English, Hindi, Spanish, Swahili.
+- Selected generated note languages: English, Hindi, Spanish, Swahili. Full app UI translation is not claimed.
 - Smriti demonstrates selected patient-specific local-language output in those four languages after manual validation.
 - Full app UI translation is not claimed. Existing patient `preferredLanguage` is not overwritten by any default/new-patient language setting.
 - `Patient.preferredLanguage` controls the RealGemma visit-note output language.
@@ -165,11 +165,11 @@ Manual multilingual harness:
 
 ## Audio Status
 
-Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe and wired into the app-facing Visit screen. `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()` succeeded on-device. Audio fills an editable transcript only. CHW must review/edit before manually generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis, treatment, or referral.
+Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe and wired into the app-facing Visit screen. `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()` succeeded on-device. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## Paper-Note Vision Evidence
 
-Local Gemma 4 vision is claimed only for synthetic paper-note data extraction.
+Local Gemma 4 vision is claimed only for synthetic paper-note data extraction. Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.
 
 - The `litertlm-android-0.11.0` AAR/classes.jar surface was checked.
 - Found image API holders: `Content.ImageBytes`, `Content.ImageFile`, and `InputData.Image`.
@@ -185,7 +185,7 @@ Local Gemma 4 vision is claimed only for synthetic paper-note data extraction.
 
 Do not claim clinical image diagnosis, referral decisions from image alone, real patient image support, or cloud OCR.
 
-Gemma audio transcription validated as manual probe; audio fills an editable transcript only. The vision path is separate from audio.
+Gemma audio transcription validated as manual probe. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. The vision path is separate from audio.
 
 ## Not Claimed
 

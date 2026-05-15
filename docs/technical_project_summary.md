@@ -6,7 +6,7 @@ Smriti is an offline maternal-health visit copilot for community health workers 
 
 The central product idea is local patient memory plus a local protocol pack plus a structured documentation workflow. Smriti is not diagnostic AI. It provides protocol-grounded documentation and referral support only, and every generated record must be reviewed and confirmed by the CHW before it is persisted.
 
-The filmed/local submission flow uses `RealGemmaAgent` as the app-facing reasoning engine. Real Gemma 4 LiteRT-LM text inference has been validated through manual paths, and app inference requires the submission build flag, app-private sentinel, and app-private model. Gemma audio transcription is wired into the Visit screen after the LiteRT-LM 0.11.0 manual probe succeeded; audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save after the CHW manually taps Generate Visit Note. No audio-only save path. No direct audio diagnosis, treatment, or referral.
+The filmed/local submission flow uses `RealGemmaAgent` as the app-facing visit-note reasoning engine. Real Gemma 4 LiteRT-LM text inference has been validated through manual paths, and app inference requires the submission build flag, app-private sentinel, and app-private model. Supervisor Summary is built from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow. Gemma audio transcription is wired into the Visit screen after the LiteRT-LM 0.11.0 manual probe succeeded. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## 2. Problem And Use Case
 
@@ -44,12 +44,12 @@ The demo includes:
 - Local Room/SQLite persistence for confirmed visits and referral flags.
 - Return-visit history that shows newly confirmed visits.
 - End-of-day supervisor summary from confirmed local records.
-- RealGemma priority follow-up queue attempt in the app-facing summary flow, with raw local counts retained when RealGemma supervisor reasoning is unavailable.
+- Supervisor Summary from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow.
 - Patient leave-behind message generated from saved reviewed visit data, editable before copy/share.
 - Community Panel / Village Panel view derived from local patients, visits, referral flags, and follow-up tasks.
 - Reset Demo Data for repeatable filming/demo runs.
 - Local JSON export for visit and summary data.
-- Local Gemma 4 vision paper-note extraction from synthetic paper notes for data-entry support only.
+- Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.
 - Offline Proof display from `Check offline setup` and on the summary screen.
 
 Out of scope for the current submission:
@@ -92,7 +92,7 @@ Key modules:
 - `ReviewScreen`: displays editable generated output, referral support, protocol citation, safety gate, and confirm/save action.
 - `SummaryScreen`: shows the supervisor brief, urgent cases, follow-ups, patient-message entry point after save, community panel entry point, export, reset, and Offline Proof.
 - `PatientLeaveBehindMessageGenerator` / `PatientMessageScreen`: generate a safe local patient message from saved reviewed data and provide editable Share/Copy controls.
-- `OfflineProofCard`: summarizes local/offline status, protocol source, active reasoning mode, RealGemma readiness, and direct-audio limitation.
+- `OfflineProofCard`: summarizes local/offline status, protocol source, active reasoning mode, RealGemma readiness, and editable-transcript-only audio boundary.
 - `VisitReasoningPipeline`: coordinates transcript text or local audio path, protocol retrieval, and `GemmaAgent` invocation. It writes nothing to storage.
 - `ProtocolRetriever`: deterministic local keyword retrieval over JSON protocol chunks.
 - `MockGemmaAgent`: deterministic test fixture only; not used for app-facing clinical/visit/supervisor output.
@@ -207,7 +207,7 @@ local microphone audio
 -> CHW confirm/save
 ```
 
-Audio fills an editable transcript only. CHW must review/edit before generating the note. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis or treatment. Production-grade multilingual audio quality is not yet claimed. App-facing microphone recording is wired only to the editable transcript field.
+Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis or treatment. Production-grade multilingual audio quality is not yet claimed. App-facing microphone recording is wired only to the editable transcript field.
 
 History: LiteRT-LM 0.10.2 blocked audio with `Audio must be preprocessed before being used in SessionAdvanced.` The 0.11.0 upgrade added `EngineConfig.audioBackend` and the probe with `Backend.CPU()` resolved the blocker.
 
@@ -314,11 +314,11 @@ Manual vision probe evidence:
 - `ManualRealGemmaVisionProbeInstrumentedTest` passed on emulator with the sideloaded app-private model.
 - The engine accepted `Conversation` image input.
 - Local Gemma 4 vision extracted structured JSON from the synthetic paper note: Grace Achieng, 02 May 2026, BP 116/74, symptoms, routine ANC follow-up, confidence HIGH, and `needsReview=true`.
-- The app uses this only for paper-note data entry support.
+- Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.
 - CHW review/edit and explicit patient-record confirmation are required before saving.
 - Image bytes are not persisted.
 - No cloud OCR/API is used.
-- Gemma audio transcription is wired into the Visit screen; audio fills an editable transcript only. The vision path is separate from audio.
+- Gemma audio transcription is wired into the Visit screen. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. The vision path is separate from audio.
 
 ## 12A. Local Follow-Up, Patient Message, Community Panel, And Lookup
 
@@ -412,9 +412,9 @@ Recommended filmed/live flow:
 10. Open the post-save patient message for review/edit/share controls.
 11. Show Lucia Spanish RealGemma note after manual validation.
 12. Show Grace Swahili routine/no-referral RealGemma note after manual validation.
-13. Show Grace sample paper-note scan: local Gemma vision extracts structured paper-note data for CHW review/save.
+13. Show Grace `Scan paper note`: paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.
 14. Show End-of-Day Summary urgent/follow-up/routine priority list and Community Panel entry.
-15. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text + vision + audio transcription validated.
+15. Close with Offline Proof: no cloud APIs, local patient memory, local guidance, RealGemma text, paper-note data entry, and editable audio transcript validated.
 
 Core spoken claim:
 
@@ -436,7 +436,7 @@ Avoid claiming:
 
 ## 16. Known Limitations / Future Work
 
-- Gemma audio transcription is wired into the app-facing Visit screen through LiteRT-LM 0.11.0; audio fills an editable transcript only and still requires a separate manual Generate Visit Note action. No direct audio diagnosis, treatment, or referral.
+- Gemma audio transcription is wired into the app-facing Visit screen through LiteRT-LM 0.11.0. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No direct audio diagnosis, treatment, or referral.
 - Android offline speech depends on device/emulator recognizer support and installed offline language packs.
 - The protocol corpus is a scaffold, not a complete reviewed guideline library.
 - Urgent Protocol Lookup is limited by the scaffold protocol corpus and must not be treated as clinical validation or an emergency chatbot.

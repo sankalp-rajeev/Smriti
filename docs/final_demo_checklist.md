@@ -16,7 +16,7 @@ Use this checklist for the final filmed or live judge demo. The app-facing reaso
 | Optional GPU experiment | Run `ManualRealGemmaBackendLatencyInstrumentedTest` only with explicit `allowExperimentalGpuBackend=true` on the target device/emulator. | CPU baseline remains available; GPU logs under `SmritiBackendLatency` and `SmritiLatency` only if it succeeds. | GPU becomes default without evidence, CPU fallback is removed, or unsupported APIs are invented. |
 | RealGemma schema hardening | If testing manual RealGemma, filter Logcat for `SmritiRealGemma` after a parser failure. | Debug/dev logs show raw output preview and parser reason; UI shows only concise retry/setup text. | Raw model output is shown to the CHW, invalid output is saved, or mock output appears as RealGemma. |
 | Urgent protocol lookup boundary | Open `Urgent protocol lookup`, select severe headache + blurred vision, and check guidance. | Guidance comes from local protocol assets with a citation, no save occurs, and Summary/Community Panel counts do not change from lookup alone. | Lookup calls RealGemma/network, creates a visit/referral/follow-up, or uses diagnosis/treatment/risk-score wording. |
-| Paper-note scan boundary | Open Grace or another patient and use `Scan paper note`. In FinalUi, the synthetic sample shortcut stays hidden. | Local Gemma vision extracts synthetic paper-note fields for reviewed data entry, then Review Scanned Note requires edit/review and explicit patient-record confirmation before save. | Image bytes are saved, referral/diagnosis appears, or note saves without confirmation. |
+| Paper-note scan boundary | Open Grace or another patient and use `Scan paper note`. In FinalUi, the synthetic sample shortcut stays hidden. | Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis. Review Scanned Note requires edit/review and explicit patient-record confirmation before save. | Image bytes are saved, referral/diagnosis appears, or note saves without confirmation. |
 
 Optional RealGemma submission setup after sideloading the model outside git:
 
@@ -49,7 +49,7 @@ Use this as the primary final filming order:
 | E. Synthetic demo patient Meena Sharma | Hindi typed observation, on-device Gemma 4 cited note, local guidance, referral support, CHW confirm/save. | Main sequence, about 55 seconds. |
 | F. Follow-up task | Show the follow-up task created after CHW confirmation. | 8 seconds. |
 | G. Patient message | Open `Prepare patient message`; show editable text and Share/Copy without sending. | 12 seconds; user-initiated share only. |
-| H. Grace paper-note scan | Show Grace and `Scan paper note`, or show a pre-prepared reviewed scan result. CHW reviews and saves. | 18 seconds; data-entry support only. |
+| H. Grace paper-note scan | Show Grace and `Scan paper note`, or show a pre-prepared reviewed scan result. CHW reviews and saves. | 18 seconds; CHW-reviewed data-entry support only. |
 | I. End-of-day Summary / Community Panel | Show saved visits, follow-ups, urgent review support, patient messages, and Community Panel counts. | 18 seconds; saved-on-device panel, not prediction. |
 | J. Closing Offline Proof | No cloud APIs after setup, local patient memory, local guidance, Gemma 4 on device, CHW review/confirm/save required. | 10 seconds. |
 
@@ -94,11 +94,11 @@ On-device Gemma 4 inference - sped up for demo.
 | Save latency boundary | Watch the save step after Review. | The app shows local saving only briefly; save uses Room/SQLite and does not call RealGemma or re-run protocol retrieval. | Confirm/save triggers another inference wait or auto-exports JSON. |
 | Show summary counts | On Summary screen, show `Today's priority list`, urgent cases, follow-ups, and routine visits. | Counts reflect confirmed local data after save. | Counts do not update after save. |
 | Summary community panel link | Tap `View community panel` from Summary. | Community Panel opens using local saved roster/visit/referral/follow-up state. | Summary counts change unexpectedly or the panel triggers model inference. |
-| Priority fallback | If on-device priority queue fails or another inference is running, show the fallback card. | It says `On-device priority summary unavailable. Showing saved local visit flags.` | Mock priority reasoning is presented as RealGemma. |
+| Summary boundary | Open End-of-day Summary. | Supervisor Summary is built from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow. | Summary claims live RealGemma supervisor priority reasoning in the filmed app-facing flow. |
 | Optional multilingual RealGemma output | Only after manual validation, show a Hindi, Swahili, or Spanish patient in fully gated submission mode. | User-facing generated note/safety wording appears in the selected patient language, while protocol citation IDs stay English. | A language fails manual validation, citation IDs are translated, or the video implies all-language support. |
 | Lucia Spanish note | Open `Lucia Fernandez` after manual validation and generate/review a Spanish RealGemma note. | Spanish user-facing note appears; citation IDs remain English; CHW review/save gate remains visible. | Video implies all languages, translates citation IDs, or skips review. |
 | Grace Swahili routine note | Open `Grace Achieng` after manual validation and generate/review a routine no-referral Swahili RealGemma note. | Routine/no-referral card appears with Swahili safety wording and review required. | Grace gets Meena danger-sign content or a false referral. |
-| Grace paper-note scan | On Grace, tap `Scan paper note`, review extracted fields, confirm patient association, and save. | Local Gemma 4 vision extracts structured paper-note data; image bytes are not persisted; scan is data entry only. | Referral, diagnosis, treatment, cloud OCR/API, or save without CHW confirmation appears. |
+| Grace paper-note scan | On Grace, tap `Scan paper note`, review extracted fields, confirm patient association, and save. | Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis. Image bytes are not persisted. | Referral, diagnosis, treatment, cloud OCR/API, or save without CHW confirmation appears. |
 | Show urgent case | Point to `Urgent Cases`. | Synthetic demo patient Meena urgent case appears with concise danger signs and citation. | Urgent case missing or contains long raw paragraphs. |
 | Show Offline Proof again | Point to Offline Proof on Summary. | Same offline evidence is visible after save. | Offline Proof missing on Summary. |
 | Optional export | Tap `Export Summary JSON`. | Local export path appears. | Export fails or implies remote sync/cloud upload. |
@@ -121,12 +121,12 @@ On-device Gemma 4 inference - sped up for demo.
 - `Follow-up tasks and Community Panel counts are local state and do not count as saved visits.`
 - `Urgent protocol lookup is a local protocol check; it does not save a visit or create a referral flag.`
 - `Patient messages are editable and shared only by user action through the Android share sheet.`
-- `Selected languages demonstrated: English, Hindi, Spanish, Swahili.`
+- `Selected generated note languages: English, Hindi, Spanish, Swahili. Full app UI translation is not claimed.`
 - `These are patient-specific generated note languages; Smriti does not claim full app UI translation.`
 - `Protocol citation IDs remain stable in English; no cloud translation API is used.`
-- `Gemma audio transcription fills an editable transcript only; clinical note generation still goes through text reasoning and CHW review after the worker taps Generate.`
+- `Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action.`
 - `App-facing microphone recording fills the editable transcript only; it does not generate or save a clinical note from audio.`
-- `Vision scan is data-entry support only, not diagnosis.`
+- `Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.`
 - `Local Gemma 4 vision paper-note extraction requires CHW review before saving.`
 
 ## What Not To Claim

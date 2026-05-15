@@ -38,9 +38,9 @@ There is currently no debug `applicationIdSuffix`, so `run-as com.smriti.clinica
 - The LiteRT layer defaults to stable `EngineConfig` with `Backend.CPU()` when the model is found.
 - Experimental `Backend.GPU()` timing is available only through explicit developer/test configuration; it is not the default app path and must keep CPU fallback intact.
 - Passive direct LiteRT API type references compile after the Room KSP migration.
-- With all RealGemma gates active, app startup/Patient Roster can start a non-blocking background preload. It initializes the RealGemma engine/session without generating clinical output and reuses that shared client for visit reasoning and supervisor priority attempts.
+- With all RealGemma gates active, app startup/Patient Roster can start a non-blocking background preload. It initializes the RealGemma engine/session without generating clinical output and reuses that shared client for visit-note reasoning and manual/probe paths.
 - If preload fails, the UI reports `Engine: Failed` and generation still follows the existing RealGemma unavailable/retry path; the app must not crash or fall back to mock output.
-- The first RealGemma call may be slower because model initialization is expensive. Subsequent Meena, Grace, Lucia, Priya, and supervisor priority calls should be faster when the process keeps the engine alive.
+- The first RealGemma call may be slower because model initialization is expensive. Subsequent Meena, Grace, Lucia, Priya, and manual/probe calls should be faster when the process keeps the engine alive.
 - Manual text inference requires `allowManualTextInference=true`.
 - RealGemma text UI mode requires `-Psmriti.realGemmaSubmissionMode=true` at build time and an app-private sentinel file at `files/dev/enable_real_gemma_text_mode`.
 - Recorded-demo RealGemma visit-note prompts use the selected patient's `preferredLanguage` for English, Hindi, Swahili, or Spanish output; citation IDs remain English/stable.
@@ -410,7 +410,7 @@ adb logcat -s SmritiLiteRtAudioInference:I "*:S"
 
 Phase 6 transcript-extraction probe, updated for LiteRT-LM 0.11.0. Sets `audioBackend = Backend.CPU()` in the EngineConfig (new in 0.11.0, was absent in 0.10.2) and prioritises Route 2 (Conversation+AudioBytes with raw WAV bytes) first. Also tries Conversation+AudioFile, Session+InputData.Audio, and WAV PCM-only extraction. If any route succeeds, the transcript preview is logged. If all routes are blocked, the test skips and logs the blocker. The probe does not write to Room, invoke the visit reasoning pipeline, or change any default app behavior.
 
-Current status: **succeeded on-device and wired into the Visit screen.** `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()` returned transcript: `"Meena is seven months pregnant. She has severe headache and blurred vision and this is a demo."` The app-facing path records short local microphone audio, fills an editable transcript only, and requires the CHW to manually tap Generate Visit Note afterward. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save. No audio-only save path. No direct audio diagnosis, treatment, or referral.
+Current status: **succeeded on-device and wired into the Visit screen.** `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()` returned transcript: `"Meena is seven months pregnant. She has severe headache and blurred vision and this is a demo."` Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 Run only the Phase 6 audio transcript probe:
 
@@ -428,7 +428,7 @@ adb logcat -s SmritiGemmaAudioTranscript:I "*:S"
 
 Current status: the `litertlm-android-0.11.0` AAR/classes.jar exposes `Content.ImageBytes`, `Content.ImageFile`, `InputData.Image`, `EngineConfig.visionBackend`, and `EngineConfig.maxNumImages`, but no public prompt-template, media-placeholder, multimodal-template, image-preprocessor, or `preprocess(...)` API was found. The manual probe passed on emulator with a sideloaded app-private model: the engine accepted `Conversation` image input and local Gemma 4 vision extracted structured JSON from the synthetic paper note.
 
-Smriti now exposes a narrow paper-note scan flow for data entry only. It requires CHW review before local save, does not save image bytes, and does not generate diagnosis or referral advice from the image.
+Smriti now exposes a narrow paper-note scan flow. Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis. It requires CHW review before local save, does not save image bytes, and does not generate diagnosis or referral advice from the image.
 
 The probe uses only the synthetic androidTest asset `sample_paper_visit_note.png` and reads it from instrumentation context assets, not target app assets.
 

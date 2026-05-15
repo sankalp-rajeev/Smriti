@@ -1,6 +1,6 @@
 # Current Status
 
-Smriti is an offline Android maternal-health visit copilot prototype for community health workers. The app-facing visit and supervisor reasoning path now requires `RealGemmaAgent`; if local RealGemma setup is missing or inference fails, Smriti shows setup/retry messaging instead of mock clinical output. The core app path does not require internet.
+Smriti is an offline Android maternal-health visit copilot prototype for community health workers. The app-facing visit-note reasoning path now requires `RealGemmaAgent`; if local RealGemma setup is missing or inference fails, Smriti shows setup/retry messaging instead of mock clinical output. Supervisor Summary is built from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow. The core app path does not require internet.
 
 ## Pre-Video Stability Update
 
@@ -8,7 +8,7 @@ After a manual Logcat review on 2026-05-03, a native LiteRT-LM text inference cr
 
 Stability changes now in place:
 
-- `RealGemmaInferenceGate` allows only one active LiteRT-LM request across visit-note generation, supervisor priority generation, paper-note vision extraction, manual text inference, and preload.
+- `RealGemmaInferenceGate` allows only one active LiteRT-LM request across visit-note generation, manual/probe supervisor-priority reasoning, paper-note vision extraction, manual text inference, and preload.
 - The gate uses non-queueing acquisition. A second request returns `Smriti is already preparing a note. Please wait.` and does not enter another `sendMessage` call.
 - Gate logs use `SmritiRealGemmaGate` with request types `VISIT_NOTE`, `SUPERVISOR_SUMMARY`, `PAPER_NOTE_SCAN`, `MANUAL_TEST`, and `PRELOAD`.
 - Diagnostics log model presence, model size, sentinel state, backend mode, engine state, and last engine failure before a request starts.
@@ -34,7 +34,7 @@ Phase D is implemented as a low-digital-literacy polish pass for the recorded de
 - Patient-specific sample transcripts prevent Grace or routine patients from receiving Meena's danger-sign transcript.
 - Generation has a calm loading card, duplicate generation prevention, blank-input inline error, short-input inline warning, and an on-device reasoning failure card that preserves the transcript.
 - Review screen now uses plain cards: `Referral suggested`, `No referral flag`, `More information needed`, and a collapsed `How was this prepared?` source section.
-- Summary screen shows `Saved visits on this device`, `Today's priority list`, urgent cases, follow-ups, routine visits, empty state, a collapsed preparation explanation, local-proof expansion, `View community panel`, and a plain fallback when on-device priority reasoning is unavailable.
+- Summary screen shows `Saved visits on this device`, `Today's priority list`, urgent cases, follow-ups, routine visits, empty state, a collapsed preparation explanation, local-proof expansion, and `View community panel`. Supervisor Summary is built from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow.
 - Destructive actions now use confirmation dialogs for Reset Demo Data and register import.
 - Offline Proof wording includes `Works offline after setup`, `Patient memory: saved on this device`, `Health guidance: stored on this device`, `On-device Gemma: ready/setup needed`, `Gemma audio transcript: editable only`, and `Cloud APIs: none`. These details now live behind `Check offline setup` instead of appearing by default on the roster.
 - Source-level unit tests were added/updated for roster filtering/sorting/chips, sample transcript mapping, first-launch screens, validation/error states, review source section, summary fallback, destructive dialogs, and forbidden UI wording.
@@ -74,11 +74,11 @@ Phase 1 validated the local Gemma 4 LiteRT-LM stack behind manual instrumentatio
 - Parser failures log the first 1500 characters of raw RealGemma output plus the rejection reason to `SmritiRealGemma` in debug/dev builds only. The UI keeps a concise retry/setup error and never shows raw model text as a clinical result.
 - The latest accepted manual RealGemma benchmark reported `totalScenarios=3`, `successCount=3`, `parserSuccessCount=3`, `referralCount=1`, `citationCount=2`, `singleCitationContractCount=3`, `averageLatencyMs=15812`, and `maxLatencyMs=26272`.
 - Manual probes confirmed native function calling API behavior and long-context memory stress behavior with a sideloaded model.
-- Gemma audio transcription is wired into the app-facing Visit screen after the LiteRT-LM 0.11.0 manual probe succeeded. The app records short local microphone audio, transcribes locally with Gemma, and fills the editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save after the CHW manually taps Generate Visit Note. No audio-only save path. No direct audio diagnosis, treatment, or referral.
+- Gemma audio transcription is wired into the app-facing Visit screen after the LiteRT-LM 0.11.0 manual probe succeeded. The app records short local microphone audio, transcribes locally with Gemma, and fills the editable transcript only. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## Phase H Paper-Note Scan Status
 
-Phase H adds a narrow paper-note scan flow for synthetic paper visit notes only. It is data-entry support, not clinical image diagnosis.
+Phase H adds a narrow paper-note scan flow for synthetic paper visit notes only. Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.
 
 - The local `litertlm-android-0.11.0` AAR/classes.jar surface was inspected for image and multimodal APIs.
 - Found public image holders: `Content.ImageBytes`, `Content.ImageFile`, and `InputData.Image`.
@@ -86,7 +86,7 @@ Phase H adds a narrow paper-note scan flow for synthetic paper visit notes only.
 - Found usable-looking transport methods: `Conversation.sendMessage(Contents)` and `Session.generateContent(List<InputData>)`.
 - No public class or method named like `PromptTemplate`, `MediaPlaceholder`, `MultiModalTemplate`, `ImagePreprocessor`, or `preprocess(...)` was found in `classes.jar`.
 - `ManualRealGemmaVisionProbeInstrumentedTest` passed on emulator with the sideloaded app-private model. The engine accepted the `Conversation` image input path and local Gemma 4 vision extracted structured JSON from the synthetic paper note: Grace Achieng, 02 May 2026, BP 116/74, symptoms, routine ANC follow-up, confidence HIGH, and `needsReview=true`.
-- The app now exposes `Scan paper note` and `Use sample paper note` from the Visit screen, below the primary visit-note actions.
+- The app now exposes `Scan paper note` from the Visit screen, below the primary visit-note actions. `Use sample paper note` remains a dev/demo-only control outside FinalUi.
 - The flow uses local Gemma vision through LiteRT-LM, then `PaperNoteVisionParser` validates the exact paper-note JSON schema.
 - CHW review/edit and explicit patient-record confirmation are required before saving.
 - Scanned notes are stored as local `VisitLog` history with `transcriptSource=paper_scan`.
@@ -94,7 +94,7 @@ Phase H adds a narrow paper-note scan flow for synthetic paper visit notes only.
 - The scan flow does not call visit-note referral reasoning, supervisor priority reasoning, or RealGemmaOutputParser.
 - The scan flow does not generate diagnosis, referral advice, or treatment recommendations from image alone.
 - No cloud OCR/API, ML Kit OCR, runtime download, PHI, or real patient image was added.
-- Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe; audio fills an editable transcript only. The vision path does not change this boundary.
+- Gemma audio transcription validated through LiteRT-LM 0.11.0 manual probe. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. The vision path does not change this boundary.
 
 ## Phase 2 Status
 
@@ -143,7 +143,7 @@ Phase B is implemented for the final recorded demo while preserving the safe nor
 - VisitScreen shows a cautious history signal for rising BP when recent prior readings clearly increase. Fatima triggers from `118/76 -> 125/80 -> 132/84 -> 138/88`; Grace does not trigger.
 - RealGemma submission mode is gated by all of: `-Psmriti.realGemmaSubmissionMode=true`, app-private `files/dev/enable_real_gemma_text_mode`, and app-private `filesDir/models/gemma-4-E2B-it-int4.litertlm`.
 - Fully active submission mode sends visit generation through `VisitReasoningPipeline` with `RealGemmaAgent`; failures show `On-device reasoning unavailable - please retry.` and do not save or silently display mock output as RealGemma.
-- SummaryScreen keeps saved local counts/referral flags visible and attempts RealGemma priority reasoning only when the global gate is free. Failure or busy state shows `On-device priority summary unavailable. Showing saved local visit flags.` without mock priority output.
+- SummaryScreen keeps saved local counts/referral flags visible. Supervisor Summary is built from confirmed local records. RealGemma supervisor-priority reasoning remains manual/probe-only and is not part of the filmed app-facing flow.
 - CommunityPanelScreen uses only local patients, visits, referral flags, and follow-up tasks. It does not call RealGemma, LiteRT, protocol retrieval, or supervisor priority reasoning.
 - Offline Proof reports active reasoning mode, RealGemma text mode, submission mode, inference, model found/missing, Gemma audio transcription validated as manual probe, and Gemma vision paper-note scan available.
 
@@ -152,7 +152,7 @@ Phase B is implemented for the final recorded demo while preserving the safe nor
 Phase C supports selected patient-specific local-language output for the recorded demo:
 
 - Demo languages are English, Hindi, Swahili, and Spanish only.
-- Selected languages demonstrated: English, Hindi, Spanish, Swahili.
+- Selected generated note languages: English, Hindi, Spanish, Swahili. Full app UI translation is not claimed.
 - Patient mapping: Meena/Priya -> Hindi, Grace -> Swahili, Lucia -> Spanish, Fatima/Amara -> English.
 - Lucia remains Peru/Spanish; the app does not use Brazil for a Spanish-language Lucia demo.
 - Amara/Ethiopia and Fatima/Bangladesh remain English because Amharic/Oromo/Bangla are not implemented or tested.
@@ -210,7 +210,7 @@ Recommended order:
 
 ## What Is Blocked
 
-- Gemma audio transcription is wired into the app-facing Visit screen; audio fills an editable transcript only and requires CHW review/edit plus a separate manual Generate Visit Note action.
+- Gemma audio transcription is wired into the app-facing Visit screen. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action.
 - The current Kotlin API path now exposes `ExperimentalFlags.overwritePromptTemplate` for future multimodal prompt customization.
 - Paper-note scan is limited to text/data extraction. It must not be used for wounds, rashes, ultrasound, medicine strips, growth charts, photos of people, diagnosis, treatment, or referral decisions from image alone.
 - Android offline speech recognition depends on device/emulator recognizer support and installed offline language packs.

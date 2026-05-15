@@ -35,6 +35,8 @@ local.properties
 
 # Logs
 *.log
+hs_err_pid*.log
+replay_pid*.log
 
 # OS files
 .DS_Store
@@ -42,6 +44,7 @@ Thumbs.db
 
 # Kotlin / Java
 *.class
+classes.jar
 
 # Secrets / env
 .env
@@ -54,12 +57,12 @@ benchmarks/*.log
 
 # Model files - do not commit large local models
 *.litertlm
-*.tflite
 *.task
+*.tflite
+*.onnx
 *.gguf
 *.bin
 *.safetensors
-*.onnx
 models/
 **/models/**
 app/src/main/assets/models/
@@ -75,4 +78,6 @@ app/src/main/assets/**/*.onnx
 *.mkv
 *.wav
 *.mp3
+*.m4a
+*.flac
 demo/recordings/

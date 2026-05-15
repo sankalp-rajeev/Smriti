@@ -102,7 +102,7 @@ LiteRtLmJniException: Failed to generate content: INTERNAL: Audio must be prepro
 
 `ManualRealGemmaAudioTranscriptInstrumentedTest` is the Phase 6 transcript-extraction probe, updated for 0.11.0. It now sets `audioBackend = Backend.CPU()` in the EngineConfig and prioritises Route 2 (Conversation+AudioBytes with raw WAV bytes) first, followed by Conversation+AudioFile, Session+InputData.Audio, and WAV PCM-only extraction. It requires `allowManualAudioInference=true`, `manualAudioFilePath=/data/local/tmp/manual-smriti-audio.wav`, and the sideloaded app-private Gemma model. If any route succeeds, it logs a transcript preview under `SmritiGemmaAudioTranscript`. If all routes are blocked, it logs the blocker and skips. The probe does not write to Room, invoke the visit reasoning pipeline, or change any default app behavior.
 
-Current audio status: Gemma audio transcription is wired into the app-facing Visit screen after the LiteRT-LM 0.11.0 manual probe succeeded. The app records short local microphone audio as 16 kHz mono PCM, wraps it as WAV bytes in memory, and calls `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()`. Audio fills an editable transcript only. Clinical note generation still goes through text reasoning, protocol citation validation, ReviewScreen, and confirm/save after the CHW manually taps Generate Visit Note. No audio-only save path. No direct audio diagnosis, treatment, or referral.
+Current audio status: Gemma audio transcription is wired into the app-facing Visit screen after the LiteRT-LM 0.11.0 manual probe succeeded. The app records short local microphone audio as 16 kHz mono PCM, wraps it as WAV bytes in memory, and calls `Conversation.sendMessage(Contents.of(Content.Text(prompt), Content.AudioBytes(audioBytes)))` with `EngineConfig.audioBackend = Backend.CPU()`. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. No audio-only save path. No direct audio diagnosis, treatment, or referral.
 
 ## Vision API Status
 
@@ -122,7 +122,7 @@ The local AAR/classes.jar inspection did not find a public class or method named
 
 Current vision status: the manual probe passed on emulator. The engine accepted the `Conversation` image input path, and local Gemma 4 vision extracted structured JSON from the synthetic paper note: Grace Achieng, 02 May 2026, BP 116/74, symptoms, routine ANC follow-up, confidence HIGH, and `needsReview=true`.
 
-The app now includes a narrow paper-note scan flow using `RealGemmaVisionPaperNoteClient` and `PaperNoteVisionParser`. It is data-entry support only. CHW review/edit and explicit patient-record confirmation are required before saving to local history with `transcriptSource=paper_scan`. The flow does not call visit-note referral generation, does not call supervisor priority reasoning, does not persist image bytes, and does not use cloud OCR/API.
+The app now includes a narrow paper-note scan flow using `RealGemmaVisionPaperNoteClient` and `PaperNoteVisionParser`. Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis. CHW review/edit and explicit patient-record confirmation are required before saving to local history with `transcriptSource=paper_scan`. The flow does not call visit-note referral generation, does not call supervisor priority reasoning, does not persist image bytes, and does not use cloud OCR/API.
 
 ## Backend Latency Experiment
 

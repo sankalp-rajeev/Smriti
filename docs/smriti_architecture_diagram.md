@@ -6,7 +6,7 @@ Offline maternal-health memory for community health workers
 flowchart LR
     CHW["CHW field visit<br/>Roster + local patient history<br/>Typed observation<br/>Synthetic demo data only"]
 
-    Inputs["Field inputs<br/>Typed note<br/>Gemma audio transcript -> editable transcript only<br/>Paper-note scan -> data-entry support only"]
+    Inputs["Field inputs<br/>Typed note<br/>Gemma audio fills editable transcript only<br/>Paper-note scan -> CHW-reviewed data entry only"]
 
     Memory["On-device memory<br/>Room / SQLite<br/>Patients, visits, referrals, follow-ups<br/>Saved on this device"]
 
@@ -43,8 +43,8 @@ flowchart LR
 - No treatment or dosage advice is generated as a product claim.
 - No autonomous referral: the CHW reviews, edits, confirms, and saves.
 - No cloud APIs are required after setup for the filmed runtime.
-- Audio is transcript-only: it fills an editable transcript and does not save or generate clinical output by itself.
-- Vision is data-entry support only: paper-note extraction goes to review and does not diagnose or create a referral from an image alone.
+- Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action.
+- Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.
 - Demo data is synthetic only.
 
 For README or media gallery use, export this Mermaid diagram to PNG/SVG in a clean phone/product frame. Keep the safety labels visible enough that the visual reads as an offline field product, not a general chatbot.

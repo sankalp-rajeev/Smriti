@@ -56,7 +56,7 @@ The hard part was not calling a model. The hard part was making a health workflo
 
 That boundary is visible in the app: unavailable reasoning produces setup/retry messaging, not a fabricated clinical note, and the model is never treated as the source of truth.
 
-Selected demo note languages are English, Hindi, Spanish, and Swahili; full app UI translation and broad all-language support are not claimed. Gemma audio fills an editable transcript only. Gemma vision supports synthetic paper-note data-entry support only. Native tool-calling was validated as a manual probe, but production retrieval remains deterministic through ProtocolRetriever.
+Selected generated note languages: English, Hindi, Spanish, Swahili. Full app UI translation is not claimed. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action. Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis. Native tool-calling was validated as a manual probe, but production retrieval remains deterministic through ProtocolRetriever.
 
 ## 5. Safety Is the Shape of the Product
 
@@ -64,7 +64,7 @@ When Smriti is uncertain, it stops.
 
 There is a review screen before save. CHW confirmation is required. Citations are checked. Referral wording must agree with the structured flag. Urgent Protocol Lookup shows local health guidance, but it does not save anything by itself. Patient messages are editable and shared only by the user. Follow-up tasks are workflow support, not clinical decisions.
 
-Smriti does not diagnose, prescribe, calculate dosage, decide referral action by itself, auto-send messages, use real patient data, or claim clinical validation. Paper-note scan is not clinical image diagnosis or paper-note OCR diagnosis. It is reviewed data entry.
+Smriti does not diagnose, prescribe, calculate dosage, decide referral action by itself, auto-send messages, use real patient data, or claim clinical validation. Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.
 
 A fast answer is not enough. The worker needs to see the source, edit the text, and decide whether it belongs in the record. In a health workflow, a visible stop is better than a confident-looking record that should not be trusted.
 
@@ -75,8 +75,8 @@ A fast answer is not enough. The worker needs to see the source, edit the text, 
 - On-device text generation runs around 15-22 seconds on CPU depending on scenario/device.
 - Local retrieval, validation, save, follow-up creation, summary, and panel refresh are milliseconds.
 - Speculative decoding was tested: 21787 ms baseline vs 22138 ms speculative, +351 ms slower, not used.
-- Audio: `Content.AudioBytes` probe succeeded; microphone path remains editable transcript only, not direct clinical reasoning.
-- Vision: synthetic paper-note extraction supports CHW-reviewed data entry only.
+- Audio: `Content.AudioBytes` probe succeeded. Gemma audio fills an editable transcript only. Clinical note generation still requires CHW review and a separate Generate action.
+- Vision: Paper-note scan is CHW-reviewed data-entry support only, not clinical image diagnosis.
 - Tool-calling: manual `lookupProtocol` probe returned cited guidance; production retrieval remains deterministic ProtocolRetriever.
 - Validation/build history includes `testDebugUnitTest`, `assembleDebug`, `compileDebugAndroidTestKotlin`, `runSmriti.ps1 -FinalUi`, and `runSmriti.ps1 -Logs`.
 
