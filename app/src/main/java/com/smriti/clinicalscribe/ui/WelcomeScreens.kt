@@ -1,6 +1,7 @@
 package com.smriti.clinicalscribe.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,8 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
@@ -159,43 +162,90 @@ fun AboutSmritiScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(SmritiSpacing.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(SmritiSpacing.CardGap)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("About Smriti", style = MaterialTheme.typography.headlineSmall)
                     Text(
-                        "Smriti is built for the health worker who shows up - even when there is no signal, no EHR, and too many visits to remember alone.",
+                        "For the health worker who shows up.",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        "Smriti helps turn one home visit into local memory: a reviewed note, a follow-up, a patient message, and visibility for the day.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             item {
-                SmritiCard(tone = SmritiTone.Success) {
-                    Text("Smriti means memory.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                AboutSmritiCard(
+                    title = "Remembers the patient",
+                    body = "Local history, visits, referrals, and follow-ups stay on this device.",
+                    tone = SmritiTone.Success
+                )
+            }
+            item {
+                AboutSmritiCard(
+                    title = "Checks local guidance",
+                    body = "Smriti uses cited local protocol guidance before drafting a note.",
+                    tone = SmritiTone.Info
+                )
+            }
+            item {
+                AboutSmritiCard(
+                    title = "Keeps the worker in control",
+                    body = "The health worker reviews and confirms before anything is saved.",
+                    tone = SmritiTone.Caution
+                )
+            }
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
                     Text(
-                        "It is built for community health workers who move from home to home carrying patient history, follow-ups, and local guidance in paper registers and memory.",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        "Smriti keeps that work on the phone: patient history, cited guidance, reviewed notes, follow-ups, patient messages, and community visibility.",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        "It works after setup without cloud APIs. Smriti supports the health worker; it does not diagnose or replace clinical judgment.",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        "The health worker reviews and confirms before saving.",
+                        text = "Smriti supports documentation and referral support. It does not diagnose, prescribe, or replace clinical judgement.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
                     )
                 }
             }
             item {
-                SmritiPrimaryButton("Back", onBack)
+                SmritiSecondaryButton("Back", onBack)
             }
+        }
+    }
+}
+
+@Composable
+private fun AboutSmritiCard(
+    title: String,
+    body: String,
+    tone: SmritiTone
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = when (tone) {
+            SmritiTone.Success -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
+            SmritiTone.Info -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)
+            SmritiTone.Caution -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.70f)
+            else -> MaterialTheme.colorScheme.surface
+        },
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
