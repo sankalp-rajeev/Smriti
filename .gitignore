@@ -1,68 +1,60 @@
-# Gradle
+# Gradle / Android build outputs
 .gradle/
+.kotlin/
 build/
 */build/
-!gradle/wrapper/gradle-wrapper.jar
-
-# Gradle wrapper distribution
-gradle/wrapper/gradle-wrapper.properties
-
-# Android Studio / IntelliJ
-.idea/
-*.iml
-*.iws
-*.ipr
 out/
-captures/
 .externalNativeBuild/
 .cxx/
+captures/
+
+# Keep Gradle wrapper for reproducible builds
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Android Studio / IntelliJ machine files
+.idea/
+*.iml
+*.ipr
+*.iws
 
 # Local machine config
 local.properties
 
-# Android generated files
+# Android generated packages / binaries
 *.apk
 *.ap_
 *.aab
 *.dex
+*.class
+classes.jar
+*.aar
+*.so
 
-# Signing / keystores
+# Signing / secrets
 *.jks
 *.keystore
 *.p12
 *.pem
 *.key
-
-# Logs
-*.log
-hs_err_pid*.log
-replay_pid*.log
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Kotlin / Java
-*.class
-classes.jar
-
-# Secrets / env
 .env
 .env.*
 secrets.properties
 
-# Benchmark/generated outputs that can be recreated
-benchmarks/*.tmp
-benchmarks/*.log
+# Logs / crash dumps
+*.log
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
 
-# Model files - do not commit large local models
+# Local models and ML artifacts
 *.litertlm
 *.task
 *.tflite
 *.onnx
 *.gguf
-*.bin
 *.safetensors
+*.bin
 models/
 **/models/**
 app/src/main/assets/models/
@@ -71,7 +63,17 @@ app/src/main/assets/**/*.task
 app/src/main/assets/**/*.tflite
 app/src/main/assets/**/*.onnx
 
-# Audio/video demo captures
+# Emulator / device outputs
+*.trace
+*.prof
+*.profm
+*.ec
+*.emu
+sdcard/
+emulator/
+device-logs/
+
+# Demo captures kept outside repo unless explicitly curated
 *.mp4
 *.mov
 *.avi
@@ -81,3 +83,7 @@ app/src/main/assets/**/*.onnx
 *.m4a
 *.flac
 demo/recordings/
+
+# OS noise
+.DS_Store
+Thumbs.db
