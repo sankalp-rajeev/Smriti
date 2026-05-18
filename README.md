@@ -188,7 +188,7 @@ If the model or gates are absent, the app can still show the local workflow and 
 
 ## Submission Links
 
-- Video: [Link to demo video](https://www.youtube.com/watch?v=s5zeFpfrVQ)
+- Video: [Link to demo video](https://www.youtube.com/watch?v=s5zeFpfrVQo&t=1s)
 - Kaggle writeup: [docs/submission_writeup.md](docs/submission_writeup.md)
 
 Additional supporting docs:
